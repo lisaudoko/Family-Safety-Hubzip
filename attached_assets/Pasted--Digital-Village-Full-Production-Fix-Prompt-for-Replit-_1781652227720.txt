@@ -1,0 +1,516 @@
+# Digital Village – Full Production Fix Prompt for Replit AI
+
+Paste this entire prompt into Replit AI to get the app to a fully functional, production-ready state.
+
+---
+
+## PROMPT (copy everything below this line)
+
+You are continuing development of "Digital Village," a production-ready iOS-first family digital safety platform. The app uses React Native with Expo, TypeScript, Supabase (Auth, Postgres, Storage, Edge Functions), and Stripe for subscriptions.
+
+Perform a complete, systematic audit and fix of the entire codebase. Do not stop after finding the first issue. Fix everything. After all fixes, confirm the app compiles and runs without errors.
+
+Work through each section below in order. For every fix, show the corrected code.
+
+---
+
+## SECTION 1 — PROJECT STRUCTURE & DEPENDENCIES
+
+1. Verify `package.json` includes all required dependencies with correct, compatible versions:
+   - `expo` (SDK 51+), `react-native`, `typescript`
+   - `@supabase/supabase-js` (v2+)
+   - `@stripe/stripe-react-native`
+   - `expo-router` (v3+) for file-based navigation
+   - `expo-notifications`, `expo-secure-store`, `expo-constants`
+   - `@react-native-async-storage/async-storage`
+   - `react-native-url-polyfill`
+   - `zod` for form validation
+   - Any missing peer dependencies
+
+2. Confirm `app.json` / `expo.json` has:
+   - Correct `bundleIdentifier` for iOS
+   - `scheme` defined for deep linking (Supabase OAuth callbacks)
+   - `plugins` array includes `expo-router`, `expo-notifications`, `@stripe/stripe-react-native`
+   - iOS `infoPlist` entries for FamilyControls usage descriptions
+   - `entitlements` file path set for Family Controls capability
+
+3. Confirm `tsconfig.json` has strict mode and correct path aliases.
+
+4. Confirm `.env` / `app.config.ts` exposes all required env vars via `Constants.expoConfig.extra`:
+   - `EXPO_PUBLIC_SUPABASE_URL`
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - `STRIPE_PUBLISHABLE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (Edge Functions only, never client-side)
+
+---
+
+## SECTION 2 — SUPABASE DATABASE & MIGRATIONS
+
+Create or fix a complete SQL migration file at `supabase/migrations/001_initial_schema.sql` that includes:
+
+### Tables (with correct column types, constraints, and defaults):
+- `profiles` — id (uuid, FK to auth.users), email, full_name, avatar_url, role ('parent'|'child'), subscription_tier ('free'|'premium'), stripe_customer_id, created_at, updated_at
+- `families` — id, name, invite_code (unique), created_by (FK profiles), created_at
+- `family_members` — id, family_id (FK families), profile_id (FK profiles), role ('parent'|'child'), joined_at
+- `children` — id, family_id, parent_id (FK profiles), name, age_band ('6-9'|'10-13'|'14-17'), avatar_url, created_at
+- `technology_agreements` — id, family_id, title, content (jsonb), signed_by_parent (bool), signed_by_child (bool), parent_signature, child_signature, signed_at, created_at
+- `lessons` — id, title, description, content (jsonb), category, age_band, difficulty, duration_minutes, order_index, is_published, created_at
+- `lesson_progress` — id, profile_id, lesson_id, completed (bool), score, completed_at
+- `quizzes` — id, lesson_id, questions (jsonb), created_at
+- `quiz_attempts` — id, profile_id, quiz_id, answers (jsonb), score, passed, attempted_at
+- `challenges` — id, title, description, type, duration_days, points, icon, is_active, created_at
+- `family_challenges` — id, family_id, challenge_id, started_at, completed_at, status ('active'|'completed'|'failed')
+- `challenge_participants` — id, family_challenge_id, profile_id, checked_in_at (jsonb array of dates)
+- `badges` — id, name, description, icon, category, criteria (jsonb), created_at
+- `earned_badges` — id, profile_id, badge_id, earned_at
+- `assessments` — id, title, description, questions (jsonb), category, created_at
+- `assessment_results` — id, profile_id, assessment_id, answers (jsonb), score, recommendations (jsonb), completed_at
+- `coaching_tips` — id, title, content, category, week_number, created_at
+- `notifications` — id, profile_id, title, body, type, read (bool), data (jsonb), created_at
+- `subscriptions` — id, profile_id, stripe_subscription_id, stripe_customer_id, plan ('free'|'premium'), status, current_period_start, current_period_end, created_at, updated_at
+
+### RLS Policies — enable RLS on every table and add policies:
+- Users can only read/write their own profile
+- Family members can read family data; only parents can write
+- Parents can manage their children's records
+- Lesson/challenge/badge data is readable by all authenticated users
+- Progress/results/badges are private to the owning user
+- Service role bypasses all RLS (for Edge Functions)
+
+### Indexes on all FK columns and frequently queried fields.
+
+### Seed data:
+- At least 8 lessons covering: cyberbullying, scams, social media readiness, online predators, AI safety, digital footprints, gaming safety, healthy screen habits — each with real content in the jsonb `content` field (not placeholder text)
+- At least 6 challenges: Screen-Free Saturday, Dinner Without Devices, Outdoor Challenge, Book Before Bed, Tech-Free Morning, Family Game Night
+- At least 10 badges across categories: learning, challenges, family, milestones
+- At least 4 coaching tips per week for weeks 1–8
+- The Social Media Readiness Assessment with at least 12 real questions and scoring rubric
+- At least 3 micro-courses with module structure in the jsonb content
+
+---
+
+## SECTION 3 — SUPABASE CLIENT & AUTH
+
+Fix or create `lib/supabase.ts`:
+- Import `react-native-url-polyfill/auto` at the top
+- Use `expo-secure-store` as the storage adapter (not AsyncStorage) for auth tokens
+- Set `autoRefreshToken: true`, `persistSession: true`, `detectSessionInUrl: false`
+- Export a typed `Database` type from the generated types
+
+Fix or create `lib/auth.ts` with functions:
+- `signUpWithEmail(email, password, fullName)`
+- `signInWithEmail(email, password)`
+- `signInWithApple()` — uses `expo-apple-authentication`, passes the identity token to `supabase.auth.signInWithIdToken`
+- `signOut()`
+- `resetPassword(email)`
+- `getCurrentUser()`
+- All functions return typed results with error handling
+
+Fix or create `context/AuthContext.tsx`:
+- Wraps the app with session state
+- Listens to `supabase.auth.onAuthStateChange`
+- On sign-in, upserts the profile row in `profiles`
+- Exposes: `session`, `user`, `profile`, `isLoading`, `signOut`
+- Handles the case where profile doesn't exist yet (new user)
+
+---
+
+## SECTION 4 — NAVIGATION (expo-router)
+
+Audit the full `app/` directory structure. Create or fix the following file-based routes so every screen is reachable with no broken navigation:
+
+```
+app/
+  _layout.tsx              ← Root layout, wraps with AuthContext + StripeProvider + QueryClientProvider
+  index.tsx                ← Redirect: authenticated → /(parent)/dashboard, unauthenticated → /(auth)/welcome
+  (auth)/
+    _layout.tsx
+    welcome.tsx            ← Landing screen with Sign In / Sign Up / Continue as Guest
+    sign-in.tsx
+    sign-up.tsx
+    forgot-password.tsx
+    onboarding/
+      _layout.tsx
+      step1-profile.tsx    ← Name, avatar
+      step2-family.tsx     ← Create or join family
+      step3-children.tsx   ← Add child profiles
+      step4-agreement.tsx  ← Intro to Technology Agreement
+      complete.tsx         ← Onboarding done, go to dashboard
+  (parent)/
+    _layout.tsx            ← Bottom tab navigator: Dashboard, Learn, Family, Challenges, Profile
+    dashboard.tsx
+    learn/
+      _layout.tsx
+      index.tsx            ← Course library
+      [lessonId].tsx       ← Individual lesson
+      assessment.tsx       ← Social Media Readiness Assessment
+      assessment-result.tsx
+    family/
+      _layout.tsx
+      index.tsx            ← Family overview
+      add-child.tsx
+      child/[childId].tsx  ← Child profile detail
+      agreement/
+        index.tsx          ← View/create Technology Agreement
+        builder.tsx        ← Agreement builder
+        sign.tsx           ← Signature screen
+    challenges/
+      _layout.tsx
+      index.tsx            ← Challenge list
+      [challengeId].tsx    ← Challenge detail + check-in
+    profile/
+      index.tsx
+      subscription.tsx     ← Plan selection + Stripe checkout
+      notifications.tsx
+      settings.tsx
+  (child)/
+    _layout.tsx            ← Child mode, separate tab navigator
+    dashboard.tsx
+    lessons/
+      index.tsx
+      [lessonId].tsx
+      quiz/[lessonId].tsx
+    badges.tsx
+    challenges.tsx
+    profile.tsx
+```
+
+Ensure:
+- Every `_layout.tsx` uses correct Stack or Tabs from `expo-router`
+- The root layout checks auth state before rendering; shows a splash/loading screen during session hydration
+- Deep links from Supabase auth callbacks (magic link, password reset) route correctly
+- `useRouter`, `useLocalSearchParams`, and `Link` are used correctly everywhere (no React Navigation imports mixed in)
+- Every screen has a proper title set via `<Stack.Screen options={{ title: '...' }} />`
+- No screen is an empty stub — every screen renders real UI
+
+---
+
+## SECTION 5 — PARENT DASHBOARD
+
+Fix `app/(parent)/dashboard.tsx` to display:
+- Welcome message with parent's name
+- Family stats: number of children, active challenges, lessons completed this week
+- Quick action cards: Add Child, Start Challenge, View Agreement, Take Assessment
+- Weekly coaching tip (fetched from `coaching_tips` table for the current week)
+- Recent activity feed (latest badge earned, latest lesson completed, latest challenge update)
+- Push notification permission prompt (if not yet granted)
+- Premium upsell banner (if on free plan)
+- All data fetched via React Query (`@tanstack/react-query`) with loading skeletons and error states
+
+---
+
+## SECTION 6 — FAMILY TECHNOLOGY AGREEMENT BUILDER
+
+Fix `app/(parent)/family/agreement/builder.tsx`:
+- Multi-step form with sections: Screen Time Rules, Device-Free Zones, Content Guidelines, Social Media Rules, Privacy Rules, Emergency Contacts
+- Each rule is toggleable and has customizable text (user can edit the default text)
+- Rules stored as structured JSON: `{ category: string, rule: string, enabled: boolean, customText?: string }`
+- Preview mode shows the formatted agreement
+- Save drafts to Supabase automatically
+- "Request Signatures" flow: sends in-app notification to child; parent signs first with a drawn or typed signature captured as base64 string stored in Supabase Storage
+- Completed agreements are viewable as a formatted document
+
+---
+
+## SECTION 7 — LESSONS & MICRO-COURSES
+
+Fix `app/(parent)/learn/index.tsx`:
+- Displays courses grouped by category
+- Each course card shows title, description, progress bar (from `lesson_progress`), duration, difficulty badge
+- Filter tabs by category
+- Premium-locked indicator on premium-only content
+
+Fix `app/(parent)/learn/[lessonId].tsx`:
+- Reads `content` jsonb field which has a structure like:
+  ```json
+  {
+    "sections": [
+      { "type": "text", "content": "..." },
+      { "type": "tip", "content": "...", "icon": "lightbulb" },
+      { "type": "scenario", "title": "...", "situation": "...", "options": [...], "correct": 0, "explanation": "..." },
+      { "type": "video_placeholder", "title": "...", "description": "..." }
+    ],
+    "key_takeaways": ["...", "..."]
+  }
+  ```
+- Renders each section type with appropriate UI
+- Tracks reading progress; marks lesson complete when user reaches the end
+- "Take Quiz" button navigates to the quiz if one exists
+
+Fix `app/(child)/lessons/quiz/[lessonId].tsx`:
+- Fetches quiz questions from `quizzes` table
+- Multiple choice questions with immediate feedback (correct/incorrect with explanation)
+- Progress bar showing question X of Y
+- Score screen at end; saves attempt to `quiz_attempts`; awards badge if passing score ≥ 80%
+
+---
+
+## SECTION 8 — SOCIAL MEDIA READINESS ASSESSMENT
+
+Fix `app/(parent)/learn/assessment.tsx`:
+- 12-question assessment across categories: Privacy Awareness, Critical Thinking, Emotional Readiness, Peer Pressure Resistance, Digital Citizenship
+- Each question is multiple choice with a weight; answers map to a score
+- Results screen shows:
+  - Overall readiness score (0–100) with a color-coded dial (red/yellow/green)
+  - Score breakdown by category
+  - Personalized recommendations based on weak categories
+  - "Age recommendation" output based on score + child's age band
+  - Option to save and share results or retake
+- Results saved to `assessment_results`
+
+---
+
+## SECTION 9 — FAMILY CHALLENGES
+
+Fix `app/(parent)/challenges/index.tsx`:
+- Grid of available challenges with icons, descriptions, duration, and points
+- "Active" tab shows currently running family challenges with days remaining and participant check-in status
+- "Completed" tab shows finished challenges with earned badge
+
+Fix `app/(parent)/challenges/[challengeId].tsx`:
+- Challenge detail with full description, tips for success, and family member participation status
+- "Start Challenge" button creates a `family_challenges` record and notifies all family members
+- Daily check-in button; stores check-in timestamp in the jsonb array
+- Progress visualization (e.g., 3/7 days completed)
+- On completion: updates status to 'completed', awards points, triggers badge check
+
+---
+
+## SECTION 10 — CHILD COMPANION MODE
+
+Fix `app/(child)/dashboard.tsx`:
+- Age-appropriate greeting and avatar
+- Today's lesson card
+- Active family challenge card with check-in button
+- Badge showcase (3 most recent)
+- Points/XP display
+- No surveillance UI anywhere — positive, game-like design
+
+Fix `app/(child)/badges.tsx`:
+- Grid of all badges (earned shown in color, unearned shown greyed out)
+- Tapping an earned badge shows when it was earned and what for
+- Tapping an unearned badge shows how to earn it
+
+---
+
+## SECTION 11 — STRIPE SUBSCRIPTION
+
+Fix `app/(parent)/profile/subscription.tsx`:
+- Two plan cards: Free (feature list) and Premium (feature list)
+- Current plan highlighted
+- "Upgrade to Premium" button initiates Stripe payment sheet
+- Uses `@stripe/stripe-react-native`'s `useStripe()` and `initPaymentSheet` / `presentPaymentSheet`
+- Payment intent created by calling a Supabase Edge Function `create-payment-intent`
+- On success: updates `subscriptions` table and `profiles.subscription_tier`
+- Handles payment errors gracefully with user-friendly messages
+- "Manage Subscription" link for existing premium users (opens Stripe customer portal via Edge Function)
+- "Restore Purchase" button
+
+Create or fix `supabase/functions/create-payment-intent/index.ts`:
+- Verifies JWT from Authorization header using Supabase service role
+- Creates or retrieves Stripe customer by email
+- Creates a PaymentIntent for the premium plan price ($9.99/month)
+- Returns `{ clientSecret, customerId }`
+- Uses `stripe` npm package with the secret key from env vars
+
+Create or fix `supabase/functions/stripe-webhook/index.ts`:
+- Handles `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+- Verifies Stripe webhook signature
+- Updates `subscriptions` and `profiles` tables accordingly
+
+---
+
+## SECTION 12 — PUSH NOTIFICATIONS
+
+Fix or create `lib/notifications.ts`:
+- `registerForPushNotifications()` — requests permission, gets Expo push token, saves to `profiles.push_token`
+- `scheduleLocalNotification(title, body, trigger)` — for local reminders
+- `handleNotificationReceived(notification)` — updates `notifications` table as read
+
+Create or fix `supabase/functions/send-push-notification/index.ts`:
+- Called by other Edge Functions or triggers
+- Sends notifications via Expo Push API
+- Stores a record in `notifications` table
+
+Create or fix `supabase/functions/weekly-coaching-tip/index.ts`:
+- Scheduled to run every Monday at 8am
+- Fetches the coaching tip for the current week number
+- Sends push notifications to all parent profiles who have push tokens
+- Uses the Expo Push API
+
+---
+
+## SECTION 13 — STATE MANAGEMENT & DATA FETCHING
+
+Ensure the following patterns are used consistently:
+
+1. React Query (`@tanstack/react-query`) for all server data:
+   - QueryClient configured in root `_layout.tsx`
+   - Custom hooks in `hooks/` directory: `useProfile`, `useFamily`, `useChildren`, `useLessons`, `useLessonProgress`, `useChallenges`, `useBadges`, `useCoachingTip`, `useAssessments`, `useSubscription`
+   - Every hook handles loading, error, and empty states
+   - Mutations invalidate relevant queries on success
+
+2. Zustand (or React Context) for local UI state that doesn't need persistence:
+   - Current child mode vs parent mode toggle
+   - Onboarding step tracking
+
+3. No raw `useState` + `useEffect` + `fetch` chains for server data — use React Query exclusively
+
+---
+
+## SECTION 14 — UI COMPONENTS
+
+Create or fix a `components/` directory with these reusable components (each fully implemented, no stubs):
+
+- `Button.tsx` — primary, secondary, ghost variants; loading state with ActivityIndicator; disabled state
+- `Card.tsx` — elevated card with optional pressable behavior
+- `Avatar.tsx` — circular image with fallback initials
+- `ProgressBar.tsx` — animated fill bar
+- `Badge.tsx` — achievement badge component with locked/unlocked states
+- `CoachingTip.tsx` — tip card with category icon and expandable content
+- `LessonCard.tsx` — lesson preview with progress, duration, difficulty
+- `ChallengeCard.tsx` — challenge preview with status indicator
+- `SkeletonLoader.tsx` — loading placeholder for cards and lists
+- `EmptyState.tsx` — illustration + message + optional CTA button
+- `ErrorState.tsx` — error message + retry button
+- `PremiumGate.tsx` — overlay/blur that prompts upgrade for locked content
+- `ChildModeSwitch.tsx` — toggle to switch between parent and child view
+- `AgeRangeSelector.tsx` — picker for child age bands
+- `SignatureCanvas.tsx` — simple canvas for drawing a signature using `react-native-signature-canvas`
+
+All components must:
+- Accept and use proper TypeScript props interfaces
+- Support dark mode via the app's theme system
+- Meet WCAG AA accessibility (accessibilityLabel, accessibilityRole, accessibilityHint where needed)
+- Have proper `testID` props
+
+---
+
+## SECTION 15 — THEME & DESIGN SYSTEM
+
+Fix or create `constants/theme.ts`:
+- Color palette: calming blues, greens, and purples; family-friendly
+- Typography scale: heading1–heading4, body, caption, label
+- Spacing scale (4, 8, 12, 16, 20, 24, 32, 48, 64)
+- Border radius values
+- Shadow presets
+- Dark mode colors
+- Export a `useTheme()` hook or context
+
+Fix or create `constants/colors.ts` with the complete palette used throughout the app.
+
+Ensure ALL screens use theme values — no hardcoded hex colors or pixel values scattered through screens.
+
+---
+
+## SECTION 16 — APPLE COMPLIANCE & SCREEN TIME
+
+Fix or create `lib/screenTime.ts`:
+- Wraps the native `FamilyControls`, `ManagedSettings`, and `DeviceActivity` frameworks via a custom Expo module or conditional native code
+- On non-iOS or unsupported versions, gracefully returns mock/empty data
+- Provides functions:
+  - `requestFamilyControlsAuthorization()` — requests parent permission
+  - `getDeviceActivityReport()` — returns weekly usage summary per app category (NOT individual apps unless consented)
+  - `applyManagedSettings(settings)` — applies screen time limits
+
+Fix or create `app/(parent)/family/screen-time.tsx`:
+- Screen Time Reflection Dashboard
+- Shows weekly usage trends in a bar chart (using `react-native-chart-kit` or similar)
+- Framed as a conversation starter, not a surveillance tool
+- Language emphasizes understanding and discussion, not punishment
+- Privacy notice explaining what data is collected and how
+
+---
+
+## SECTION 17 — ERROR HANDLING & EDGE CASES
+
+Audit every screen and fix:
+
+1. **Auth edge cases:**
+   - Token expiry handled gracefully (auto-refresh or redirect to sign-in)
+   - Apple Sign-In failure (user cancels) handled without crash
+   - Network offline state: show appropriate message, retry when back online
+
+2. **Empty states:** Every list/grid screen must have an empty state component when there's no data (new user has no children, no lessons completed, etc.)
+
+3. **Loading states:** Every data-fetching screen must show skeleton loaders while loading
+
+4. **Form validation:** All forms use `zod` schemas; errors shown inline below each field; submit button disabled until valid
+
+5. **Image upload failures:** Avatar uploads must handle file size limits, wrong format, network errors
+
+6. **Supabase RLS violations:** Handle 403 errors gracefully (log out if session is invalid)
+
+7. **Stripe payment failures:** Show specific, user-friendly error messages for declined cards, insufficient funds, etc.
+
+8. **Deep link handling:** Supabase magic links and password reset links must open the app and route to the correct screen
+
+---
+
+## SECTION 18 — TYPESCRIPT STRICT MODE COMPLIANCE
+
+Audit every file and fix:
+- No `any` types — replace with proper types or `unknown` with guards
+- All Supabase query results typed using the generated `Database` type
+- All navigation params typed using expo-router's typed routes or a `types/navigation.ts` file
+- No non-null assertions (`!`) without a comment explaining why it's safe
+- No implicit `undefined` in function return types
+- All async functions have `try/catch` or typed error returns
+- All component props have explicit interfaces
+- Generate Supabase types: `supabase gen types typescript --project-id <id> > types/supabase.ts`
+
+---
+
+## SECTION 19 — ENVIRONMENT & BUILD CONFIG
+
+Create or fix `.env.example`:
+```
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_or_pk_test_...
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key (Edge Functions only)
+STRIPE_SECRET_KEY=sk_live_or_sk_test_... (Edge Functions only)
+STRIPE_WEBHOOK_SECRET=whsec_... (Edge Functions only)
+STRIPE_PREMIUM_PRICE_ID=price_...
+```
+
+Fix `app.config.ts` to read all `EXPO_PUBLIC_*` vars and expose them via `extra`.
+
+Create `supabase/config.toml` with correct project settings including function definitions and scheduled function cron expressions.
+
+---
+
+## SECTION 20 — FINAL SELF-AUDIT & DEBUG REPORT
+
+After implementing all fixes above, run a complete self-audit:
+
+1. **TypeScript compile check:** Run `npx tsc --noEmit` and fix all errors
+2. **Import audit:** Verify every import resolves — no missing files, no circular dependencies
+3. **Navigation audit:** Trace every user flow end-to-end and confirm no dead ends or missing screens
+4. **Data flow audit:** Confirm every screen's data is fetched, displayed, and mutated correctly
+5. **Auth flow audit:** Sign up → onboarding → dashboard → sign out → sign in → correct screen
+6. **Child mode audit:** Switch to child mode → age-appropriate content only → no parent features accessible
+7. **Subscription flow audit:** Free user → upgrade → premium features unlock → webhook updates DB
+8. **Agreement flow audit:** Build agreement → sign → child receives notification → child signs → complete
+9. **Challenge flow audit:** Browse → start → daily check-in → complete → badge awarded
+10. **Assessment flow audit:** Take assessment → scoring → results with recommendations → saved to DB
+
+Produce a **Debug and Validation Report** as a markdown table with columns:
+| # | Area | Issue Found | Fix Applied | Status |
+
+List every issue found and resolved. End with "COMPILATION STATUS: ✅ PASSES" or list remaining blockers.
+
+---
+
+## IMPORTANT CONSTRAINTS
+
+- Do NOT implement: keylogging, reading iMessages, monitoring third-party apps, secretly accessing photos, recording calls, or any background surveillance
+- Follow Apple App Store guidelines throughout
+- All child-facing content must be positive and educational — no fear-based messaging
+- Never store raw Stripe secret keys or service role keys in client-side code
+- All sensitive keys must only be used in Supabase Edge Functions
+- The app must work offline for previously-loaded content (lessons, agreement drafts)
+
+---
+
+Start with Section 1 and work through to Section 20 without stopping. Show the complete fixed code for every file you modify or create.
