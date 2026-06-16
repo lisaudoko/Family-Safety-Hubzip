@@ -1,5 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { Session } from "@supabase/supabase-js";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { getSupabase } from "@/lib/supabase";
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: "parent" | "child";
+  subscription_tier: "free" | "premium";
+  family_id: string | null;
+  has_completed_onboarding: boolean;
+}
 
 export interface User {
   id: string;
@@ -14,6 +26,7 @@ export interface User {
 
 interface AuthState {
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -29,102 +42,208 @@ interface AuthContextType extends AuthState {
 }
 
 const AUTH_KEY = "@digital_village_auth";
+const PARENT_KEY = "@digital_village_parent_auth";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function profileToUser(profile: Profile): User {
+  return {
+    id: profile.id,
+    name: profile.full_name,
+    email: profile.email,
+    role: profile.role,
+    isPremium: profile.subscription_tier === "premium",
+    createdAt: new Date().toISOString(),
+    hasCompletedOnboarding: profile.has_completed_onboarding,
+    familyId: profile.family_id ?? "",
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AuthState>({ user: null, isLoading: true, isAuthenticated: false });
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    session: null,
+    isLoading: true,
+    isAuthenticated: false,
+  });
+
+  const initialized = useRef(false);
+  const supabase = getSupabase();
+  const hasSupabase = !!supabase;
 
   useEffect(() => {
-    loadUser();
+    if (initialized.current) return;
+    initialized.current = true;
+
+    let cleanup: (() => void) | undefined;
+    if (hasSupabase) {
+      initWithSupabase().then(fn => { cleanup = fn; });
+    } else {
+      loadLocalUser();
+    }
+    return () => cleanup?.();
   }, []);
 
-  const loadUser = async () => {
+  const initWithSupabase = async () => {
+    const sb = getSupabase()!;
+
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const user = await fetchOrCreateProfile(session);
+        setState({ user, session, isLoading: false, isAuthenticated: !!user });
+      } else {
+        setState({ user: null, session: null, isLoading: false, isAuthenticated: false });
+      }
+    });
+
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      setState(s => ({ ...s, isLoading: false }));
+    }
+
+    return () => subscription.unsubscribe();
+  };
+
+  const fetchOrCreateProfile = async (session: Session): Promise<User | null> => {
+    const sb = getSupabase()!;
+    try {
+      const { data, error } = await sb
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+
+      if (error && error.code === "PGRST116") {
+        const { data: newProfile, error: createError } = await sb
+          .from("profiles")
+          .insert({
+            id: session.user.id,
+            email: session.user.email ?? "",
+            full_name: session.user.user_metadata?.full_name ?? session.user.email?.split("@")[0] ?? "Parent",
+            role: "parent",
+            subscription_tier: "free",
+            has_completed_onboarding: false,
+          })
+          .select()
+          .single();
+
+        if (createError || !newProfile) return null;
+        return profileToUser(newProfile as Profile);
+      }
+
+      if (error || !data) return null;
+      return profileToUser(data as Profile);
+    } catch {
+      return null;
+    }
+  };
+
+  const loadLocalUser = async () => {
     try {
       const stored = await AsyncStorage.getItem(AUTH_KEY);
       if (stored) {
         const user: User = JSON.parse(stored);
-        setState({ user, isLoading: false, isAuthenticated: true });
+        setState({ user, session: null, isLoading: false, isAuthenticated: true });
       } else {
-        setState({ user: null, isLoading: false, isAuthenticated: false });
+        setState(s => ({ ...s, isLoading: false }));
       }
     } catch {
-      setState({ user: null, isLoading: false, isAuthenticated: false });
+      setState(s => ({ ...s, isLoading: false }));
     }
   };
 
-  const saveUser = async (user: User) => {
+  const saveLocalUser = async (user: User) => {
     await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(user));
-    setState({ user, isLoading: false, isAuthenticated: true });
+    setState({ user, session: null, isLoading: false, isAuthenticated: true });
   };
 
-  const login = useCallback(async (email: string, _password: string) => {
-    const stored = await AsyncStorage.getItem(AUTH_KEY);
-    if (stored) {
-      const user: User = JSON.parse(stored);
-      if (user.email === email) {
-        await saveUser(user);
-        return;
+  const login = useCallback(async (email: string, password: string) => {
+    const sb = getSupabase();
+    if (sb) {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } else {
+      const stored = await AsyncStorage.getItem(AUTH_KEY);
+      if (stored) {
+        const user: User = JSON.parse(stored);
+        if (user.email === email) { await saveLocalUser(user); return; }
       }
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      await saveLocalUser({
+        id, name: email.split("@")[0] ?? "Parent", email,
+        role: "parent", isPremium: false,
+        createdAt: new Date().toISOString(),
+        hasCompletedOnboarding: false,
+        familyId: "f" + id,
+      });
     }
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    const user: User = {
-      id,
-      name: email.split("@")[0] ?? "Parent",
-      email,
-      role: "parent",
-      isPremium: false,
-      createdAt: new Date().toISOString(),
-      hasCompletedOnboarding: false,
-      familyId: "f" + id,
-    };
-    await saveUser(user);
   }, []);
 
-  const register = useCallback(async (name: string, email: string, _password: string) => {
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    const user: User = {
-      id,
-      name,
-      email,
-      role: "parent",
-      isPremium: false,
-      createdAt: new Date().toISOString(),
-      hasCompletedOnboarding: false,
-      familyId: "f" + id,
-    };
-    await saveUser(user);
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const sb = getSupabase();
+    if (sb) {
+      const { error } = await sb.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } },
+      });
+      if (error) throw error;
+    } else {
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      await saveLocalUser({
+        id, name, email, role: "parent", isPremium: false,
+        createdAt: new Date().toISOString(),
+        hasCompletedOnboarding: false,
+        familyId: "f" + id,
+      });
+    }
   }, []);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem(AUTH_KEY);
-    setState({ user: null, isLoading: false, isAuthenticated: false });
+    const sb = getSupabase();
+    if (sb) {
+      await sb.auth.signOut();
+    } else {
+      await AsyncStorage.removeItem(AUTH_KEY);
+      setState({ user: null, session: null, isLoading: false, isAuthenticated: false });
+    }
   }, []);
 
   const completeOnboarding = useCallback(async () => {
     if (!state.user) return;
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("profiles").update({ has_completed_onboarding: true }).eq("id", state.user.id);
+    }
     const updated: User = { ...state.user, hasCompletedOnboarding: true };
-    await saveUser(updated);
+    if (!sb) await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(updated));
+    setState(s => ({ ...s, user: updated }));
   }, [state.user]);
 
   const upgradeToPremi = useCallback(async () => {
     if (!state.user) return;
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("profiles").update({ subscription_tier: "premium" }).eq("id", state.user.id);
+    }
     const updated: User = { ...state.user, isPremium: true };
-    await saveUser(updated);
+    if (!sb) await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(updated));
+    setState(s => ({ ...s, user: updated }));
   }, [state.user]);
 
   const switchToChildMode = useCallback(async (childId: string) => {
     if (!state.user) return;
-    const parentKey = "@digital_village_parent_id";
-    await AsyncStorage.setItem(parentKey, state.user.id);
-    const updated: User = { ...state.user, role: "child", id: childId };
-    setState({ user: updated, isLoading: false, isAuthenticated: true });
+    await AsyncStorage.setItem(PARENT_KEY, JSON.stringify(state.user));
+    setState(s => ({ ...s, user: { ...s.user!, role: "child", id: childId } }));
   }, [state.user]);
 
   const switchToParentMode = useCallback(async () => {
-    if (!state.user) return;
-    await loadUser();
-  }, [state.user]);
+    const stored = await AsyncStorage.getItem(PARENT_KEY);
+    if (stored) {
+      const parent: User = JSON.parse(stored);
+      setState(s => ({ ...s, user: parent }));
+    }
+  }, []);
 
   return (
     <AuthContext.Provider value={{ ...state, login, register, logout, completeOnboarding, upgradeToPremi, switchToChildMode, switchToParentMode }}>

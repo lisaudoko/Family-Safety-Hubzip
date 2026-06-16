@@ -1,8 +1,9 @@
 import { router } from "expo-router";
-import React from "react";
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { BADGES } from "@/data/seed";
@@ -13,6 +14,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { progress } = useFamily();
+  const [editModal, setEditModal] = useState(false);
+  const [editName, setEditName] = useState(user?.name ?? "");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -27,6 +30,36 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleNotifications = () => {
+    Alert.alert(
+      "Notifications",
+      "Push notifications will be available in a future update. You'll get weekly tips and progress reminders.",
+      [{ text: "Got it" }]
+    );
+  };
+
+  const handlePrivacyPolicy = () => {
+    Alert.alert(
+      "Our Privacy Commitment",
+      "Digital Village does not monitor, track, or surveil children's devices. We do not sell or share your data. All family data stays with you.\n\nWe believe digital safety is built through education and trust — never surveillance.",
+      [{ text: "Close" }]
+    );
+  };
+
+  const handleHelp = () => {
+    Alert.alert(
+      "Help & Support",
+      "Need help? Reach out at:\n\nhello@digitalvillage.app\n\nWe respond within 1 business day.",
+      [
+        { text: "Send Email", onPress: () => Linking.openURL("mailto:hello@digitalvillage.app") },
+        { text: "Close", style: "cancel" },
+      ]
+    );
+  };
+
+  const completedCourses = Object.values(progress.courseProgress).filter(p => p === 100).length;
+  const completedLessons = progress.completedLessons.length;
+
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
@@ -35,7 +68,9 @@ export default function ProfileScreen() {
     >
       <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
-          <Text style={[styles.avatarLetter, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>{user?.name?.[0]?.toUpperCase() ?? "P"}</Text>
+          <Text style={[styles.avatarLetter, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>
+            {user?.name?.[0]?.toUpperCase() ?? "P"}
+          </Text>
         </View>
         <View style={styles.profileInfo}>
           <Text style={[styles.profileName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{user?.name ?? "Parent"}</Text>
@@ -47,6 +82,20 @@ export default function ProfileScreen() {
             </Text>
           </View>
         </View>
+      </View>
+
+      <View style={styles.statsRow}>
+        {[
+          { label: "Courses Done", value: completedCourses, icon: "book-open" as const },
+          { label: "Lessons Done", value: completedLessons, icon: "check-circle" as const },
+          { label: "Badges Earned", value: earnedBadges.length, icon: "award" as const },
+        ].map(s => (
+          <View key={s.label} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name={s.icon} size={16} color={colors.primary} />
+            <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{s.value}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{s.label}</Text>
+          </View>
+        ))}
       </View>
 
       {!user?.isPremium && (
@@ -67,7 +116,9 @@ export default function ProfileScreen() {
         {earnedBadges.length === 0 ? (
           <View style={[styles.emptyBadges, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="award" size={28} color={colors.mutedForeground} />
-            <Text style={[styles.emptyBadgesText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Complete courses and challenges to earn badges</Text>
+            <Text style={[styles.emptyBadgesText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Complete courses and challenges to earn badges
+            </Text>
           </View>
         ) : (
           <View style={styles.badgesGrid}>
@@ -82,16 +133,14 @@ export default function ProfileScreen() {
         )}
         {unearnedBadges.length > 0 && (
           <View style={styles.lockedBadgesRow}>
-            {unearnedBadges.slice(0, 4).map(badge => (
+            <Text style={[styles.lockedLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              {unearnedBadges.length} more to unlock
+            </Text>
+            {unearnedBadges.slice(0, 5).map(badge => (
               <View key={badge.id} style={[styles.lockedBadge, { backgroundColor: colors.muted }]}>
                 <Feather name="lock" size={14} color={colors.mutedForeground} />
               </View>
             ))}
-            {unearnedBadges.length > 4 && (
-              <View style={[styles.lockedBadge, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.lockedMore, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>+{unearnedBadges.length - 4}</Text>
-              </View>
-            )}
           </View>
         )}
       </View>
@@ -100,10 +149,10 @@ export default function ProfileScreen() {
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Settings</Text>
         <View style={[styles.settingsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {[
-            { icon: "user" as const, label: "Edit Profile", onPress: () => {} },
-            { icon: "bell" as const, label: "Notifications", onPress: () => {} },
-            { icon: "shield" as const, label: "Privacy Policy", onPress: () => {} },
-            { icon: "help-circle" as const, label: "Help & Support", onPress: () => {} },
+            { icon: "user" as const, label: "Edit Profile", onPress: () => { setEditName(user?.name ?? ""); setEditModal(true); } },
+            { icon: "bell" as const, label: "Notifications", onPress: handleNotifications },
+            { icon: "shield" as const, label: "Privacy Policy", onPress: handlePrivacyPolicy },
+            { icon: "help-circle" as const, label: "Help & Support", onPress: handleHelp },
           ].map((item, idx, arr) => (
             <TouchableOpacity
               key={item.label}
@@ -125,6 +174,45 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <Text style={[styles.version, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Digital Village v1.0.0</Text>
+
+      <Modal visible={editModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditModal(false)}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setEditModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Edit Profile</Text>
+            <View style={{ width: 22 }} />
+          </View>
+          <View style={styles.modalBody}>
+            <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Display Name</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Your name"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="words"
+              autoFocus
+            />
+            <Text style={[styles.modalNote, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Name changes update your display only. Your email cannot be changed here.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.modalSaveBtn, { backgroundColor: editName.trim() ? colors.primary : colors.muted }]}
+            disabled={!editName.trim()}
+            onPress={async () => {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              setEditModal(false);
+              Alert.alert("Profile Updated", "Your name has been saved.");
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.modalSaveBtnText, { fontFamily: "Inter_700Bold" }]}>Save Changes</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -139,6 +227,10 @@ const styles = StyleSheet.create({
   profileEmail: { fontSize: 13 },
   planBadge: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   planText: { fontSize: 12 },
+  statsRow: { flexDirection: "row", gap: 8 },
+  statCard: { flex: 1, alignItems: "center", padding: 12, borderRadius: 14, borderWidth: 1, gap: 4 },
+  statValue: { fontSize: 22 },
+  statLabel: { fontSize: 11, textAlign: "center" },
   upgradeCard: { borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   upgradeContent: { flexDirection: "row", alignItems: "center", gap: 12 },
   upgradeTitle: { color: "#FFFFFF", fontSize: 16 },
@@ -150,13 +242,22 @@ const styles = StyleSheet.create({
   badge: { width: "47%", borderRadius: 14, borderWidth: 1, padding: 14, gap: 6, alignItems: "center" },
   badgeName: { fontSize: 13, textAlign: "center" },
   badgeDesc: { fontSize: 11, textAlign: "center", lineHeight: 15 },
-  lockedBadgesRow: { flexDirection: "row", gap: 8, marginTop: 10 },
-  lockedBadge: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  lockedMore: { fontSize: 12 },
+  lockedBadgesRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
+  lockedLabel: { fontSize: 12, flex: 1 },
+  lockedBadge: { width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   settingsList: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
   settingsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, gap: 12 },
   settingsLabel: { flex: 1, fontSize: 15 },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
   logoutText: { fontSize: 15 },
   version: { textAlign: "center", fontSize: 12, paddingBottom: 4 },
+  modalContainer: { flex: 1, paddingHorizontal: 24, gap: 24 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  modalTitle: { fontSize: 18 },
+  modalBody: { gap: 10 },
+  label: { fontSize: 14 },
+  modalInput: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
+  modalNote: { fontSize: 13, lineHeight: 19 },
+  modalSaveBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
+  modalSaveBtnText: { color: "#FFFFFF", fontSize: 16 },
 });

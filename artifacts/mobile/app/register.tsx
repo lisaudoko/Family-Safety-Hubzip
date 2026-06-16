@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -36,77 +36,83 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAwareScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
       <TouchableOpacity onPress={() => router.back()} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         <Feather name="arrow-left" size={22} color={colors.foreground} />
       </TouchableOpacity>
 
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Create your account</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Start your family's digital safety journey today — free forever</Text>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Your Name</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-            placeholder="First name or full name"
-            placeholderTextColor={colors.mutedForeground}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-            autoComplete="name"
-          />
+      <View style={styles.middle}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Create your account</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Start your family's digital safety journey today — free forever
+          </Text>
         </View>
 
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Email</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-            placeholder="you@example.com"
-            placeholderTextColor={colors.mutedForeground}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Password</Text>
-          <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.form}>
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Your Name</Text>
             <TextInput
-              style={[styles.inputInner, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-              placeholder="Minimum 6 characters"
+              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              placeholder="First name or full name"
               placeholderTextColor={colors.mutedForeground}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPw}
-              autoComplete="new-password"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoComplete="name"
             />
-            <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
-            </TouchableOpacity>
           </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Email</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.mutedForeground}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Password</Text>
+            <View style={[styles.inputWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.inputInner, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                placeholder="Minimum 6 characters"
+                placeholderTextColor={colors.mutedForeground}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPw}
+                autoComplete="new-password"
+              />
+              <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>
+              {loading ? "Creating account…" : "Create Free Account"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.disclaimer, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Digital Village does not monitor, track, or surveil children's devices. Privacy is a family value.
+          </Text>
         </View>
-
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]}
-          onPress={handleRegister}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>{loading ? "Creating account..." : "Create Free Account"}</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.disclaimer, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          Digital Village does not monitor, track, or surveil children's devices. Privacy is a family value.
-        </Text>
       </View>
 
       <TouchableOpacity onPress={() => router.push("/login")} style={styles.switchRow}>
@@ -120,10 +126,11 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, paddingHorizontal: 24, gap: 28 },
+  container: { flexGrow: 1, paddingHorizontal: 24 },
   back: { alignSelf: "flex-start" },
+  middle: { flex: 1, justifyContent: "center", gap: 32, paddingVertical: 32 },
   header: { gap: 8 },
-  title: { fontSize: 28 },
+  title: { fontSize: 28, lineHeight: 34 },
   subtitle: { fontSize: 15, lineHeight: 22 },
   form: { gap: 16 },
   field: { gap: 8 },
@@ -134,6 +141,6 @@ const styles = StyleSheet.create({
   btn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", marginTop: 4 },
   btnText: { color: "#FFFFFF", fontSize: 16 },
   disclaimer: { fontSize: 12, textAlign: "center", lineHeight: 18 },
-  switchRow: { alignItems: "center" },
+  switchRow: { alignItems: "center", paddingTop: 8 },
   switchText: { fontSize: 14 },
 });

@@ -1,2 +1,3 @@
 - [Expo router entry point](expo-entry-point.md) — always create app/index.tsx as auth gate; missing it causes blank white screen at root URL.
 - [Expo auth redirect pattern](expo-auth-redirect.md) — use Redirect component in app/index.tsx, not useSegments in layout, to avoid timing/loop issues.
+- [Supabase RN URL polyfill](supabase-rn-polyfill.md) — use conditional require() for react-native-url-polyfill/auto, not top-level import; crashes web bundle otherwise.
