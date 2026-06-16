@@ -1,0 +1,64 @@
+Build a production-ready iOS-first family digital safety platform called "Digital Village." This is NOT a surveillance or spyware app. The target customer is parents, with optional child participation. Use React Native with Expo for iOS/Android compatibility, TypeScript, Supabase (Auth, Postgres, Storage, Edge Functions), and Stripe subscriptions. Follow Apple's App Store guidelines and Screen Time framework limitations. Do not implement any features that read iMessages, monitor third-party messaging apps, keylog, secretly access photos, record calls, or perform unauthorized background surveillance.
+
+The app should include:
+
+1. Parent Experience (primary user):
+- Email/Apple sign-in and onboarding
+- Parent dashboard
+- Family profile management
+- Child profiles with age bands (6–9, 10–13, 14–17)
+- Family Technology Agreement Builder with customizable rules and digital signatures
+- Weekly parent coaching tips and push notifications
+- Digital parenting micro-courses covering cyberbullying, scams, social media readiness, online predators, AI safety, digital footprints, gaming safety, and healthy screen habits
+- Social Media Readiness Assessment with scoring and recommendations
+- Family Challenge system (Screen-Free Saturday, Dinner Without Devices, Outdoor Challenge, etc.)
+- Goal tracking and milestone badges
+- Subscription plans (Free and Premium) with Stripe integration
+
+2. Child Experience (optional companion mode):
+- Age-appropriate digital safety lessons
+- Interactive quizzes and scenario-based learning
+- Achievement badges and progress tracking
+- Family challenge participation
+- Positive reinforcement design; no surveillance functionality
+
+3. Apple-Compliant Features:
+- Integrate Apple's FamilyControls, ManagedSettings, and DeviceActivity frameworks where permitted
+- Screen Time Reflection Dashboard that helps parents interpret device usage trends without judgment
+- Encourage family conversations around technology use rather than punitive controls
+- Clear parental consent and privacy disclosures
+
+4. Backend Requirements:
+- Supabase authentication and row-level security
+- Database schema for users, families, children, agreements, lessons, challenges, assessments, subscriptions, badges, and notifications
+- Edge functions for scheduled coaching content and reminders
+- Secure API architecture with environment variables
+- Seed data for lessons, challenges, and assessments
+
+5. UI/UX Requirements:
+- Modern, calming, family-friendly interface
+- Accessibility compliance
+- Responsive layouts
+- Empty states, loading states, and error handling
+- Onboarding optimized for non-technical parents
+
+6. Deliverables:
+- Full project architecture
+- Complete folder structure
+- All code files with no placeholders or TODO comments
+- Supabase SQL migration scripts
+- Stripe setup instructions and implementation
+- Environment variable template
+- Installation and deployment documentation
+- Comprehensive README
+
+Before finalizing, perform a full self-audit. Automatically debug the application by:
+- Reviewing all code for TypeScript, logic, runtime, navigation, and state-management errors
+- Identifying and fixing broken imports, missing dependencies, unused code, and inconsistent naming
+- Verifying all database queries and API calls
+- Testing authentication, onboarding, assessments, subscriptions, and lesson flows
+- Simulating edge cases and failed requests
+- Ensuring the app compiles successfully without errors
+- Producing a final "Debug and Validation Report" documenting every issue found and how it was resolved.
+
+Do not stop at scaffolding. Generate complete, production-ready code and continue iterating until the application is internally consistent, fully connected, and free of known bugs.
