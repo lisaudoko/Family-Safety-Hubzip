@@ -62,8 +62,9 @@ export default function OnboardingScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep("done");
       setTimeout(() => router.replace("/(tabs)"), 1400);
-    } catch {
-      Alert.alert("Error", "Something went wrong. Please try again.");
+    } catch (err: any) {
+      console.error("[onboarding] handleFinish error:", err?.message || err);
+      Alert.alert("Error", err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

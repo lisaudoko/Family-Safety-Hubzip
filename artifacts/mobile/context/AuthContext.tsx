@@ -162,6 +162,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (sb) {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      // Eagerly set user so the next screen doesn't see a stale null state
+      // while waiting for the onAuthStateChange listener to fire.
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const user = await fetchOrCreateProfile(session);
+        setState({ user, session, isLoading: false, isAuthenticated: !!user });
+      }
     } else {
       const stored = await AsyncStorage.getItem(AUTH_KEY);
       if (stored) {
@@ -188,6 +195,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: { data: { full_name: name } },
       });
       if (error) throw error;
+      // Eagerly set user so the onboarding screen sees the user immediately.
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        const user = await fetchOrCreateProfile(session);
+        setState({ user, session, isLoading: false, isAuthenticated: !!user });
+      }
     } else {
       const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
       await saveLocalUser({

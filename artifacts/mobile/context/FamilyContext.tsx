@@ -216,6 +216,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [isLoading, setIsLoading] = useState(true);
 
+  // familyRef mirrors the current family so mutators that run in async loops
+  // (e.g., onboarding calling addChild repeatedly) read the latest state
+  // instead of a stale closure capture.
+  const familyRef = useRef<FamilyProfile | null>(null);
+  useEffect(() => {
+    familyRef.current = family;
+  }, [family]);
+
   const supabase = getSupabase();
   const supabaseAvailable = !!supabase;
   // Only sync as a real parent account. Child mode reuses a non-UUID id that
@@ -457,28 +465,31 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       familyId,
       createdAt: new Date().toISOString(),
     };
-    const updated = family
-      ? { ...family, children: [...family.children, child] }
+    const fam = familyRef.current;
+    const updated = fam
+      ? { ...fam, children: [...fam.children, child] }
       : { id: familyId, name: "My Family", parentId: user?.id ?? "", children: [child], createdAt: new Date().toISOString() };
     await saveFamily(updated);
     // Family setup badge: earned once a family has at least one child.
     await awardBadgesMerged(["b14"]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family, user?.id, progress, useSupabaseSync, syncFamilyToSupabase, syncProgressToSupabase]);
+  }, [user?.id, progress, useSupabaseSync, syncFamilyToSupabase, syncProgressToSupabase]);
 
   const removeChild = useCallback(async (childId: string) => {
-    if (!family) return;
-    const updated = { ...family, children: family.children.filter(c => c.id !== childId) };
+    const fam = familyRef.current;
+    if (!fam) return;
+    const updated = { ...fam, children: fam.children.filter(c => c.id !== childId) };
     await saveFamily(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family, useSupabaseSync, syncFamilyToSupabase]);
+  }, [useSupabaseSync, syncFamilyToSupabase]);
 
   const updateChild = useCallback(async (childId: string, updates: Partial<Child>) => {
-    if (!family) return;
-    const updated = { ...family, children: family.children.map(c => c.id === childId ? { ...c, ...updates } : c) };
+    const fam = familyRef.current;
+    if (!fam) return;
+    const updated = { ...fam, children: fam.children.map(c => c.id === childId ? { ...c, ...updates } : c) };
     await saveFamily(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family, useSupabaseSync, syncFamilyToSupabase]);
+  }, [useSupabaseSync, syncFamilyToSupabase]);
 
   const saveAgreement = useCallback(async (rules: AgreementRule[], customRules: string[]) => {
     const a: FamilyAgreement = {
