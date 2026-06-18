@@ -27,8 +27,9 @@ export default function RegisterScreen() {
       await register(name.trim(), email.trim().toLowerCase(), password);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/onboarding");
-    } catch {
-      Alert.alert("Sign Up Failed", "Something went wrong. Please try again.");
+    } catch (err: any) {
+      console.error("[register] error:", err?.message || err);
+      Alert.alert("Sign Up Failed", err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

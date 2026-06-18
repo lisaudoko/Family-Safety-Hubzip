@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -42,18 +42,27 @@ export default function ChallengeDetailScreen() {
 
   const handleStart = async () => {
     if (isLocked) { router.push("/subscription"); return; }
-    await startChallenge(challenge.id);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await startChallenge(challenge.id);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      console.error("[challenge] start error:", e?.message || e);
+      Alert.alert("Error", "Failed to start challenge. Please try again.");
+    }
   };
 
   const handleToggleStep = async (idx: number) => {
     if (!isActive) return;
-    const justCompleted = await completeChallengeStep(challenge.id, idx, totalSteps);
-    if (justCompleted) {
-      // Badge awards are derived centrally in FamilyContext on completion.
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const justCompleted = await completeChallengeStep(challenge.id, idx, totalSteps);
+      if (justCompleted) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (e: any) {
+      console.error("[challenge] step error:", e?.message || e);
+      Alert.alert("Error", "Failed to update step. Please try again.");
     }
   };
 

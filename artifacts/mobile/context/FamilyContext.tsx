@@ -421,6 +421,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const saveFamily = async (f: FamilyProfile) => {
     await AsyncStorage.setItem(cacheKeys().family, JSON.stringify(f));
     setFamily(f);
+    familyRef.current = f;
     if (useSupabaseSync) await syncFamilyToSupabase(f);
   };
 
@@ -435,6 +436,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     setProgress(p);
     if (useSupabaseSync) await syncProgressToSupabase(p);
   };
+
 
   // Award badges without clobbering other progress fields: merge against the
   // freshest persisted snapshot (not just the captured render state).

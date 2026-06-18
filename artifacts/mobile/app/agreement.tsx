@@ -46,14 +46,24 @@ export default function AgreementScreen() {
   };
 
   const handleSave = async () => {
-    await saveAgreement(rules, customRules);
-    setStep("sign");
+    try {
+      await saveAgreement(rules, customRules);
+      setStep("sign");
+    } catch (e: any) {
+      console.error("[agreement] save failed:", e?.message || e);
+      Alert.alert("Error", "Failed to save agreement. Please try again.");
+    }
   };
 
   const handleSign = async () => {
-    await signAgreement();
-    setSigned(true);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await signAgreement();
+      setSigned(true);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      console.error("[agreement] sign failed:", e?.message || e);
+      Alert.alert("Error", "Failed to sign agreement. Please try again.");
+    }
   };
 
   return (

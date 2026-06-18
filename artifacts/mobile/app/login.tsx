@@ -27,8 +27,9 @@ export default function LoginScreen() {
       await login(email.trim().toLowerCase(), password);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
-    } catch {
-      Alert.alert("Sign In Failed", "Please check your credentials and try again.");
+    } catch (err: any) {
+      console.error("[login] error:", err?.message || err);
+      Alert.alert("Sign In Failed", err?.message || "Please check your credentials and try again.");
     } finally {
       setLoading(false);
     }

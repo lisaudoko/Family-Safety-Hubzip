@@ -27,11 +27,16 @@ export default function FamilyScreen() {
   const handleAddChild = async () => {
     if (!childName.trim()) { Alert.alert("Name Required", "Please enter a name for this child."); return; }
     if (!user) return;
-    await addChild(childName.trim(), childAge, user.familyId);
-    setChildName("");
-    setChildAge("10-13");
-    setAddingChild(false);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    try {
+      await addChild(childName.trim(), childAge, user.familyId);
+      setChildName("");
+      setChildAge("10-13");
+      setAddingChild(false);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      console.error("[family] addChild error:", e?.message || e);
+      Alert.alert("Error", "Failed to add child. Please try again.");
+    }
   };
 
   const agreementStatus = agreement?.signedAt ? "Signed" : agreement ? "Draft" : "Not Created";

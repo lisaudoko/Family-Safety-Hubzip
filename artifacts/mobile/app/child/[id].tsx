@@ -28,15 +28,28 @@ export default function ChildProfileScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert("Name Required", "Please enter a name."); return; }
-    await updateChild(child.id, { name: name.trim(), ageBand });
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setEditing(false);
+    try {
+      await updateChild(child.id, { name: name.trim(), ageBand });
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setEditing(false);
+    } catch (e: any) {
+      console.error("[child] save error:", e?.message || e);
+      Alert.alert("Error", "Failed to save changes. Please try again.");
+    }
   };
 
   const handleDelete = () => {
     Alert.alert("Remove Child", `Remove ${child.name} from your family profile?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: async () => { await removeChild(child.id); router.back(); } },
+      { text: "Remove", style: "destructive", onPress: async () => {
+        try {
+          await removeChild(child.id);
+          router.back();
+        } catch (e: any) {
+          console.error("[child] delete error:", e?.message || e);
+          Alert.alert("Error", "Failed to remove child. Please try again.");
+        }
+      } },
     ]);
   };
 

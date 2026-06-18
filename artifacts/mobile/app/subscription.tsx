@@ -27,7 +27,7 @@ const FEATURES = [
 export default function SubscriptionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, upgradeToPremi } = useAuth();
+  const { user, upgradeToPremium } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState("annual");
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +38,7 @@ export default function SubscriptionScreen() {
     try {
       setLoading(true);
       await new Promise(r => setTimeout(r, 1200));
-      await upgradeToPremi();
+      await upgradeToPremium();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Welcome to Premium!", "You now have full access to all Digital Village content.", [{ text: "Let's go!", onPress: () => router.back() }]);
     } catch {

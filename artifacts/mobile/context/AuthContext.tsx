@@ -36,7 +36,7 @@ interface AuthContextType extends AuthState {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
-  upgradeToPremi: () => Promise<void>;
+  upgradeToPremium: () => Promise<void>;
   switchToChildMode: (childId: string) => Promise<void>;
   switchToParentMode: () => Promise<void>;
 }
@@ -85,7 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initWithSupabase = async () => {
-    const sb = getSupabase()!;
+    const sb = getSupabase();
+    if (!sb) {
+      setState(s => ({ ...s, isLoading: false }));
+      return () => {};
+    }
 
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
@@ -105,7 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const fetchOrCreateProfile = async (session: Session): Promise<User | null> => {
-    const sb = getSupabase()!;
+    const sb = getSupabase();
+    if (!sb) return null;
     try {
       const { data, error } = await sb
         .from("profiles")
@@ -225,19 +230,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completeOnboarding = useCallback(async () => {
     if (!state.user) return;
     const sb = getSupabase();
-    if (sb) {
-      await sb.from("profiles").update({ has_completed_onboarding: true }).eq("id", state.user.id);
+    try {
+      if (sb) {
+        await sb.from("profiles").update({ has_completed_onboarding: true }).eq("id", state.user.id);
+      }
+    } catch (e: any) {
+      console.error("[completeOnboarding] Supabase error:", e?.message || e);
     }
     const updated: User = { ...state.user, hasCompletedOnboarding: true };
     if (!sb) await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(updated));
     setState(s => ({ ...s, user: updated }));
   }, [state.user]);
 
-  const upgradeToPremi = useCallback(async () => {
+  const upgradeToPremium = useCallback(async () => {
     if (!state.user) return;
     const sb = getSupabase();
-    if (sb) {
-      await sb.from("profiles").update({ subscription_tier: "premium" }).eq("id", state.user.id);
+    try {
+      if (sb) {
+        await sb.from("profiles").update({ subscription_tier: "premium" }).eq("id", state.user.id);
+      }
+    } catch (e: any) {
+      console.error("[upgradeToPremium] Supabase error:", e?.message || e);
     }
     const updated: User = { ...state.user, isPremium: true };
     if (!sb) await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(updated));
@@ -247,7 +260,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const switchToChildMode = useCallback(async (childId: string) => {
     if (!state.user) return;
     await AsyncStorage.setItem(PARENT_KEY, JSON.stringify(state.user));
-    setState(s => ({ ...s, user: { ...s.user!, role: "child", id: childId } }));
+    setState(s => {
+      if (!s.user) return s;
+      return { ...s, user: { ...s.user, role: "child", id: childId } };
+    });
   }, [state.user]);
 
   const switchToParentMode = useCallback(async () => {
@@ -259,7 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, completeOnboarding, upgradeToPremi, switchToChildMode, switchToParentMode }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, completeOnboarding, upgradeToPremium, switchToChildMode, switchToParentMode }}>
       {children}
     </AuthContext.Provider>
   );
