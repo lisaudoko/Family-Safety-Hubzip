@@ -1,6 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AgeBand } from "@/data/seed";
+import { useAuth } from "@/context/AuthContext";
+import { getSupabase } from "@/lib/supabase";
+import type {
+  ChildRow,
+  FamilyAgreementRow,
+  FamilyRow,
+  UserProgressRow,
+} from "@/lib/supabase-types";
 
 export interface Child {
   id: string;
@@ -83,17 +91,90 @@ const defaultProgress: UserProgress = {
 
 const FamilyContext = createContext<FamilyContextType | null>(null);
 
+// --- Mappers between local app shapes and Supabase row shapes -------------
+
+function rowToFamily(fam: FamilyRow, kids: ChildRow[]): FamilyProfile {
+  return {
+    id: fam.id,
+    name: fam.name,
+    parentId: fam.parent_id ?? "",
+    createdAt: fam.created_at ?? new Date().toISOString(),
+    children: kids.map(k => ({
+      id: k.id,
+      name: k.name,
+      ageBand: (k.age_band as AgeBand) ?? "10-13",
+      familyId: k.family_id,
+      createdAt: k.created_at ?? new Date().toISOString(),
+    })),
+  };
+}
+
+function rowToProgress(row: UserProgressRow): UserProgress {
+  return {
+    completedLessons: row.completed_lessons ?? [],
+    completedQuizzes: row.completed_quizzes ?? [],
+    courseProgress: row.course_progress ?? {},
+    completedChallenges: row.completed_challenges ?? [],
+    activeChallenges: row.active_challenges ?? [],
+    earnedBadges: row.earned_badges ?? [],
+    assessmentScore: row.assessment_score,
+    assessmentCompletedAt: row.assessment_completed_at,
+    weeklyTipIndex: row.weekly_tip_index ?? 0,
+  };
+}
+
+function progressToRow(p: UserProgress, userId: string): UserProgressRow {
+  return {
+    user_id: userId,
+    completed_lessons: p.completedLessons,
+    completed_quizzes: p.completedQuizzes,
+    course_progress: p.courseProgress,
+    completed_challenges: p.completedChallenges,
+    active_challenges: p.activeChallenges,
+    earned_badges: p.earnedBadges,
+    assessment_score: p.assessmentScore,
+    assessment_completed_at: p.assessmentCompletedAt,
+    weekly_tip_index: p.weeklyTipIndex,
+  };
+}
+
+function rowToAgreement(row: FamilyAgreementRow): FamilyAgreement {
+  return {
+    id: row.id,
+    familyId: row.family_id,
+    rules: row.rules ?? [],
+    customRules: row.custom_rules ?? [],
+    signedAt: row.signed_at,
+  };
+}
+
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated } = useAuth();
   const [family, setFamily] = useState<FamilyProfile | null>(null);
   const [agreement, setAgreement] = useState<FamilyAgreement | null>(null);
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [isLoading, setIsLoading] = useState(true);
 
+  const supabase = getSupabase();
+  const useSupabaseSync = !!supabase && isAuthenticated && !!user?.id;
+  const loadedForUser = useRef<string | null>(null);
+
+  // Initial local load (offline cache). Runs once on mount.
   useEffect(() => {
-    loadAll();
+    loadLocal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadAll = async () => {
+  // When a Supabase-authenticated user is available, hydrate from Supabase.
+  useEffect(() => {
+    if (!useSupabaseSync || !user) return;
+    if (loadedForUser.current === user.id) return;
+    loadedForUser.current = user.id;
+    loadFromSupabase(user.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useSupabaseSync, user?.id]);
+
+  const loadLocal = async () => {
     try {
       const [fam, agr, prog] = await Promise.all([
         AsyncStorage.getItem(FAMILY_KEY),
@@ -103,30 +184,147 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       if (fam) setFamily(JSON.parse(fam));
       if (agr) setAgreement(JSON.parse(agr));
       if (prog) setProgress({ ...defaultProgress, ...JSON.parse(prog) });
+    } catch {
+      // ignore corrupt cache
     } finally {
       setIsLoading(false);
     }
   };
 
+  const loadFromSupabase = async (userId: string) => {
+    const sb = getSupabase();
+    if (!sb) return;
+    try {
+      const { data: fams } = await sb
+        .from("families")
+        .select("*")
+        .eq("parent_id", userId)
+        .limit(1);
+      const famRow = fams?.[0] as FamilyRow | undefined;
+
+      if (famRow) {
+        const { data: kids } = await sb
+          .from("children")
+          .select("*")
+          .eq("family_id", famRow.id);
+        const fam = rowToFamily(famRow, (kids ?? []) as ChildRow[]);
+        setFamily(fam);
+        await AsyncStorage.setItem(FAMILY_KEY, JSON.stringify(fam));
+
+        const { data: agr } = await sb
+          .from("family_agreements")
+          .select("*")
+          .eq("family_id", famRow.id)
+          .limit(1);
+        if (agr?.[0]) {
+          const a = rowToAgreement(agr[0] as FamilyAgreementRow);
+          setAgreement(a);
+          await AsyncStorage.setItem(AGREEMENT_KEY, JSON.stringify(a));
+        }
+      }
+
+      const { data: prog } = await sb
+        .from("user_progress")
+        .select("*")
+        .eq("user_id", userId)
+        .limit(1);
+      if (prog?.[0]) {
+        const p = rowToProgress(prog[0] as UserProgressRow);
+        setProgress(p);
+        await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+      }
+    } catch {
+      // network/table errors: keep the local cache we already loaded
+    }
+  };
+
+  // --- Supabase write helpers (best-effort, never throw) ------------------
+
+  const syncFamilyToSupabase = useCallback(async (f: FamilyProfile) => {
+    const sb = getSupabase();
+    if (!sb || !user?.id) return;
+    try {
+      await sb.from("families").upsert({
+        id: f.id,
+        name: f.name,
+        parent_id: f.parentId || user.id,
+      });
+      // Replace the child set for this family.
+      await sb.from("children").delete().eq("family_id", f.id);
+      if (f.children.length) {
+        await sb.from("children").insert(
+          f.children.map(c => ({
+            id: c.id,
+            family_id: f.id,
+            name: c.name,
+            age_band: c.ageBand,
+          })),
+        );
+      }
+      // Best-effort link on the profile (ignored if column type differs).
+      await sb.from("profiles").update({ family_id: f.id }).eq("id", user.id);
+    } catch {
+      // ignore — local cache is the source of truth offline
+    }
+  }, [user?.id]);
+
+  const syncProgressToSupabase = useCallback(async (p: UserProgress) => {
+    const sb = getSupabase();
+    if (!sb || !user?.id) return;
+    try {
+      await sb.from("user_progress").upsert({
+        ...progressToRow(p, user.id),
+        updated_at: new Date().toISOString(),
+      });
+    } catch {
+      // ignore
+    }
+  }, [user?.id]);
+
+  const syncAgreementToSupabase = useCallback(async (a: FamilyAgreement) => {
+    const sb = getSupabase();
+    if (!sb || !a.familyId) return;
+    try {
+      await sb.from("family_agreements").upsert(
+        {
+          id: a.id,
+          family_id: a.familyId,
+          rules: a.rules,
+          custom_rules: a.customRules,
+          signed_at: a.signedAt,
+        },
+        { onConflict: "family_id" },
+      );
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // --- Local persistence + Supabase sync ---------------------------------
+
   const saveFamily = async (f: FamilyProfile) => {
     await AsyncStorage.setItem(FAMILY_KEY, JSON.stringify(f));
     setFamily(f);
+    if (useSupabaseSync) await syncFamilyToSupabase(f);
   };
 
   const saveAgreementData = async (a: FamilyAgreement) => {
     await AsyncStorage.setItem(AGREEMENT_KEY, JSON.stringify(a));
     setAgreement(a);
+    if (useSupabaseSync) await syncAgreementToSupabase(a);
   };
 
   const saveProgress = async (p: UserProgress) => {
     await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
     setProgress(p);
+    if (useSupabaseSync) await syncProgressToSupabase(p);
   };
 
   const initFamily = useCallback(async (name: string, familyId: string, parentId: string) => {
     const f: FamilyProfile = { id: familyId, name, parentId, children: [], createdAt: new Date().toISOString() };
     await saveFamily(f);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useSupabaseSync, syncFamilyToSupabase]);
 
   const addChild = useCallback(async (name: string, ageBand: AgeBand, familyId: string) => {
     const child: Child = {
@@ -136,38 +334,45 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       familyId,
       createdAt: new Date().toISOString(),
     };
-    const updated = family ? { ...family, children: [...family.children, child] } : { id: familyId, name: "My Family", parentId: "", children: [child], createdAt: new Date().toISOString() };
+    const updated = family
+      ? { ...family, children: [...family.children, child] }
+      : { id: familyId, name: "My Family", parentId: user?.id ?? "", children: [child], createdAt: new Date().toISOString() };
     await saveFamily(updated);
-  }, [family]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family, user?.id, useSupabaseSync, syncFamilyToSupabase]);
 
   const removeChild = useCallback(async (childId: string) => {
     if (!family) return;
     const updated = { ...family, children: family.children.filter(c => c.id !== childId) };
     await saveFamily(updated);
-  }, [family]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family, useSupabaseSync, syncFamilyToSupabase]);
 
   const updateChild = useCallback(async (childId: string, updates: Partial<Child>) => {
     if (!family) return;
     const updated = { ...family, children: family.children.map(c => c.id === childId ? { ...c, ...updates } : c) };
     await saveFamily(updated);
-  }, [family]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family, useSupabaseSync, syncFamilyToSupabase]);
 
   const saveAgreement = useCallback(async (rules: AgreementRule[], customRules: string[]) => {
     const a: FamilyAgreement = {
       id: agreement?.id ?? ("agr" + Date.now()),
       familyId: family?.id ?? "",
       rules,
-      signedAt: null,
+      signedAt: agreement?.signedAt ?? null,
       customRules,
     };
     await saveAgreementData(a);
-  }, [agreement, family]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agreement, family, useSupabaseSync, syncAgreementToSupabase]);
 
   const signAgreement = useCallback(async () => {
     if (!agreement) return;
     const updated = { ...agreement, signedAt: new Date().toISOString() };
     await saveAgreementData(updated);
-  }, [agreement]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agreement, useSupabaseSync, syncAgreementToSupabase]);
 
   const completeLesson = useCallback(async (lessonId: string, courseId: string, totalLessons: number) => {
     const updated = { ...progress };
@@ -177,19 +382,22 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     const courseLessons = updated.completedLessons.filter(id => id.startsWith(courseId));
     updated.courseProgress = { ...updated.courseProgress, [courseId]: Math.round((courseLessons.length / totalLessons) * 100) };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const completeQuiz = useCallback(async (quizId: string) => {
     if (progress.completedQuizzes.includes(quizId)) return;
     const updated = { ...progress, completedQuizzes: [...progress.completedQuizzes, quizId] };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const startChallenge = useCallback(async (challengeId: string) => {
     if (progress.activeChallenges.includes(challengeId) || progress.completedChallenges.includes(challengeId)) return;
     const updated = { ...progress, activeChallenges: [...progress.activeChallenges, challengeId] };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const completeChallenge = useCallback(async (challengeId: string) => {
     const updated = {
@@ -198,23 +406,27 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       activeChallenges: progress.activeChallenges.filter(id => id !== challengeId),
     };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const setAssessmentScore = useCallback(async (score: number) => {
     const updated = { ...progress, assessmentScore: score, assessmentCompletedAt: new Date().toISOString() };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const awardBadge = useCallback(async (badgeId: string) => {
     if (progress.earnedBadges.includes(badgeId)) return;
     const updated = { ...progress, earnedBadges: [...progress.earnedBadges, badgeId] };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const advanceWeeklyTip = useCallback(async () => {
     const updated = { ...progress, weeklyTipIndex: (progress.weeklyTipIndex + 1) % 8 };
     await saveProgress(updated);
-  }, [progress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   return (
     <FamilyContext.Provider value={{ family, agreement, progress, isLoading, initFamily, addChild, removeChild, updateChild, saveAgreement, signAgreement, completeLesson, completeQuiz, startChallenge, completeChallenge, setAssessmentScore, awardBadge, advanceWeeklyTip }}>

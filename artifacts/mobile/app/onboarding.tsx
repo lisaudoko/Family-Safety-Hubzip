@@ -51,11 +51,12 @@ export default function OnboardingScreen() {
   const handleFinish = async () => {
     if (!user) return;
     const namedChildren = children.filter(c => c.name.trim());
+    const familyId = user.familyId || ("f" + user.id);
     try {
       setLoading(true);
-      await initFamily(familyName.trim(), user.familyId, user.id);
+      await initFamily(familyName.trim(), familyId, user.id);
       for (const child of namedChildren) {
-        await addChild(child.name.trim(), child.ageBand, user.familyId);
+        await addChild(child.name.trim(), child.ageBand, familyId);
       }
       await completeOnboarding();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
