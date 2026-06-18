@@ -77,6 +77,17 @@ const FAMILY_KEY = "@dv_family";
 const AGREEMENT_KEY = "@dv_agreement";
 const PROGRESS_KEY = "@dv_progress";
 
+// Cache is scoped per authenticated user in Supabase mode so one account's
+// cached data can never leak into another account on the same device.
+function storageKeys(userId?: string) {
+  const suffix = userId ? `:${userId}` : "";
+  return {
+    family: FAMILY_KEY + suffix,
+    agreement: AGREEMENT_KEY + suffix,
+    progress: PROGRESS_KEY + suffix,
+  };
+}
+
 const defaultProgress: UserProgress = {
   completedLessons: [],
   completedQuizzes: [],
@@ -156,34 +167,62 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const supabase = getSupabase();
-  const useSupabaseSync = !!supabase && isAuthenticated && !!user?.id;
+  const supabaseAvailable = !!supabase;
+  // Only sync as a real parent account. Child mode reuses a non-UUID id that
+  // must never own family/progress rows in Supabase.
+  const useSupabaseSync =
+    supabaseAvailable && isAuthenticated && !!user?.id && user?.role === "parent";
   const loadedForUser = useRef<string | null>(null);
 
-  // Initial local load (offline cache). Runs once on mount.
+  const cacheKeys = useCallback(
+    () => storageKeys(supabaseAvailable ? user?.id : undefined),
+    [supabaseAvailable, user?.id],
+  );
+
+  const resetState = useCallback(() => {
+    setFamily(null);
+    setAgreement(null);
+    setProgress(defaultProgress);
+  }, []);
+
+  // Mock-auth mode (no Supabase): load the shared local cache once on mount.
   useEffect(() => {
+    if (supabaseAvailable) return;
     loadLocal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When a Supabase-authenticated user is available, hydrate from Supabase.
+  // Supabase mode: load the current user's own cache, then hydrate from
+  // Supabase. Reset everything when logged out so data never carries across
+  // users on a shared device.
   useEffect(() => {
-    if (!useSupabaseSync || !user) return;
-    if (loadedForUser.current === user.id) return;
-    loadedForUser.current = user.id;
-    loadFromSupabase(user.id);
+    if (!supabaseAvailable) return;
+    if (useSupabaseSync && user?.id) {
+      if (loadedForUser.current === user.id) return;
+      loadedForUser.current = user.id;
+      (async () => {
+        await loadLocal(user.id);
+        await loadFromSupabase(user.id);
+      })();
+    } else {
+      loadedForUser.current = null;
+      resetState();
+      setIsLoading(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useSupabaseSync, user?.id]);
+  }, [supabaseAvailable, useSupabaseSync, user?.id]);
 
-  const loadLocal = async () => {
+  const loadLocal = async (userId?: string) => {
+    const keys = storageKeys(userId);
     try {
       const [fam, agr, prog] = await Promise.all([
-        AsyncStorage.getItem(FAMILY_KEY),
-        AsyncStorage.getItem(AGREEMENT_KEY),
-        AsyncStorage.getItem(PROGRESS_KEY),
+        AsyncStorage.getItem(keys.family),
+        AsyncStorage.getItem(keys.agreement),
+        AsyncStorage.getItem(keys.progress),
       ]);
-      if (fam) setFamily(JSON.parse(fam));
-      if (agr) setAgreement(JSON.parse(agr));
-      if (prog) setProgress({ ...defaultProgress, ...JSON.parse(prog) });
+      setFamily(fam ? JSON.parse(fam) : null);
+      setAgreement(agr ? JSON.parse(agr) : null);
+      setProgress(prog ? { ...defaultProgress, ...JSON.parse(prog) } : defaultProgress);
     } catch {
       // ignore corrupt cache
     } finally {
@@ -194,6 +233,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const loadFromSupabase = async (userId: string) => {
     const sb = getSupabase();
     if (!sb) return;
+    const keys = storageKeys(userId);
     try {
       const { data: fams } = await sb
         .from("families")
@@ -209,7 +249,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           .eq("family_id", famRow.id);
         const fam = rowToFamily(famRow, (kids ?? []) as ChildRow[]);
         setFamily(fam);
-        await AsyncStorage.setItem(FAMILY_KEY, JSON.stringify(fam));
+        await AsyncStorage.setItem(keys.family, JSON.stringify(fam));
 
         const { data: agr } = await sb
           .from("family_agreements")
@@ -219,7 +259,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         if (agr?.[0]) {
           const a = rowToAgreement(agr[0] as FamilyAgreementRow);
           setAgreement(a);
-          await AsyncStorage.setItem(AGREEMENT_KEY, JSON.stringify(a));
+          await AsyncStorage.setItem(keys.agreement, JSON.stringify(a));
         }
       }
 
@@ -231,7 +271,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       if (prog?.[0]) {
         const p = rowToProgress(prog[0] as UserProgressRow);
         setProgress(p);
-        await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+        await AsyncStorage.setItem(keys.progress, JSON.stringify(p));
       }
     } catch {
       // network/table errors: keep the local cache we already loaded
@@ -247,12 +287,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       await sb.from("families").upsert({
         id: f.id,
         name: f.name,
-        parent_id: f.parentId || user.id,
+        // Always the authenticated parent — never a stale cached owner id.
+        parent_id: user.id,
       });
-      // Replace the child set for this family.
-      await sb.from("children").delete().eq("family_id", f.id);
+      // Upsert the current children first (no delete-then-insert gap), then
+      // prune any children that are no longer part of the family.
       if (f.children.length) {
-        await sb.from("children").insert(
+        await sb.from("children").upsert(
           f.children.map(c => ({
             id: c.id,
             family_id: f.id,
@@ -260,6 +301,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
             age_band: c.ageBand,
           })),
         );
+        const keepIds = f.children.map(c => c.id);
+        await sb
+          .from("children")
+          .delete()
+          .eq("family_id", f.id)
+          .not("id", "in", `(${keepIds.join(",")})`);
+      } else {
+        await sb.from("children").delete().eq("family_id", f.id);
       }
       // Best-effort link on the profile (ignored if column type differs).
       await sb.from("profiles").update({ family_id: f.id }).eq("id", user.id);
@@ -303,19 +352,19 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   // --- Local persistence + Supabase sync ---------------------------------
 
   const saveFamily = async (f: FamilyProfile) => {
-    await AsyncStorage.setItem(FAMILY_KEY, JSON.stringify(f));
+    await AsyncStorage.setItem(cacheKeys().family, JSON.stringify(f));
     setFamily(f);
     if (useSupabaseSync) await syncFamilyToSupabase(f);
   };
 
   const saveAgreementData = async (a: FamilyAgreement) => {
-    await AsyncStorage.setItem(AGREEMENT_KEY, JSON.stringify(a));
+    await AsyncStorage.setItem(cacheKeys().agreement, JSON.stringify(a));
     setAgreement(a);
     if (useSupabaseSync) await syncAgreementToSupabase(a);
   };
 
   const saveProgress = async (p: UserProgress) => {
-    await AsyncStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+    await AsyncStorage.setItem(cacheKeys().progress, JSON.stringify(p));
     setProgress(p);
     if (useSupabaseSync) await syncProgressToSupabase(p);
   };
