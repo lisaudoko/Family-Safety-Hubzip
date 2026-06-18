@@ -838,6 +838,13 @@ export const COURSES: Course[] = [
             correctIndex: 1,
             explanation: "A regular family digital audit — searching your names, reviewing old content, checking app permissions and privacy settings — keeps everyone's footprint intentional and healthy. Doing it together makes it a normal, shared habit rather than surveillance.",
           },
+          {
+            id: "c6l0q5",
+            question: "Why does a positive digital footprint matter, not just avoiding a negative one?",
+            options: ["It does not — only deleting bad content matters", "Colleges and employers increasingly look you up online, so thoughtful posts, projects, and interests can become an asset", "A positive footprint makes your account harder to hack", "Positive posts are automatically deleted after a year"],
+            correctIndex: 1,
+            explanation: "A digital footprint is not only about damage control. Colleges and employers regularly search applicants, so deliberately sharing genuine interests, achievements, and projects builds a footprint that works in your favor rather than against you.",
+          },
         ],
       },
       {
@@ -971,6 +978,13 @@ export const COURSES: Course[] = [
             options: ["Playing for one hour after homework", "Enjoying games with friends on weekends", "Extreme anger when gaming is interrupted, lying about gaming time, and declining grades", "Talking about a game they like"],
             correctIndex: 2,
             explanation: "Gaming in moderation is healthy. The warning signs are behavioral: constant preoccupation, lying about time spent, choosing gaming over previously enjoyed activities, extreme distress when interrupted, and declining grades or hygiene.",
+          },
+          {
+            id: "c7l0q5",
+            question: "What is the most effective way to set healthy gaming boundaries with your child?",
+            options: ["Ban gaming entirely with no discussion", "Secretly monitor their play and confiscate the device when they break a rule", "Agree on clear limits together in advance and use the game's own parental controls and play-time tools", "Let them self-regulate with no limits at all"],
+            correctIndex: 2,
+            explanation: "Boundaries work best when they are agreed on together before conflict arises. Pairing a shared agreement with the platform's built-in parental controls and play-time limits makes the rules predictable and enforceable without surveillance or sudden punishment.",
           },
         ],
       },
@@ -1699,6 +1713,7 @@ export const BADGES: Badge[] = [
   { id: "b19", title: "Three Month Journey", description: "Active in Digital Village for 90 days.", iconName: "trending-up", color: "#8E44AD", condition: "days_active_90" },
   { id: "b20", title: "Dedicated Parent", description: "Completed 8 weekly coaching tip readings.", iconName: "heart", color: "#E91E8C", condition: "coaching_tips_read_8" },
   { id: "b21", title: "Safety Advocate", description: "Completed 10 lessons and 3 challenges.", iconName: "shield", color: "#C0392B", condition: "lessons_10_challenges_3" },
+  { id: "b22", title: "Password Guardian", description: "Completed the Password Security Audit challenge.", iconName: "lock", color: "#2D7DD2", condition: "complete_challenge_ch8" },
 ];
 
 export const WEEKLY_TIPS: WeeklyTip[] = [

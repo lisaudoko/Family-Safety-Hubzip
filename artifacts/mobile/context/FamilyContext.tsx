@@ -141,6 +141,7 @@ function deriveProgressBadges(p: UserProgress): string[] {
   if (p.completedChallenges.includes("ch3")) add.push("b11");
   if (p.completedChallenges.includes("ch4")) add.push("b12");
   if (p.completedChallenges.includes("ch5")) add.push("b13");
+  if (p.completedChallenges.includes("ch8")) add.push("b22");
   if (lessonCount >= 10 && challengeCount >= 3) add.push("b21");
   return mergeBadges(p.earnedBadges, add);
 }
