@@ -6,9 +6,9 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { router, Stack, useSegments } from "expo-router";
+import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -26,15 +26,21 @@ const queryClient = new QueryClient();
 
 function AuthRedirect() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const segments = useSegments();
+  const pathname = usePathname();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (isLoading) return;
-    const inAuthGroup = segments[0] === "(tabs)";
-    const inWelcome = segments[0] === "welcome";
-    const inLogin = segments[0] === "login";
-    const inRegister = segments[0] === "register";
-    const inOnboarding = segments[0] === "onboarding";
+    const t = setTimeout(() => setReady(true), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || isLoading) return;
+    const inAuthGroup = pathname === "/(tabs)" || pathname.startsWith("/(tabs)/");
+    const inWelcome = pathname === "/welcome";
+    const inLogin = pathname === "/login";
+    const inRegister = pathname === "/register";
+    const inOnboarding = pathname === "/onboarding";
     const inAuthFlow = inWelcome || inLogin || inRegister || inOnboarding;
 
     if (!isAuthenticated && !inAuthFlow) {
@@ -44,7 +50,7 @@ function AuthRedirect() {
     } else if (isAuthenticated && user?.hasCompletedOnboarding && inAuthFlow) {
       router.replace("/(tabs)");
     }
-  }, [isAuthenticated, isLoading, user, segments]);
+  }, [isAuthenticated, isLoading, user, pathname, ready]);
 
   return null;
 }

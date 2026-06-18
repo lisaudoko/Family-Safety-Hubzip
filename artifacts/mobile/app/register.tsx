@@ -1,10 +1,9 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -28,15 +27,15 @@ export default function RegisterScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/onboarding");
     } catch (err: any) {
-      console.error("[register] error:", err?.message || err);
-      Alert.alert("Sign Up Failed", err?.message || "Something went wrong. Please try again.");
+      console.error("[register] unexpected error:", err?.message || err);
+      Alert.alert("Sign Up Failed", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAwareScrollView
+    <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
@@ -122,7 +121,7 @@ export default function RegisterScreen() {
           <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>Sign in</Text>
         </Text>
       </TouchableOpacity>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 }
 

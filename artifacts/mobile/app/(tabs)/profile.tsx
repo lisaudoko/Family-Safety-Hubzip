@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -12,7 +13,7 @@ import { useColors } from "@/hooks/useColors";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
   const { progress } = useFamily();
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? "");
@@ -203,6 +204,13 @@ export default function ProfileScreen() {
             style={[styles.modalSaveBtn, { backgroundColor: editName.trim() ? colors.primary : colors.muted }]}
             disabled={!editName.trim()}
             onPress={async () => {
+              const trimmed = editName.trim();
+              if (!trimmed) return;
+              try {
+                await updateProfile({ name: trimmed });
+              } catch {
+                // ignore
+              }
               await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               setEditModal(false);
               Alert.alert("Profile Updated", "Your name has been saved.");

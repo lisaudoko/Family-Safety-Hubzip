@@ -1,10 +1,9 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -28,15 +27,15 @@ export default function LoginScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
     } catch (err: any) {
-      console.error("[login] error:", err?.message || err);
-      Alert.alert("Sign In Failed", err?.message || "Please check your credentials and try again.");
+      console.error("[login] unexpected error:", err?.message || err);
+      Alert.alert("Sign In Failed", "Please check your credentials and try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAwareScrollView
+    <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={[
         styles.container,
@@ -158,7 +157,7 @@ export default function LoginScreen() {
           <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>Create one</Text>
         </Text>
       </TouchableOpacity>
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 }
 

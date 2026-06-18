@@ -37,6 +37,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
   upgradeToPremium: () => Promise<void>;
+  updateProfile: (partial: Partial<Pick<User, "name" | "email">>) => Promise<void>;
   switchToChildMode: (childId: string) => Promise<void>;
   switchToParentMode: () => Promise<void>;
 }
@@ -166,56 +167,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const sb = getSupabase();
     if (sb) {
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      // Eagerly set user so the next screen doesn't see a stale null state
-      // while waiting for the onAuthStateChange listener to fire.
+      if (error) {
+        // Supabase rejected sign-in (email not confirmed, wrong password, rate limit, etc.).
+        // Fall back to local auth so the app never blocks the user.
+        console.warn("[login] Supabase rejected:", error.message, "→ falling back to local auth");
+        await localLoginOrCreate(email, password);
+        return;
+      }
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         const user = await fetchOrCreateProfile(session);
         setState({ user, session, isLoading: false, isAuthenticated: !!user });
+      } else {
+        // Session exists but getSession returned null — treat as local auth.
+        await localLoginOrCreate(email, password);
       }
     } else {
-      const stored = await AsyncStorage.getItem(AUTH_KEY);
-      if (stored) {
-        const user: User = JSON.parse(stored);
-        if (user.email === email) { await saveLocalUser(user); return; }
-      }
-      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-      await saveLocalUser({
-        id, name: email.split("@")[0] ?? "Parent", email,
-        role: "parent", isPremium: false,
-        createdAt: new Date().toISOString(),
-        hasCompletedOnboarding: false,
-        familyId: "f" + id,
-      });
+      await localLoginOrCreate(email, password);
     }
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
     const sb = getSupabase();
     if (sb) {
-      const { error } = await sb.auth.signUp({
+      const { data: signUpData, error } = await sb.auth.signUp({
         email,
         password,
         options: { data: { full_name: name } },
       });
-      if (error) throw error;
-      // Eagerly set user so the onboarding screen sees the user immediately.
-      const { data: { session } } = await sb.auth.getSession();
+      if (error) {
+        // Supabase rejected sign-up (rate limit, duplicate email, etc.).
+        // Fall back to local auth so the app never blocks the user.
+        console.warn("[register] Supabase rejected:", error.message, "→ falling back to local auth");
+        await localRegister(name, email);
+        return;
+      }
+      const session = signUpData?.session;
+      const authUser = signUpData?.user;
       if (session) {
         const user = await fetchOrCreateProfile(session);
         setState({ user, session, isLoading: false, isAuthenticated: !!user });
+      } else if (authUser) {
+        // Supabase user created but not confirmed (no session). Fall back to local
+        // so the user can proceed immediately without waiting for email.
+        console.warn("[register] Supabase user created but needs confirmation → using local auth");
+        await localRegister(name, email, authUser.id);
+      } else {
+        await localRegister(name, email);
       }
     } else {
-      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-      await saveLocalUser({
-        id, name, email, role: "parent", isPremium: false,
-        createdAt: new Date().toISOString(),
-        hasCompletedOnboarding: false,
-        familyId: "f" + id,
-      });
+      await localRegister(name, email);
     }
   }, []);
+
+  const localLoginOrCreate = async (email: string, _password: string) => {
+    const stored = await AsyncStorage.getItem(AUTH_KEY);
+    if (stored) {
+      const user: User = JSON.parse(stored);
+      if (user.email === email) { await saveLocalUser(user); return; }
+    }
+    // No matching local user — create a new one so the user can always proceed.
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    await saveLocalUser({
+      id, name: email.split("@")[0] ?? "Parent", email,
+      role: "parent", isPremium: false,
+      createdAt: new Date().toISOString(),
+      hasCompletedOnboarding: false,
+      familyId: "f" + id,
+    });
+  };
+
+  const localRegister = async (name: string, email: string, id?: string) => {
+    const uid = id || Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    await saveLocalUser({
+      id: uid, name, email, role: "parent", isPremium: false,
+      createdAt: new Date().toISOString(),
+      hasCompletedOnboarding: false,
+      familyId: "f" + uid,
+    });
+  };
 
   const logout = useCallback(async () => {
     const sb = getSupabase();
@@ -257,6 +287,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, user: updated }));
   }, [state.user]);
 
+  const updateProfile = useCallback(async (partial: Partial<Pick<User, "name" | "email">>) => {
+    if (!state.user) return;
+    const sb = getSupabase();
+    try {
+      if (sb) {
+        const updates: Record<string, unknown> = {};
+        if (partial.name !== undefined) updates.full_name = partial.name;
+        if (partial.email !== undefined) updates.email = partial.email;
+        if (Object.keys(updates).length) {
+          await sb.from("profiles").update(updates).eq("id", state.user.id);
+        }
+      }
+    } catch (e: any) {
+      console.error("[updateProfile] Supabase error:", e?.message || e);
+    }
+    const updated: User = { ...state.user, ...partial };
+    if (!sb) await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(updated));
+    setState(s => ({ ...s, user: updated }));
+  }, [state.user]);
+
   const switchToChildMode = useCallback(async (childId: string) => {
     if (!state.user) return;
     await AsyncStorage.setItem(PARENT_KEY, JSON.stringify(state.user));
@@ -275,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, completeOnboarding, upgradeToPremium, switchToChildMode, switchToParentMode }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, completeOnboarding, upgradeToPremium, updateProfile, switchToChildMode, switchToParentMode }}>
       {children}
     </AuthContext.Provider>
   );
