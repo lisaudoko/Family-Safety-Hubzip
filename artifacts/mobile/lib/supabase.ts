@@ -31,22 +31,35 @@ const SecureStoreAdapter = {
 
 let _client: SupabaseClient | null = null;
 
-function isValidSupabaseUrl(url: string): boolean {
+// Supabase expects the project base URL (e.g. https://<ref>.supabase.co).
+// Normalize to the origin so a value that mistakenly includes a path suffix
+// like "/rest/v1/" can't break auth/data calls (the SDK appends /auth/v1,
+// /rest/v1, etc. to whatever it is given).
+function normalizeSupabaseUrl(url: string): string | null {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" || u.protocol === "http:";
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    return u.origin;
   } catch {
-    return false;
+    return null;
   }
 }
 
 export function getSupabase(): SupabaseClient | null {
   if (_client) return _client;
 
-  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const rawUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  const url = rawUrl ? normalizeSupabaseUrl(rawUrl) : null;
 
-  if (!url || !key || !isValidSupabaseUrl(url)) return null;
+  if (url && rawUrl && url !== rawUrl.replace(/\/+$/, "")) {
+    console.warn(
+      "[supabase] EXPO_PUBLIC_SUPABASE_URL contained an extra path/query and was normalized to its origin. " +
+        "Set it to the base project URL (https://<ref>.supabase.co) to avoid this.",
+    );
+  }
+
+  if (!url || !key) return null;
 
   _client = createClient(url, key, {
     auth: {

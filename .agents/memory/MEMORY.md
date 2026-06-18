@@ -1,5 +1,6 @@
 - [Expo router entry point](expo-entry-point.md) — always create app/index.tsx as auth gate; missing it causes blank white screen at root URL.
 - [Expo auth redirect pattern](expo-auth-redirect.md) — use Redirect component in app/index.tsx, not useSegments in layout, to avoid timing/loop issues.
+- [Supabase URL normalization](supabase-url-normalization.md) — pass Supabase the base origin; a /rest/v1/ suffix makes all auth/data calls 404 with PGRST125.
 - [Mobile → API base URL wiring](mobile-api-base-url.md) — Expo web runs on a different origin than the proxy's /api; call setBaseUrl from EXPO_PUBLIC_DOMAIN before any generated hook.
 - [Supabase DB connection](supabase-db-connection.md) — direct db.*.supabase.co is IPv6-only/unreachable here; run DDL via aws-1-<region> pooler (port 5432, user postgres.<ref>).
 - [Supabase RN URL polyfill](supabase-rn-polyfill.md) — use conditional require() for react-native-url-polyfill/auto, not top-level import; crashes web bundle otherwise.
