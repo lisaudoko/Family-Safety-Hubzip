@@ -49,8 +49,9 @@ export default function QuizScreen() {
   const handleNext = async () => {
     if (isLast) {
       await completeQuiz(lessonId);
-      const quizTotal = quiz.questions.length;
-      if (correct + (selected === q.correctIndex ? 1 : 0) === quizTotal) {
+      // `correct` already includes the final answer here: handleSelect set it
+      // before the re-render that revealed this button, so no extra increment.
+      if (correct === quiz.questions.length) {
         await awardBadge("b4");
       }
       setShowResult(true);
