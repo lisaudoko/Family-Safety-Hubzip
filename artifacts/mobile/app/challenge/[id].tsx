@@ -25,7 +25,7 @@ export default function ChallengeDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { progress, startChallenge, completeChallengeStep, awardBadge } = useFamily();
+  const { progress, startChallenge, completeChallengeStep } = useFamily();
 
   const challenge = CHALLENGES.find(c => c.id === id);
   if (!challenge) { router.back(); return null; }
@@ -50,9 +50,7 @@ export default function ChallengeDetailScreen() {
     if (!isActive) return;
     const justCompleted = await completeChallengeStep(challenge.id, idx, totalSteps);
     if (justCompleted) {
-      await awardBadge("b6");
-      if (challenge.id === "ch1") await awardBadge("b8");
-      if (challenge.id === "ch5") await awardBadge("b9");
+      // Badge awards are derived centrally in FamilyContext on completion.
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -135,6 +133,31 @@ export default function ChallengeDetailScreen() {
         })}
       </View>
 
+      {challenge.tips && challenge.tips.length > 0 && (
+        <View style={[styles.tipsCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <View style={styles.tipsHeader}>
+            <Feather name="zap" size={16} color={challenge.color} />
+            <Text style={[styles.tipsTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Tips for Success</Text>
+          </View>
+          {challenge.tips.map((tip, idx) => (
+            <View key={idx} style={styles.tipRow}>
+              <View style={[styles.tipDot, { backgroundColor: challenge.color }]} />
+              <Text style={[styles.tipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{tip}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {challenge.successCriteria && (
+        <View style={[styles.criteriaCard, { backgroundColor: colors.success + "12", borderColor: colors.success + "33" }]}>
+          <Feather name="target" size={18} color={colors.success} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[styles.criteriaTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>How to Complete It</Text>
+            <Text style={[styles.criteriaText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{challenge.successCriteria}</Text>
+          </View>
+        </View>
+      )}
+
       <View style={[styles.whyCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
         <Text style={[styles.whyTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Why This Matters</Text>
         <Text style={[styles.whyText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
@@ -196,6 +219,15 @@ const styles = StyleSheet.create({
   stepNum: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   stepNumText: { fontSize: 14 },
   stepText: { flex: 1, fontSize: 14, lineHeight: 20, paddingTop: 3 },
+  tipsCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 10 },
+  tipsHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  tipsTitle: { fontSize: 15 },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  tipDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  tipText: { flex: 1, fontSize: 13, lineHeight: 20 },
+  criteriaCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, borderRadius: 14, borderWidth: 1, padding: 16 },
+  criteriaTitle: { fontSize: 15 },
+  criteriaText: { fontSize: 13, lineHeight: 20 },
   whyCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },
   whyTitle: { fontSize: 15 },
   whyText: { fontSize: 13, lineHeight: 20 },

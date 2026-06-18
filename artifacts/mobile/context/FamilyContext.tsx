@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AgeBand } from "@/data/seed";
+import { AgeBand, COURSES } from "@/data/seed";
 import { useAuth } from "@/context/AuthContext";
 import { getSupabase } from "@/lib/supabase";
 import type {
@@ -116,6 +116,34 @@ const defaultProgress: UserProgress = {
   challengeSteps: {},
   weeklyTipIndex: 0,
 };
+
+function mergeBadges(earned: string[], toAdd: string[]): string[] {
+  const set = new Set(earned);
+  for (const id of toAdd) set.add(id);
+  return Array.from(set);
+}
+
+// Centralized badge rules derived from a progress snapshot. Lesson- and
+// challenge-based badges are computed here so every mutator stays consistent
+// and we never hardcode badge ids in individual screens.
+function deriveProgressBadges(p: UserProgress): string[] {
+  const add: string[] = [];
+  const lessonCount = p.completedLessons.length;
+  if (lessonCount >= 1) add.push("b1");
+  if (lessonCount >= 5) add.push("b2");
+  if (lessonCount >= 8) add.push("b3");
+  if (COURSES.every(c => c.lessons.some(l => p.completedLessons.includes(l.id)))) add.push("b6");
+  const challengeCount = p.completedChallenges.length;
+  if (challengeCount >= 1) add.push("b7");
+  if (challengeCount >= 5) add.push("b8");
+  if (p.completedChallenges.includes("ch1")) add.push("b9");
+  if (p.completedChallenges.includes("ch2")) add.push("b10");
+  if (p.completedChallenges.includes("ch3")) add.push("b11");
+  if (p.completedChallenges.includes("ch4")) add.push("b12");
+  if (p.completedChallenges.includes("ch5")) add.push("b13");
+  if (lessonCount >= 10 && challengeCount >= 3) add.push("b21");
+  return mergeBadges(p.earnedBadges, add);
+}
 
 const FamilyContext = createContext<FamilyContextType | null>(null);
 
@@ -399,6 +427,21 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     if (useSupabaseSync) await syncProgressToSupabase(p);
   };
 
+  // Award badges without clobbering other progress fields: merge against the
+  // freshest persisted snapshot (not just the captured render state).
+  const awardBadgesMerged = async (ids: string[]) => {
+    let base = progress;
+    try {
+      const raw = await AsyncStorage.getItem(cacheKeys().progress);
+      if (raw) base = { ...defaultProgress, ...JSON.parse(raw) };
+    } catch {
+      // fall back to in-memory progress
+    }
+    const merged = mergeBadges(base.earnedBadges, ids);
+    if (merged.length === base.earnedBadges.length) return;
+    await saveProgress({ ...base, earnedBadges: merged });
+  };
+
   const initFamily = useCallback(async (name: string, familyId: string, parentId: string) => {
     const f: FamilyProfile = { id: familyId, name, parentId, children: [], createdAt: new Date().toISOString() };
     await saveFamily(f);
@@ -417,8 +460,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       ? { ...family, children: [...family.children, child] }
       : { id: familyId, name: "My Family", parentId: user?.id ?? "", children: [child], createdAt: new Date().toISOString() };
     await saveFamily(updated);
+    // Family setup badge: earned once a family has at least one child.
+    await awardBadgesMerged(["b14"]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family, user?.id, useSupabaseSync, syncFamilyToSupabase]);
+  }, [family, user?.id, progress, useSupabaseSync, syncFamilyToSupabase, syncProgressToSupabase]);
 
   const removeChild = useCallback(async (childId: string) => {
     if (!family) return;
@@ -450,8 +495,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     if (!agreement) return;
     const updated = { ...agreement, signedAt: new Date().toISOString() };
     await saveAgreementData(updated);
+    // Agreement Makers badge: earned once the family agreement is signed.
+    await awardBadgesMerged(["b15"]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agreement, useSupabaseSync, syncAgreementToSupabase]);
+  }, [agreement, progress, useSupabaseSync, syncAgreementToSupabase, syncProgressToSupabase]);
 
   const completeLesson = useCallback(async (lessonId: string, courseId: string, totalLessons: number) => {
     const updated = { ...progress };
@@ -460,6 +507,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
     const courseLessons = updated.completedLessons.filter(id => id.startsWith(courseId));
     updated.courseProgress = { ...updated.courseProgress, [courseId]: Math.round((courseLessons.length / totalLessons) * 100) };
+    updated.earnedBadges = deriveProgressBadges(updated);
     await saveProgress(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, useSupabaseSync, syncProgressToSupabase]);
@@ -479,11 +527,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   const completeChallenge = useCallback(async (challengeId: string) => {
-    const updated = {
+    const updated: UserProgress = {
       ...progress,
       completedChallenges: progress.completedChallenges.includes(challengeId) ? progress.completedChallenges : [...progress.completedChallenges, challengeId],
       activeChallenges: progress.activeChallenges.filter(id => id !== challengeId),
     };
+    updated.earnedBadges = deriveProgressBadges(updated);
     await saveProgress(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, useSupabaseSync, syncProgressToSupabase]);
@@ -501,6 +550,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     if (totalSteps > 0 && next.length >= totalSteps && !updated.completedChallenges.includes(challengeId)) {
       updated.completedChallenges = [...updated.completedChallenges, challengeId];
       updated.activeChallenges = updated.activeChallenges.filter(id => id !== challengeId);
+      updated.earnedBadges = deriveProgressBadges(updated);
       justCompleted = true;
     }
     await saveProgress(updated);
@@ -526,6 +576,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       updated.assessmentScore = score;
       updated.assessmentCompletedAt = completedAt;
     }
+    // Safety Assessed badge: earned on completing any assessment.
+    updated.earnedBadges = mergeBadges(updated.earnedBadges, ["b17"]);
     await saveProgress(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, useSupabaseSync, syncProgressToSupabase]);

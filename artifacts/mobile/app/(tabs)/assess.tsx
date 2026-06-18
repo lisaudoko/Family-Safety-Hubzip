@@ -32,7 +32,7 @@ type Answer = { optionIndex: number; score: number; category: string };
 export default function AssessScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { progress, setAssessmentResult, awardBadge } = useFamily();
+  const { progress, setAssessmentResult } = useFamily();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
@@ -87,7 +87,6 @@ export default function AssessScreen() {
     const score = finalAnswers.reduce((sum, a) => sum + a.score, 0);
     const categoryScores = computeCategoryScores(finalAnswers);
     await setAssessmentResult(assessment.id, score, categoryScores);
-    if (score / maxScore >= 0.75) await awardBadge("b10");
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setStarted(false);
   };

@@ -1,13 +1,90 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
-import { COURSES } from "@/data/seed";
+import { COURSES, type LessonSection } from "@/data/seed";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
+
+function ScenarioBlock({ section, accent }: { section: Extract<LessonSection, { type: "scenario" }>; accent: string }) {
+  const colors = useColors();
+  const [selected, setSelected] = useState<number | null>(null);
+  const answered = selected !== null;
+
+  const handlePick = (idx: number) => {
+    if (answered) return;
+    setSelected(idx);
+    Haptics.notificationAsync(
+      idx === section.correct
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Warning,
+    );
+  };
+
+  return (
+    <View style={[styles.scenarioCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.scenarioHeader}>
+        <Feather name="help-circle" size={16} color={accent} />
+        <Text style={[styles.scenarioTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{section.title}</Text>
+      </View>
+      <Text style={[styles.scenarioSituation, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{section.situation}</Text>
+      <View style={styles.scenarioOptions}>
+        {section.options.map((opt, idx) => {
+          const isCorrect = idx === section.correct;
+          const isPicked = idx === selected;
+          const bg = !answered ? colors.secondary : isCorrect ? colors.success + "22" : isPicked ? colors.destructive + "22" : colors.secondary;
+          const border = !answered ? colors.border : isCorrect ? colors.success : isPicked ? colors.destructive : colors.border;
+          return (
+            <TouchableOpacity
+              key={idx}
+              style={[styles.scenarioOption, { backgroundColor: bg, borderColor: border, borderWidth: isPicked || (answered && isCorrect) ? 2 : 1 }]}
+              onPress={() => handlePick(idx)}
+              activeOpacity={answered ? 1 : 0.8}
+            >
+              <Text style={[styles.scenarioOptionText, { color: colors.foreground, fontFamily: isPicked ? "Inter_600SemiBold" : "Inter_400Regular" }]}>{opt}</Text>
+              {answered && isCorrect && <Feather name="check-circle" size={18} color={colors.success} />}
+              {answered && isPicked && !isCorrect && <Feather name="x-circle" size={18} color={colors.destructive} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {answered && (
+        <View style={[styles.scenarioExplain, { backgroundColor: colors.secondary }]}>
+          <Feather name="info" size={15} color={accent} />
+          <Text style={[styles.scenarioExplainText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{section.explanation}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function TextSection({ section }: { section: Extract<LessonSection, { type: "text" }> }) {
+  const colors = useColors();
+  const paragraphs = section.content.split("\n\n");
+  return (
+    <View style={styles.textSection}>
+      {section.heading ? (
+        <Text style={[styles.heading, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{section.heading}</Text>
+      ) : null}
+      {paragraphs.map((para, idx) => (
+        <Text key={idx} style={[styles.paragraph, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{para}</Text>
+      ))}
+    </View>
+  );
+}
+
+function TipSection({ section, accent }: { section: Extract<LessonSection, { type: "tip" }>; accent: string }) {
+  const colors = useColors();
+  return (
+    <View style={[styles.tipCard, { backgroundColor: accent + "12", borderColor: accent + "33" }]}>
+      <Feather name={section.icon as never} size={18} color={accent} />
+      <Text style={[styles.tipText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{section.content}</Text>
+    </View>
+  );
+}
 
 export default function LessonScreen() {
   const colors = useColors();
@@ -36,6 +113,7 @@ export default function LessonScreen() {
     }
   };
 
+  const hasSections = !!lesson.sections && lesson.sections.length > 0;
   const paragraphs = lesson.content.split("\n\n");
 
   return (
@@ -68,19 +146,36 @@ export default function LessonScreen() {
       <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
       <View style={styles.body}>
-        {paragraphs.map((para, idx) => {
-          const isListItem = para.startsWith("•");
-          const isNumbered = /^\d+\./.test(para);
-          if (para.startsWith("##")) {
-            return <Text key={idx} style={[styles.heading, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{para.replace("## ", "")}</Text>;
-          }
-          return (
-            <Text key={idx} style={[styles.paragraph, { color: colors.foreground, fontFamily: "Inter_400Regular", paddingLeft: isListItem || isNumbered ? 0 : 0 }]}>
-              {para}
-            </Text>
-          );
-        })}
+        {hasSections
+          ? lesson.sections!.map((section, idx) => {
+              if (section.type === "tip") return <TipSection key={idx} section={section} accent={course.color} />;
+              if (section.type === "scenario") return <ScenarioBlock key={idx} section={section} accent={course.color} />;
+              return <TextSection key={idx} section={section} />;
+            })
+          : paragraphs.map((para, idx) => {
+              if (para.startsWith("##")) {
+                return <Text key={idx} style={[styles.heading, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{para.replace("## ", "")}</Text>;
+              }
+              return (
+                <Text key={idx} style={[styles.paragraph, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{para}</Text>
+              );
+            })}
       </View>
+
+      {lesson.keyTakeaways && lesson.keyTakeaways.length > 0 && (
+        <View style={[styles.takeawaysCard, { backgroundColor: course.color + "12", borderColor: course.color + "33" }]}>
+          <View style={styles.takeawaysHeader}>
+            <Feather name="check-circle" size={16} color={course.color} />
+            <Text style={[styles.takeawaysTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Key Takeaways</Text>
+          </View>
+          {lesson.keyTakeaways.map((item, idx) => (
+            <View key={idx} style={styles.takeawayRow}>
+              <View style={[styles.takeawayDot, { backgroundColor: course.color }]} />
+              <Text style={[styles.takeawayText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {lesson.hasQuiz && (
         <View style={[styles.quizPreview, { backgroundColor: colors.secondary, borderColor: colors.primary + "44" }]}>
@@ -119,9 +214,27 @@ const styles = StyleSheet.create({
   quizTagText: { fontSize: 12 },
   title: { fontSize: 24, lineHeight: 32 },
   separator: { height: 1 },
-  body: { gap: 14 },
-  heading: { fontSize: 18, marginTop: 6 },
-  paragraph: { fontSize: 15, lineHeight: 24 },
+  body: { gap: 16 },
+  heading: { fontSize: 18, marginBottom: 8 },
+  paragraph: { fontSize: 15, lineHeight: 24, marginBottom: 8 },
+  textSection: {},
+  tipCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
+  tipText: { flex: 1, fontSize: 14, lineHeight: 21 },
+  scenarioCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
+  scenarioHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  scenarioTitle: { fontSize: 15, flex: 1 },
+  scenarioSituation: { fontSize: 14, lineHeight: 21 },
+  scenarioOptions: { gap: 8 },
+  scenarioOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, padding: 12, borderRadius: 12 },
+  scenarioOptionText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  scenarioExplain: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 12 },
+  scenarioExplainText: { flex: 1, fontSize: 13, lineHeight: 20 },
+  takeawaysCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 10 },
+  takeawaysHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  takeawaysTitle: { fontSize: 15 },
+  takeawayRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  takeawayDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  takeawayText: { flex: 1, fontSize: 14, lineHeight: 21 },
   quizPreview: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
   quizTitle: { fontSize: 15, marginBottom: 2 },
   quizDesc: { fontSize: 13 },

@@ -51,7 +51,7 @@ export default function QuizScreen() {
       await completeQuiz(lessonId);
       const quizTotal = quiz.questions.length;
       if (correct + (selected === q.correctIndex ? 1 : 0) === quizTotal) {
-        await awardBadge("b2");
+        await awardBadge("b4");
       }
       setShowResult(true);
     } else {
