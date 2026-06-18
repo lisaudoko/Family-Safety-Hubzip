@@ -31,13 +31,22 @@ const SecureStoreAdapter = {
 
 let _client: SupabaseClient | null = null;
 
+function isValidSupabaseUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function getSupabase(): SupabaseClient | null {
   if (_client) return _client;
 
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || !key) return null;
+  if (!url || !key || !isValidSupabaseUrl(url)) return null;
 
   _client = createClient(url, key, {
     auth: {
