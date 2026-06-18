@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: coach
+    description: AI Coach operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /coach/chat:
+    post:
+      operationId: sendCoachMessage
+      tags: [coach]
+      summary: Ask the AI digital safety coach
+      description: Sends the conversation so far to the AI coach and returns its reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoachChatInput"
+      responses:
+        "200":
+          description: Coach reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoachChatReply"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Coach failed to respond
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +66,40 @@ components:
           type: string
       required:
         - status
+    CoachMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+      required:
+        - role
+        - content
+    CoachChatInput:
+      type: object
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CoachMessage"
+      required:
+        - messages
+    CoachChatReply:
+      type: object
+      properties:
+        reply:
+          type: string
+      required:
+        - reply
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
 

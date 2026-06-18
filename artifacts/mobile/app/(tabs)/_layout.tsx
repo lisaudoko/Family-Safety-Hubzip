@@ -28,6 +28,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
         <Label>Family</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="coach">
+        <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
+        <Label>Coach</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
         <Label>Profile</Label>
@@ -119,6 +123,18 @@ function ClassicTabLayout() {
               <SymbolView name="person.2" tintColor={color} size={24} />
             ) : (
               <Feather name="users" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="coach"
+        options={{
+          title: "Coach",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="bubble.left.and.bubble.right" tintColor={color} size={24} />
+            ) : (
+              <Feather name="message-circle" size={22} color={color} />
             ),
         }}
       />
