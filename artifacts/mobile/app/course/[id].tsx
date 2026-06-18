@@ -7,6 +7,7 @@ import { useFamily } from "@/context/FamilyContext";
 import { useAuth } from "@/context/AuthContext";
 import { COURSES } from "@/data/seed";
 import { CategoryPill, ProgressBar } from "@/components/UI";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
 
 export default function CourseDetailScreen() {
@@ -25,7 +26,8 @@ export default function CourseDetailScreen() {
   const isComplete = courseProgress === 100;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingBottom: 32 }]} showsVerticalScrollIndicator={false}>
       <View style={[styles.hero, { backgroundColor: course.color + "18", paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={course.color} />
@@ -115,6 +117,8 @@ export default function CourseDetailScreen() {
         </TouchableOpacity>
       )}
     </ScrollView>
+    <BottomTabBar active="learn" />
+    </View>
   );
 }
 

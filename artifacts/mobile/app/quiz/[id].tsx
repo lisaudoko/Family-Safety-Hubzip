@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
 import { COURSES } from "@/data/seed";
 import { ProgressBar } from "@/components/UI";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
 
 export default function QuizScreen() {
@@ -62,7 +63,8 @@ export default function QuizScreen() {
 
   if (isAlreadyDone && !showResult) {
     return (
-      <View style={[styles.doneWrap, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.doneWrap, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: 32 }]}>
         <View style={[styles.doneIcon, { backgroundColor: colors.success + "22" }]}>
           <Feather name="check-circle" size={40} color={colors.success} />
         </View>
@@ -71,6 +73,8 @@ export default function QuizScreen() {
         <TouchableOpacity style={[styles.doneBtn, { backgroundColor: colors.primary }]} onPress={() => router.push({ pathname: "/course/[id]", params: { id: course.id } })}>
           <Text style={[styles.doneBtnText, { fontFamily: "Inter_700Bold" }]}>Back to Course</Text>
         </TouchableOpacity>
+      </View>
+      <BottomTabBar active="learn" />
       </View>
     );
   }
@@ -82,7 +86,8 @@ export default function QuizScreen() {
     const color = passed ? colors.success : colors.destructive;
     const nextLesson = course.lessons[course.lessons.findIndex(l => l.id === lessonId) + 1];
     return (
-      <View style={[styles.doneWrap, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.doneWrap, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: 32 }]}>
         <View style={[styles.doneIcon, { backgroundColor: color + "22" }]}>
           <Feather name={passed ? "award" : "refresh-cw"} size={40} color={color} />
         </View>
@@ -98,11 +103,14 @@ export default function QuizScreen() {
           <Text style={[styles.doneBtnText, { fontFamily: "Inter_700Bold" }]}>{nextLesson ? "Next Lesson" : "Finish Course"}</Text>
         </TouchableOpacity>
       </View>
+      <BottomTabBar active="learn" />
+      </View>
     );
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="x" size={22} color={colors.foreground} />
@@ -145,6 +153,8 @@ export default function QuizScreen() {
         </TouchableOpacity>
       )}
     </ScrollView>
+    <BottomTabBar active="learn" />
+    </View>
   );
 }
 

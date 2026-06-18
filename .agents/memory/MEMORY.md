@@ -2,3 +2,4 @@
 - [Expo auth redirect pattern](expo-auth-redirect.md) — use Redirect component in app/index.tsx, not useSegments in layout, to avoid timing/loop issues.
 - [Supabase DB connection](supabase-db-connection.md) — direct db.*.supabase.co is IPv6-only/unreachable here; run DDL via aws-1-<region> pooler (port 5432, user postgres.<ref>).
 - [Supabase RN URL polyfill](supabase-rn-polyfill.md) — use conditional require() for react-native-url-polyfill/auto, not top-level import; crashes web bundle otherwise.
+- [Metro transient syntax errors](metro-transient-syntax-errors.md) — mid-edit Metro SyntaxErrors are stale; trust tsc + a fresh "Web Bundled" log, not captured logs.

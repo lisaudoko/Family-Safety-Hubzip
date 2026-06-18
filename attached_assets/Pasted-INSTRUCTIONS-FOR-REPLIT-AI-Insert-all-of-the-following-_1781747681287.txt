@@ -1,0 +1,1206 @@
+INSTRUCTIONS FOR REPLIT AI
+
+Insert all of the following content into your supabase/migrations/002_seed_content.sql file (or append to your existing seed migration). All jsonb fields are valid JSON. Run this after your schema migration.
+
+
+PART 1 — LESSONS
+
+Each lesson has a content jsonb field with real educational text, scenario exercises, and key takeaways.
+
+SQL SEED — LESSONS
+
+sqlINSERT INTO lessons (id, title, description, category, age_band, difficulty, duration_minutes, order_index, is_published, content) VALUES
+
+-- LESSON 1: Cyberbullying
+(
+  gen_random_uuid(),
+  'What Is Cyberbullying — And How to Stop It',
+  'Learn to recognize cyberbullying, understand why it happens, and know exactly what to do if you or a friend experiences it.',
+  'cyberbullying',
+  'all',
+  'beginner',
+  15,
+  1,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "What counts as cyberbullying?",
+        "content": "Cyberbullying is when someone uses technology — phones, apps, games, or the internet — to repeatedly hurt, embarrass, or threaten another person. It is different from a one-time argument or someone being rude once. The key word is ''repeatedly'' — a pattern of mean behavior.\n\nExamples include: sending mean or threatening messages, posting embarrassing photos without permission, spreading rumors online, leaving someone out of group chats on purpose, creating fake accounts to mock someone, or flooding someone with hurtful comments."
+      },
+      {
+        "type": "tip",
+        "icon": "alert-circle",
+        "content": "One important fact: cyberbullying can happen 24/7. Unlike in-person bullying that ends when the school day does, online harassment can follow someone home, into their bedroom, and interrupt their sleep. This is why it can feel so overwhelming."
+      },
+      {
+        "type": "text",
+        "heading": "Why do people cyberbully?",
+        "content": "Understanding why helps us respond better. Common reasons include: wanting to feel powerful or in control, going along with a group (bystander pressure), jealousy, boredom, or personal pain that gets directed outward. Sometimes people act online in ways they never would face-to-face because screens make them feel anonymous and distant from consequences.\n\nThis does not excuse cyberbullying — but it helps explain it."
+      },
+      {
+        "type": "scenario",
+        "title": "What would you do?",
+        "situation": "Your 12-year-old says a classmate has been screenshot-ing her private messages and sharing them in a group chat, making fun of what she wrote. She begs you not to get her in trouble at school. What is the right first step?",
+        "options": [
+          "Tell her to block the classmate and not worry about it",
+          "Take screenshots of the evidence, listen to her feelings, and ask what kind of support she wants before deciding next steps",
+          "Immediately call the school principal",
+          "Contact the other child''s parents directly"
+        ],
+        "correct": 1,
+        "explanation": "Documenting evidence first is critical — screenshots can disappear. Asking your child what support they want builds trust and gives you better information. Acting impulsively (calling the school or other parents right away without your child''s input) can sometimes escalate the situation or damage your child''s trust in you."
+      },
+      {
+        "type": "text",
+        "heading": "The 3-step response plan",
+        "content": "Step 1 — DOCUMENT: Screenshot and save everything before blocking anyone. Evidence is important if you need to involve school staff or authorities.\n\nStep 2 — DON''T RETALIATE: Responding with anger or insults gives the bully more ammunition and can make your child look equally at fault.\n\nStep 3 — REPORT: Use the platform''s reporting tools. Most major platforms (Instagram, TikTok, Snapchat, Roblox) have one-tap reporting. For serious threats, contact school administrators or, if there are threats of violence, local law enforcement."
+      },
+      {
+        "type": "tip",
+        "icon": "heart",
+        "content": "For parents: the most important thing you can do is make home a safe place to talk. Children who feel they can tell a parent about cyberbullying without the device being taken away are far more likely to report it early."
+      },
+      {
+        "type": "text",
+        "heading": "Platform reporting — quick reference",
+        "content": "Instagram: Press and hold a comment → Report. For a post: tap the three dots → Report.\nTikTok: Long-press the comment or tap the share icon on a video → Report.\nSnapchat: Press and hold a message → Report or Block.\nRoblox: Click the flag icon on any player''s profile.\nYouTube: Three dots next to a comment → Report.\n\nAll platforms are legally required to respond to reports involving minors."
+      }
+    ],
+    "key_takeaways": [
+      "Cyberbullying is repeated harmful behavior online — not a one-time rudeness",
+      "Document before blocking — screenshots are your evidence",
+      "Never retaliate — it escalates the situation",
+      "Most platforms have one-tap reporting tools",
+      "Open communication at home is the single most protective factor"
+    ]
+  }'
+),
+
+-- LESSON 2: Online Scams
+(
+  gen_random_uuid(),
+  'Scams, Schemes & Digital Traps',
+  'Scammers specifically target young people. Learn the most common tricks used to steal money, passwords, and personal information — and how to spot them instantly.',
+  'scams',
+  'all',
+  'beginner',
+  18,
+  2,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Why kids and teens are prime targets",
+        "content": "Scammers love targeting young people for a few reasons: young people are often more trusting, less experienced with financial deception, and more active online. Teens in particular are targeted by gaming scams, fake job offers, and social media prize scams. The FBI''s Internet Crime Complaint Center reports that people under 20 lose millions of dollars to online fraud every year.\n\nThe good news: scams almost always follow predictable patterns. Once you know the patterns, they become easy to spot."
+      },
+      {
+        "type": "text",
+        "heading": "The 6 most common scams targeting young people",
+        "content": "1. FREE ROBUX / V-BUCKS SCAMS: Fake websites or accounts promise in-game currency in exchange for your login credentials. They take your account — not just your currency.\n\n2. FAKE JOB OFFERS: ''Make $500/week from home, no experience needed!'' These scams are everywhere on Instagram and TikTok. They either ask for personal info, ask you to ''process payments'' (money laundering), or charge a startup fee.\n\n3. ROMANCE SCAMS: A stranger builds a relationship over weeks or months before eventually asking for money, gift cards, or compromising photos.\n\n4. PRIZE / GIVEAWAY SCAMS: ''You''ve won an iPhone! Click here to claim.'' The link steals your login or installs malware.\n\n5. PHISHING TEXTS AND EMAILS: Messages pretending to be from Apple, PayPal, your bank, or a streaming service saying your account is suspended — with a link to a fake login page.\n\n6. SOCIAL MEDIA IMPERSONATION: Someone creates a fake account of a friend or celebrity and messages you asking for money or Venmo payments."
+      },
+      {
+        "type": "tip",
+        "icon": "zap",
+        "content": "The Universal Scam Rule: If something creates urgency, promises something too good to be true, or asks for gift cards as payment — it is a scam. No legitimate business ever asks you to pay with iTunes gift cards."
+      },
+      {
+        "type": "scenario",
+        "title": "Scam or legit?",
+        "situation": "Your teenager gets a DM on Instagram from an account with 50,000 followers saying: ''Hey! We found your profile and think you''d be a perfect brand ambassador. We''ll send you $200 Venmo just for posting one photo. Just DM us your Venmo username and confirm your email to get started.'' What is this?",
+        "options": [
+          "A real brand ambassador opportunity — 50k followers means it''s probably legit",
+          "Possibly real — ask them to send a contract first",
+          "A scam — they''ll use the Venmo username and email to attempt account takeover or request money back via a fake ''overpayment'' trick",
+          "Hard to tell — DM them back and see what they say"
+        ],
+        "correct": 2,
+        "explanation": "This is a classic influencer scam. The overpayment trick works like this: they ''send'' you $300, then say it was a mistake and ask you to send back $200. The original payment was fraudulent and gets reversed, but the $200 you sent is real and gone. Follower counts mean nothing — they''re bought. Legitimate brand deals always use official business email, not Instagram DMs."
+      },
+      {
+        "type": "text",
+        "heading": "How to verify before you click or share",
+        "content": "CHECK THE SENDER: Hover over email addresses (or press and hold on mobile) to see the real address. ''Apple Support'' sent from apple-support-noreply@gmail.com is not Apple.\n\nSEARCH THE OFFER: Copy the message text and Google it with the word ''scam.'' Most scams have been reported thousands of times.\n\nGO DIRECTLY: Instead of clicking a link in an email, go directly to the official website by typing it yourself.\n\nASK A PARENT: There is no shame in asking. Scammers are sophisticated professionals. Adults get fooled too."
+      },
+      {
+        "type": "tip",
+        "icon": "shield",
+        "content": "For parents: teach your kids that coming to you after almost falling for a scam is brave, not stupid. Shame keeps scam victims silent — and silence lets scammers win."
+      }
+    ],
+    "key_takeaways": [
+      "Urgency + too-good-to-be-true + gift card payment = always a scam",
+      "Free gaming currency scams steal your entire account, not just add currency",
+      "Verify by going directly to websites — never through links in messages",
+      "Search the offer text + the word scam before responding to anything",
+      "Talking about it isn''t embarrassing — scammers are professionals"
+    ]
+  }'
+),
+
+-- LESSON 3: Social Media Readiness
+(
+  gen_random_uuid(),
+  'Is Your Child Ready for Social Media?',
+  'A practical, research-backed guide to evaluating social media readiness by age — and how to set up their first account for success, not disaster.',
+  'social_media',
+  'all',
+  'intermediate',
+  20,
+  3,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "The real question isn''t age — it''s readiness",
+        "content": "Most platforms require users to be 13+ under COPPA (the Children''s Online Privacy Protection Act). But age alone is a poor predictor of readiness. A mature 12-year-old may handle social media better than an impulsive 15-year-old. Readiness involves emotional regulation, critical thinking, understanding of privacy, and the ability to handle social comparison and rejection.\n\nResearch from the American Psychological Association (2023) found that adolescents who had conversations with parents about social media use before getting accounts reported higher wellbeing and better coping strategies than those who simply received access."
+      },
+      {
+        "type": "text",
+        "heading": "Readiness checklist by age band",
+        "content": "AGES 10–12 (pre-social media prep):\n• Can they handle not getting a ''like'' without emotional distress?\n• Do they understand that online posts are permanent and public even if deleted?\n• Can they identify when someone is being unkind vs. just disagreeing?\n• Do they know what personal information should never be shared (address, school name, phone number)?\n\nAGES 13–14 (starter accounts):\n• Do they understand that people curate highlight reels — not real life?\n• Can they block and report without feeling guilty?\n• Do they know how to set an account to private?\n• Can they have a conversation with you about something uncomfortable they see online?\n\nAGES 15–17 (expanding access):\n• Do they think before posting — imagining how it might look in 10 years?\n• Can they recognize when a platform is negatively affecting their mood?\n• Do they understand the difference between a public and private digital footprint?\n• Can they identify misinformation?"
+      },
+      {
+        "type": "tip",
+        "icon": "users",
+        "content": "The ''Front Page Test'': Before posting anything, ask: ''Would I be comfortable if this appeared on the front page of my school newsletter and my grandparents could see it?'' If not, don''t post it."
+      },
+      {
+        "type": "scenario",
+        "title": "Setting up their first account",
+        "situation": "Your 13-year-old wants an Instagram account. They''re responsible, get good grades, and have good friendships. What''s the best approach to setting it up?",
+        "options": [
+          "Let them set it up themselves — they''re old enough",
+          "Set it up together, go through all privacy settings, discuss your household rules, follow each other, and check in monthly",
+          "Say no until they''re 16",
+          "Allow it but install a parental monitoring app to see everything they post"
+        ],
+        "correct": 1,
+        "explanation": "Setting up the account together is the research-backed approach. Going through privacy settings together teaches skills, not just imposes rules. Following each other maintains connection without surveillance. Monthly check-ins keep the conversation open. Secret monitoring apps damage trust if discovered — and they always are eventually."
+      },
+      {
+        "type": "text",
+        "heading": "The 5 conversations to have before first login",
+        "content": "1. WHAT WE SHARE AND DON''T SHARE: Full name, school, location, home address, and daily schedule are off-limits. Discuss this specifically, not just ''be careful.'' \n\n2. HOW TO HANDLE STRANGERS: Anyone they don''t know in real life who tries to become close online should be told to a parent immediately — no exceptions.\n\n3. THE PERMANENCE PRINCIPLE: Once something is posted, assume it exists forever, even if deleted. Screenshots exist.\n\n4. THE COMPARISON TRAP: Social media shows highlights. No one posts their bad days, boring days, or insecurities. Comparing your behind-the-scenes to everyone else''s highlight reel is a losing game.\n\n5. THE OPEN DOOR: If they ever see something that makes them uncomfortable, confused, or scared — there will be no device confiscation. You will help them handle it together."
+      }
+    ],
+    "key_takeaways": [
+      "Readiness is about emotional and critical thinking skills — not just age",
+      "Set up first accounts together, not independently",
+      "Privacy settings should be reviewed together and revisited every 6 months",
+      "The open door conversation is the most protective thing a parent can do",
+      "Social comparison is built into platform design — teach kids to recognize it"
+    ]
+  }'
+),
+
+-- LESSON 4: Online Predators
+(
+  gen_random_uuid(),
+  'Online Predators: What Parents and Kids Must Know',
+  'Clear, non-alarmist guidance on grooming tactics, warning signs, and how to create a family culture where children feel safe reporting concerns.',
+  'predators',
+  'all',
+  'intermediate',
+  22,
+  4,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Understanding grooming — how it actually works",
+        "content": "Online grooming is a process, not a single event. It typically follows a predictable pattern over weeks or months:\n\n1. TARGETING: Predators look for children who seem lonely, have family conflict, or are seeking attention and validation online.\n\n2. GAINING TRUST: They present themselves as uniquely understanding — ''I''m the only one who really gets you.'' They shower the child with attention, compliments, and gifts (gaming currency, gift cards).\n\n3. ISOLATION: They gradually separate the child from friends and family — ''Your parents just don''t understand us. Our friendship is special.''\n\n4. DESENSITIZATION: They introduce sexual topics gradually — starting with jokes, then images, then requests.\n\n5. MAINTAINING SECRECY: By the time a request for images or a meeting is made, they''ve often convinced the child that the ''relationship'' must be kept secret because adults ''wouldn''t understand.''"
+      },
+      {
+        "type": "tip",
+        "icon": "alert-triangle",
+        "content": "Key insight: Most children who experience online grooming do not recognize it as such while it is happening. They believe they are in a genuine friendship or relationship. This is why ''stranger danger'' messaging alone is insufficient — predators are skilled at becoming familiar and trusted."
+      },
+      {
+        "type": "text",
+        "heading": "Warning signs to watch for",
+        "content": "Behavioral changes in your child:\n• Secretive about online activity — closes laptop or turns phone over when you enter the room\n• Receives calls or messages late at night\n• Switches screens or hides their phone quickly when you approach\n• Uses devices at unusual hours\n• Withdraws from family and friends they were previously close to\n• Receives unexplained gifts — gaming credits, gift cards, packages\n• Uses sexual language or references they wouldn''t have encountered age-appropriately\n• Seems emotionally disturbed or anxious after being online\n\nNote: These behaviors can have innocent explanations (normal teenage privacy). The concern rises when multiple signs appear together or when they change suddenly."
+      },
+      {
+        "type": "scenario",
+        "title": "How to respond — not react",
+        "situation": "Your 14-year-old mentions that an ''online friend'' they play games with has been asking a lot of personal questions and wants to video call. Your child seems excited about the friendship. What do you do?",
+        "options": [
+          "Take the device away immediately and end all online gaming",
+          "Stay calm, express interest rather than alarm, ask curious questions about this friend, and review the conversation history together without judgment",
+          "Tell them only creeps make friends online",
+          "Allow it — gaming friendships are normal"
+        ],
+        "correct": 1,
+        "explanation": "Reacting with alarm or punishment causes children to hide information from you — which is exactly what a predator wants. Expressing genuine curiosity (''Tell me about them — how long have you been talking? What do you talk about?'') keeps the conversation open. Reviewing the conversation history together, framed as ''help me understand your friendship,'' gives you the information you need while preserving trust."
+      },
+      {
+        "type": "text",
+        "heading": "The safety conversations that actually work",
+        "content": "TEACH THE PATTERN, NOT JUST THE RULE: Instead of ''never talk to strangers online,'' teach children what grooming looks like: ''If someone you met online is asking you to keep your friendship secret, wants you to feel like they understand you better than we do, or is asking for photos — that''s a sign to tell me immediately. I promise I will not be angry at you.''\n\nPRACTICE THE SCRIPT: Teach kids what to say: ''I need to tell my parents before we video call or meet.'' A good person will accept this. Someone who pushes back or gets angry at that request is showing you who they are.\n\nNO-PUNISHMENT PROMISE: Make an explicit promise: ''If someone makes you uncomfortable online, or if you accidentally got into a situation you didn''t expect — you can tell me and I will not punish you or take your devices. I will only help you.''"
+      },
+      {
+        "type": "tip",
+        "icon": "phone",
+        "content": "Report suspected predator contact: National Center for Missing and Exploited Children CyberTipline at cybertipline.org or 1-800-843-5678. FBI at tips.fbi.gov. You can also report directly to the platform."
+      }
+    ],
+    "key_takeaways": [
+      "Grooming is a slow process — children rarely recognize it while it is happening",
+      "Secretive device behavior + unexplained gifts + withdrawal are key warning signs",
+      "Reacting with anger or punishment closes the door on future disclosures",
+      "Teach children the pattern of grooming, not just ''don''t talk to strangers''",
+      "A no-punishment promise is the most powerful safety tool a parent has"
+    ]
+  }'
+),
+
+-- LESSON 5: AI Safety
+(
+  gen_random_uuid(),
+  'AI in Your Child''s World: Opportunities and Risks',
+  'From ChatGPT to deepfakes to AI companions — what every parent needs to understand about artificial intelligence, and how to guide kids to use it responsibly.',
+  'ai_safety',
+  'all',
+  'intermediate',
+  18,
+  5,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "AI is already part of your child''s life",
+        "content": "Whether you''ve had a conversation about it or not, your child is almost certainly using AI tools. Studies show over 60% of students aged 13–18 have used ChatGPT or a similar tool. They''re using it for homework help, creative writing, answering questions, and entertainment.\n\nAI tools are also embedded in platforms they already use: TikTok''s recommendation algorithm, Snapchat''s My AI, Instagram''s content moderation, and video games with AI-generated characters. Understanding AI isn''t optional anymore — it''s a core digital literacy skill."
+      },
+      {
+        "type": "text",
+        "heading": "The real risks parents should know about",
+        "content": "1. DEEPFAKES: AI can now generate realistic fake photos, videos, and audio of real people. ''Deepfake pornography'' targeting minors — taking a real photo of a teenager and digitally manipulating it — is a growing and devastating form of image-based abuse. Teach children: never share photos with someone they don''t know in person. \n\n2. AI COMPANIONS: Apps like Replika and Character.AI allow children to form emotional bonds with AI chatbots. While not inherently harmful, unmoderated AI companions have been known to engage in inappropriate conversations with minors and, in extreme cases, have been linked to emotional dependency.\n\n3. AI-GENERATED MISINFORMATION: AI can produce convincing fake news articles, fake social media posts, and fake images of events that never happened. Teach: check primary sources before sharing anything surprising or alarming.\n\n4. ACADEMIC DISHONESTY: Using AI to complete assignments without disclosure has real consequences for learning and integrity. Establish family expectations about appropriate AI use for schoolwork."
+      },
+      {
+        "type": "tip",
+        "icon": "cpu",
+        "content": "For kids: AI is a tool, not a friend. If an AI chatbot is saying things that make you uncomfortable, screenshot it and tell a parent. You won''t be in trouble — the app is doing something it shouldn''t."
+      },
+      {
+        "type": "scenario",
+        "title": "Navigating AI homework help",
+        "situation": "Your 15-year-old says all their friends use ChatGPT for homework and asks why they can''t too. How do you respond?",
+        "options": [
+          "Absolutely not — it''s cheating",
+          "Yes, use it however you want",
+          "Discuss the difference between using AI as a tutor (explain a concept, check understanding, give feedback on drafts) vs. using it as a ghostwriter (do the work for me). Set a family rule about disclosure.",
+          "Only use it if the teacher doesn''t find out"
+        ],
+        "correct": 2,
+        "explanation": "The most effective approach addresses why the distinction matters, not just whether it''s allowed. Using AI to understand a concept, get feedback, or brainstorm builds skills. Using it to generate final work you submit as your own stunts learning and is dishonest. Many schools are now explicitly teaching AI literacy — knowing how to use AI well is itself a skill worth developing correctly."
+      },
+      {
+        "type": "text",
+        "heading": "Spotting AI-generated content",
+        "content": "Teach your child these practical checks:\n\nFOR IMAGES: Look for distorted hands or fingers (AI struggles with hands), asymmetrical features, background elements that don''t make sense, unnaturally perfect skin, and artifacts around hair. Use Google Reverse Image Search.\n\nFOR TEXT: AI-generated text often sounds fluent but weirdly generic. It rarely contains specific personal anecdotes, tends to be balanced to the point of wishy-washiness, and may include plausible-sounding but incorrect facts. Always verify specific claims with a primary source.\n\nFOR VIDEO: Deepfake videos often have unnatural blinking, lighting that doesn''t match the background, or audio that doesn''t perfectly sync with lip movements."
+      }
+    ],
+    "key_takeaways": [
+      "Over 60% of teens already use AI tools — the conversation starts now",
+      "Deepfakes targeting minors are a growing and serious threat",
+      "AI companions can create unhealthy emotional dependency in vulnerable teens",
+      "Use AI as a tutor, not a ghostwriter — the distinction shapes learning",
+      "Practical deepfake detection skills are now a core digital literacy"
+    ]
+  }'
+),
+
+-- LESSON 6: Digital Footprints
+(
+  gen_random_uuid(),
+  'Your Digital Footprint: What You Leave Behind',
+  'Everything posted online creates a permanent record that can affect college admissions, job opportunities, and relationships. Learn how to manage it intentionally.',
+  'digital_footprint',
+  'all',
+  'beginner',
+  15,
+  6,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "What is a digital footprint?",
+        "content": "A digital footprint is the trail of data you leave behind whenever you use the internet. It has two parts:\n\nACTIVE FOOTPRINT: Things you deliberately post — social media, comments, photos, reviews, blog posts, and forum threads. You created these intentionally.\n\nPASSIVE FOOTPRINT: Data collected without you necessarily knowing — your browsing history, location data, what you searched for, how long you hovered over an ad, app permissions you''ve granted.\n\nBoth are stored, potentially forever, and can be accessed by future employers, college admissions officers, law enforcement, and anyone who knows how to look."
+      },
+      {
+        "type": "tip",
+        "icon": "search",
+        "content": "Try this: Google yourself right now. Then Google your child''s full name. What comes up? This is what a college admissions officer, future employer, or anyone else sees. Do it once a year as a family digital health check."
+      },
+      {
+        "type": "text",
+        "heading": "Real consequences — not scare tactics",
+        "content": "These are documented, real cases (names omitted):\n\n• A 17-year-old lost a full scholarship after a university discovered racist tweets from two years earlier.\n• A college freshman''s acceptance was rescinded when their private Facebook group — shared with 100 people — was screenshotted and sent to the admissions office.\n• A teenager who made a joke post about calling in a bomb threat ''as a meme'' was arrested and charged.\n• An adult''s job offer was withdrawn after the employer found photos from a company holiday party four years prior.\n\nNone of these people thought what they were doing would matter. That''s exactly the problem."
+      },
+      {
+        "type": "scenario",
+        "title": "The 10-year rule",
+        "situation": "A 14-year-old is about to post a funny video mocking a teacher behind their back. Their friends think it''s hilarious. They ask you if it''s okay. What do you say?",
+        "options": [
+          "Sure, it''s just a joke — everyone does it",
+          "Apply the 10-year rule: imagine yourself at 24, showing this video to a job interviewer. Would you be comfortable? If not, don''t post it.",
+          "No — never post anything negative online ever",
+          "It''s fine as long as the teacher doesn''t find out"
+        ],
+        "correct": 1,
+        "explanation": "The 10-year rule is a practical heuristic that works because it makes the abstraction concrete. It''s not about being a perfect person online — it''s about recognizing that your future self will have to live with what your current self posts. The video might get 200 likes today. It could cost a job offer in 10 years."
+      },
+      {
+        "type": "text",
+        "heading": "Managing your digital footprint",
+        "content": "AUDIT STEP 1 — SEARCH YOURSELF: Google your full name and your username. Check image results.\n\nAUDIT STEP 2 — REVIEW OLD POSTS: Most platforms let you see your post history. Scroll back to posts from 2+ years ago with fresh eyes.\n\nAUDIT STEP 3 — CHECK APP PERMISSIONS: Go to phone settings → Privacy. See which apps have access to your camera, microphone, location, and contacts. Revoke anything you don''t actively use.\n\nAUDIT STEP 4 — PRIVACY SETTINGS REVIEW: Set social media profiles to private. Remove your birthdate, phone number, and hometown from public profiles.\n\nMake this a family activity every 6 months."
+      }
+    ],
+    "key_takeaways": [
+      "Digital footprints include both what you post and what platforms collect passively",
+      "''Deleted'' posts are often not truly gone — screenshots last forever",
+      "College admissions officers and employers routinely search candidates online",
+      "The 10-year rule: would your 24-year-old self be comfortable with this post?",
+      "Annual digital audits are as important as annual checkups"
+    ]
+  }'
+),
+
+-- LESSON 7: Gaming Safety
+(
+  gen_random_uuid(),
+  'Gaming Safety: Protecting Your Child in Online Games',
+  'Online gaming is where many children first encounter strangers, spend real money, and face peer pressure. Here''s everything parents need to know.',
+  'gaming_safety',
+  'all',
+  'beginner',
+  16,
+  7,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Why gaming is a unique digital safety concern",
+        "content": "Online games are social platforms. Fortnite, Roblox, Minecraft, Call of Duty, and Valorant all allow real-time voice and text chat with strangers. Unlike social media — where your child''s connections are usually people they know — gaming lobbies can put your child in a voice chat with dozens of anonymous strangers instantly.\n\nThis creates risks that are different from social media: stranger contact happens in real time, children are often focused on the game and less guarded, and the social dynamics of gaming (teamwork, competition) create emotional openings that can be exploited."
+      },
+      {
+        "type": "text",
+        "heading": "Financial risks: microtransactions and loot boxes",
+        "content": "The gaming industry generated over $110 billion from in-game purchases in 2023. Many of these are intentionally designed to be psychologically compelling to children.\n\nLOOT BOXES: You pay real money for a randomized reward. Many countries have classified loot boxes as gambling. Children as young as 7 have spent hundreds or thousands of dollars through saved payment methods without parental awareness.\n\nMICROTRANSACTIONS: Small purchases ($1–$20) that add up. A child spending $3 on a Fortnite skin three times a week spends $468 per year.\n\nPRACTICAL RULE: Remove saved payment methods from gaming platforms. Use gift cards with a set monthly amount instead. This teaches budgeting and prevents accidental overspending."
+      },
+      {
+        "type": "tip",
+        "icon": "dollar-sign",
+        "content": "Check this right now: Go to your Apple ID → Payment & Shipping → Make sure ''Ask to Buy'' is turned on for your child''s account. On Android: Google Play → Settings → Parental controls → Require authentication for purchases."
+      },
+      {
+        "type": "scenario",
+        "title": "Voice chat with strangers",
+        "situation": "Your 10-year-old is playing Roblox and mentions that ''a really nice older kid'' has been helping them through levels and wants to be their ''gaming buddy'' across multiple games. What do you do?",
+        "options": [
+          "It''s fine — gaming buddies are normal",
+          "Ban all online gaming immediately",
+          "Calmly ask to see the chat history, explain why cross-platform contact with older strangers is a concern, and review Roblox privacy settings together to disable contact from non-friends",
+          "Tell them only to play with kids from school"
+        ],
+        "correct": 2,
+        "explanation": "An older player who befriends a younger child and immediately wants to move the relationship to other platforms is a grooming warning sign. Calmly reviewing the conversation (without alarm) helps you assess the situation. Adjusting privacy settings together teaches the child WHY these settings matter, not just imposing rules. Roblox allows you to restrict chat to pre-approved friends only."
+      },
+      {
+        "type": "text",
+        "heading": "Gaming health: screens, sleep, and behavior",
+        "content": "SLEEP: Blue light from screens suppresses melatonin. Gaming within 1 hour of bedtime is associated with later sleep onset and worse sleep quality in children. Set a device curfew that accounts for wind-down time.\n\nGAMING ADDICTION SIGNS: Thinking about gaming constantly when not playing, lying about gaming time, choosing gaming over previously enjoyed activities, extreme anger or distress when gaming is interrupted, declining grades or hygiene.\n\nNOTE: Gaming in moderation is not harmful. Social gaming builds real friendships and problem-solving skills. The goal is balance, not elimination."
+      }
+    ],
+    "key_takeaways": [
+      "Online games are social platforms — children interact with strangers in real time",
+      "Loot boxes and microtransactions are designed to exploit children''s psychology",
+      "Remove saved payment methods; use prepaid gift cards for gaming budgets",
+      "Cross-game contact from older strangers is a grooming warning sign",
+      "Gaming in moderation is healthy; watch for behavioral signs of problematic use"
+    ]
+  }'
+),
+
+-- LESSON 8: Healthy Screen Habits
+(
+  gen_random_uuid(),
+  'Healthy Screen Habits for the Whole Family',
+  'Screen time isn''t just about hours — it''s about how, when, and why. Practical strategies for building a healthy digital lifestyle that actually sticks.',
+  'screen_habits',
+  'all',
+  'beginner',
+  14,
+  8,
+  true,
+  '{
+    "sections": [
+      {
+        "type": "text",
+        "heading": "The screen time debate — what the research actually says",
+        "content": "The American Academy of Pediatrics updated its screen time guidance in 2023 to move away from simple hour limits toward a focus on content quality and context. The key finding: it''s not just HOW MUCH screen time, but WHAT kind and WHETHER it displaces other important activities.\n\nSCREEN TIME THAT IS FINE: Video calls with family, educational content, creative tools (drawing apps, coding games), social gaming with known friends.\n\nSCREEN TIME TO MONITOR: Passive consumption (scrolling feeds, watching others play games), social media apps, content that generates strong emotional reactions.\n\nSCREEN TIME TO LIMIT BEFORE BED: Any screen within 1 hour of bedtime affects sleep quality across all age groups."
+      },
+      {
+        "type": "text",
+        "heading": "Building a family media plan",
+        "content": "A media plan isn''t a punishment — it''s a framework your family agrees on together. The most effective plans are co-created with children (even young ones), not imposed on them.\n\nKEY ELEMENTS OF A MEDIA PLAN:\n\n1. DEVICE-FREE ZONES: Choose 2–3 spaces in your home that are device-free (dining table, bedrooms after 9pm, the first 30 minutes after school). Post this visibly.\n\n2. TECH-FREE TIMES: Designate times, not just places. Dinner is the most researched — families that eat together without devices have children with significantly better communication skills and lower rates of substance use.\n\n3. CHARGE STATIONS: All family devices (including parents'') charge in a common area overnight — not bedrooms.\n\n4. BALANCE BEFORE SCREENS: Homework done, outdoor time had, chores complete before leisure screen time begins."
+      },
+      {
+        "type": "tip",
+        "icon": "sun",
+        "content": "The 1-to-1 Rule for younger children: For every hour of leisure screen time, 1 hour of non-screen activity (outdoor play, reading, creative play, social time). This isn''t punishment — it''s balance-building. Make the non-screen activity genuinely fun and the rule becomes self-enforcing."
+      },
+      {
+        "type": "scenario",
+        "title": "The bedtime phone battle",
+        "situation": "Every night at 10pm there''s a fight about your 13-year-old keeping their phone. They say they need it for their alarm. You''re exhausted from the nightly conflict. What''s the most effective long-term solution?",
+        "options": [
+          "Give in — it''s not worth the fight",
+          "Take the phone at 9pm every night no matter what",
+          "Buy a $5 alarm clock, make a household rule that ALL family phones (including yours) charge in the kitchen overnight, and involve your child in setting the handover time so they have some ownership",
+          "Install parental controls that cut off access at 10pm"
+        ],
+        "correct": 2,
+        "explanation": "The most effective solution solves the stated problem (alarm), removes the double standard (parents also comply), and gives the child partial ownership (they choose between 9:30 and 10:00). Rules that apply to the whole family have dramatically better compliance than rules that single out children. The $5 alarm clock eliminates the most common objection."
+      },
+      {
+        "type": "text",
+        "heading": "Modeling the behavior you want to see",
+        "content": "Studies consistently show that parental screen behavior is the strongest predictor of children''s screen behavior. Children whose parents use devices at dinner are 3x more likely to exceed recommended screen time. Children who see parents read books are more likely to read.\n\nThis isn''t a guilt trip — it''s an opportunity. You have enormous influence. A simple phrase: ''I''m putting my phone down while we talk'' models exactly the skill you want your child to develop.\n\nFamily tech agreements (which you can build right in this app) work best when parents sign them too."
+      }
+    ],
+    "key_takeaways": [
+      "Screen time quality and context matter more than raw hours",
+      "Device-free zones and times work best when co-created with children",
+      "All family devices (including parents'') should charge outside bedrooms",
+      "Parental modeling is the strongest predictor of children''s screen habits",
+      "A $5 alarm clock eliminates the most common bedtime phone objection"
+    ]
+  }'
+);
+
+
+PART 2 — QUIZZES
+
+sqlINSERT INTO quizzes (id, lesson_id, questions) 
+SELECT 
+  gen_random_uuid(),
+  l.id,
+  CASE l.category
+    WHEN 'cyberbullying' THEN '[
+      {
+        "id": 1,
+        "question": "What makes cyberbullying different from someone being rude to you once online?",
+        "options": ["Cyberbullying only happens on social media", "Cyberbullying is a repeated pattern of harmful behavior", "Cyberbullying always involves physical threats", "Cyberbullying only counts if it happens at school"],
+        "correct": 1,
+        "explanation": "The key distinction is repetition. A one-time rude comment, while hurtful, is not cyberbullying. Cyberbullying is a sustained, repeated pattern of behavior intended to harm, embarrass, or threaten."
+      },
+      {
+        "id": 2,
+        "question": "Your child tells you they are being cyberbullied. What should you do FIRST?",
+        "options": ["Call the school immediately", "Take the device away so they cannot be reached", "Take screenshots to document the evidence before blocking anyone", "Contact the bully''s parents"],
+        "correct": 2,
+        "explanation": "Evidence documentation always comes first. Once you block a user, you may lose access to the evidence. Screenshots give you what you need to report to the platform, school, or authorities."
+      },
+      {
+        "id": 3,
+        "question": "Why is cyberbullying particularly harmful compared to in-person bullying?",
+        "options": ["It is not actually more harmful", "It can follow the victim home and happen 24/7", "It only affects teenagers", "It is easier to report than in-person bullying"],
+        "correct": 1,
+        "explanation": "Traditional bullying stops at the school gates. Cyberbullying invades every safe space — home, bedroom, even sleep. This constant exposure is why cyberbullied children show higher rates of anxiety and depression than those experiencing in-person bullying alone."
+      },
+      {
+        "id": 4,
+        "question": "Which of these is the MOST protective thing a parent can do to help prevent and address cyberbullying?",
+        "options": ["Monitor every message your child sends", "Make home a safe place to talk without fear of device confiscation", "Install parental control software on all devices", "Have your child only talk to people they know in real life"],
+        "correct": 1,
+        "explanation": "Research consistently shows that children who feel they can tell a parent about cyberbullying — without losing their devices — report it earlier and recover better. Fear of losing device access is one of the top reasons children stay silent."
+      },
+      {
+        "id": 5,
+        "question": "Which action should you AVOID when your child is being cyberbullied?",
+        "options": ["Documenting the evidence", "Reporting through the platform", "Responding to the bully with angry messages", "Talking to school staff"],
+        "correct": 2,
+        "explanation": "Retaliating escalates the situation, can make your child appear equally at fault, and gives the bully more material to use. Never respond to a bully in anger."
+      }
+    ]'::jsonb
+    WHEN 'scams' THEN '[
+      {
+        "id": 1,
+        "question": "You receive a text saying ''Your Netflix account has been suspended. Click here to restore access.'' What is the safest response?",
+        "options": ["Click the link to see if it is real", "Go directly to netflix.com by typing it yourself and check your account there", "Reply STOP to unsubscribe", "Forward it to a friend to check"],
+        "correct": 1,
+        "explanation": "Never click links in unsolicited messages. Always navigate directly to the official website by typing the URL yourself. If your account was actually suspended, you will see that when you log in normally."
+      },
+      {
+        "id": 2,
+        "question": "A gaming website promises free Robux if you enter your Roblox username and password. What will actually happen?",
+        "options": ["You will receive free Robux", "Nothing — it is just a broken link", "Your account will be stolen and potentially sold", "You will receive a survey"],
+        "correct": 2,
+        "explanation": "Free currency scams exist solely to steal account credentials. Once they have your username and password, they lock you out, steal your items, and often sell the account. Roblox never gives free currency through third-party websites."
+      },
+      {
+        "id": 3,
+        "question": "What payment method is ALWAYS a sign of a scam?",
+        "options": ["Credit card", "PayPal", "Gift cards (iTunes, Google Play, Amazon)", "Bank transfer to a known company"],
+        "correct": 2,
+        "explanation": "No legitimate business, government agency, or employer ever asks to be paid in gift cards. Gift card payments are irreversible and untraceable — exactly what scammers want. This is true 100% of the time."
+      },
+      {
+        "id": 4,
+        "question": "An Instagram account with 50,000 followers offers your teenager $200 to post a photo. They ask for your Venmo username to ''send the payment.'' What is this?",
+        "options": ["A real opportunity — large follower counts mean legitimacy", "A scam using the overpayment trick", "Harmless — giving a Venmo username is safe", "A real offer that needs a contract first"],
+        "correct": 1,
+        "explanation": "This is the overpayment scam. They send a fraudulent payment, then ask you to return part of it. When their payment reverses, your money is gone. Follower counts are purchased and meaningless. Legitimate brand deals come through official business channels, not Instagram DMs."
+      },
+      {
+        "id": 5,
+        "question": "You are suspicious about an offer you received online. What is the fastest way to check if it is a scam?",
+        "options": ["Ask the sender directly", "Look it up on Wikipedia", "Copy the key phrases and Google them with the word ''scam''", "Check if the website has a padlock icon"],
+        "correct": 2,
+        "explanation": "Most scam messages are sent to thousands of people. A quick Google search of the message text plus the word ''scam'' almost always reveals whether others have reported the same scheme. The padlock icon (HTTPS) only means data is encrypted — it does not mean the site is trustworthy."
+      }
+    ]'::jsonb
+    WHEN 'gaming_safety' THEN '[
+      {
+        "id": 1,
+        "question": "Why are online games a unique safety concern compared to social media?",
+        "options": ["Games are always violent", "Games allow real-time voice chat with complete strangers in every match", "Games cost money", "Games are not monitored"],
+        "correct": 1,
+        "explanation": "Unlike social media where connections are usually known people, a gaming lobby can instantly place your child in a voice chat with dozens of anonymous strangers. The focus on gameplay makes children less guarded than they would be in a text-based social context."
+      },
+      {
+        "id": 2,
+        "question": "What is the safest way to handle in-game purchases for your child?",
+        "options": ["Save your credit card to their account for convenience", "Allow unlimited purchases if grades are good", "Use prepaid gaming gift cards with a set monthly amount and remove saved payment methods", "Never allow any in-game purchases"],
+        "correct": 2,
+        "explanation": "Prepaid gift cards set a natural limit, teach budgeting, and eliminate the risk of accidental large charges. Saved credit cards on children''s accounts have resulted in bills in the thousands of dollars for parents."
+      },
+      {
+        "id": 3,
+        "question": "An older player has been helping your 10-year-old in Roblox and now wants to be ''gaming buddies'' across multiple different games. This is:",
+        "options": ["Normal gaming behavior", "A potential grooming warning sign that warrants calm investigation", "Fine as long as they only talk about games", "Impossible — Roblox does not allow cross-game contact"],
+        "correct": 1,
+        "explanation": "Befriending a younger child and immediately seeking to move the relationship to other platforms is a recognized grooming pattern. Calmly review the chat history and adjust privacy settings together. Roblox allows you to restrict contact to approved friends only."
+      },
+      {
+        "id": 4,
+        "question": "Which of these is a warning sign of problematic gaming use?",
+        "options": ["Enjoying talking about games with friends", "Playing with known friends on weekends", "Extreme anger or distress when gaming is interrupted", "Preferring certain game genres"],
+        "correct": 2,
+        "explanation": "Disproportionate emotional reactions to gaming interruption — beyond normal disappointment — is one of the key clinical markers of problematic gaming. Other signs include lying about gaming time, choosing games over previously enjoyed activities, and declining school performance."
+      }
+    ]'::jsonb
+    WHEN 'digital_footprint' THEN '[
+      {
+        "id": 1,
+        "question": "What is the difference between an active and passive digital footprint?",
+        "options": ["Active footprints are bigger", "Active footprints are things you post intentionally; passive footprints are data collected without you necessarily knowing", "Passive footprints are only on mobile devices", "There is no difference"],
+        "correct": 1,
+        "explanation": "Your active footprint includes posts, comments, and photos you deliberately create. Your passive footprint includes browsing history, location data, and behavioral data collected by platforms. Both persist and can be accessed."
+      },
+      {
+        "id": 2,
+        "question": "You deleted an embarrassing post from three years ago. Is it gone?",
+        "options": ["Yes — deleted means deleted", "Only if you deleted it within 30 days", "Not necessarily — others may have screenshotted it, and platforms retain data", "Yes, unless someone reported it"],
+        "correct": 2,
+        "explanation": "''Deleted'' on social media means it is no longer publicly visible — it does not mean it is gone. Screenshots exist. Platforms retain data. Archive sites may have crawled it. Assume anything posted online exists forever."
+      },
+      {
+        "id": 3,
+        "question": "What is the ''10-year rule'' for social media?",
+        "options": ["Only post content that is at least 10 years old", "Before posting, imagine your 10-years-older self showing this to a job interviewer", "Delete posts after 10 years", "Only use social media for 10 minutes per day"],
+        "correct": 1,
+        "explanation": "The 10-year rule is a practical way to evaluate posts: imagine yourself at 10 years older, in a professional context, having to explain this post. If you would be uncomfortable, reconsider posting it."
+      },
+      {
+        "id": 4,
+        "question": "How often should families conduct a digital audit?",
+        "options": ["Once, when children first get a device", "Only after a problem occurs", "Every 6 months", "Every day"],
+        "correct": 2,
+        "explanation": "A semi-annual digital audit — searching your own name, reviewing privacy settings, checking old posts, and auditing app permissions — catches issues before they become problems and keeps the conversation about digital footprints an ongoing family habit."
+      }
+    ]'::jsonb
+    ELSE '[]'::jsonb
+  END
+FROM lessons l
+WHERE l.content IS NOT NULL;
+
+
+PART 3 — CHALLENGES
+
+sqlINSERT INTO challenges (id, title, description, type, duration_days, points, icon, is_active, tips, success_criteria) VALUES
+
+(gen_random_uuid(), 'Screen-Free Saturday', 'Spend one entire Saturday without recreational screens — no social media, no gaming, no streaming. Phones for calls and navigation are allowed. Discover what your family does when screens disappear.', 'family', 1, 100, 'sun', true,
+'["Plan activities in advance so no one is bored — boredom is when people reach for devices", "Prepare a ''boredom box'' with board games, craft supplies, or books", "Cook a meal together — it naturally fills 2–3 hours", "Go outside for at least 2 hours", "Tell extended family so they don''t expect immediate text replies"]'::jsonb,
+'{"required_checkins": 1, "all_members": true, "description": "All participating family members check in at end of day confirming no recreational screens"}'::jsonb),
+
+(gen_random_uuid(), 'Dinner Without Devices', 'Keep all devices off the table and in another room for every dinner this week. No checking phones between bites. Just conversation.', 'family', 7, 150, 'utensils', true,
+'["Put a basket in the hallway — everyone deposits their phone before sitting down", "Prepare conversation starter cards if silence feels awkward at first", "Make an exception for genuine emergencies only", "Let kids lead the conversation topics some nights", "Notice how different dinner feels by day 7 compared to day 1"]'::jsonb,
+'{"required_checkins": 7, "all_members": true, "description": "Check in after each dinner confirming devices stayed out of the room"}'::jsonb),
+
+(gen_random_uuid(), '7-Day Outdoor Challenge', 'Get outside for at least 30 minutes every day for a week. Walk, bike, play, garden — anything counts as long as it is outdoors.', 'family', 7, 200, 'map-pin', true,
+'["It does not need to be a hike — a walk around the block counts", "Invite a neighbor or friend to join for accountability", "Take photos of things you notice outside — clouds, birds, interesting plants", "Try a different outdoor activity each day", "Going outside in rain is extra points for bravery"]'::jsonb,
+'{"required_checkins": 7, "any_member": true, "description": "At least one family member checks in each day with their outdoor activity"}'::jsonb),
+
+(gen_random_uuid(), 'Book Before Bed', 'Replace the last 30 minutes of screen time before bed with reading — any book, any genre, physical or e-ink reader only. Do this for 5 nights.', 'family', 5, 125, 'book-open', true,
+'["Keep the book on your pillow so it is the first thing you see when lying down", "It does not have to be educational — comic books, graphic novels, and fiction all count", "E-ink Kindles are allowed (no backlit tablets)", "If you fall asleep reading, that is a win", "Let kids pick books about whatever they are into — even if it seems silly"]'::jsonb,
+'{"required_checkins": 5, "individual": true, "description": "Each participant checks in each night confirming they read instead of watched screens"}'::jsonb),
+
+(gen_random_uuid(), 'Tech-Free Morning', 'No screens for the first 60 minutes after waking up — for the entire family — every day for 5 days. Start your morning with your own thoughts.', 'family', 5, 175, 'sunrise', true,
+'["Charge your phone in the kitchen overnight so it is not the first thing you reach for", "Replace phone-checking with a simple morning routine: stretch, make tea, sit quietly", "The news will still be there in an hour", "Notice your mood and energy on tech-free mornings vs. regular mornings", "This is hardest on day 1 and 2 — it gets easier"]'::jsonb,
+'{"required_checkins": 5, "all_members": true, "description": "Family confirms no screens for first 60 minutes each morning"}'::jsonb),
+
+(gen_random_uuid(), 'Family Game Night', 'Host a dedicated family game night — board games, card games, or outdoor games only. No screens involved. Do this twice this week.', 'family', 7, 125, 'gamepad', true,
+'["Let each family member pick one game per session so everyone is invested", "Snacks make everything better — make it feel like an event", "Keep it friendly — the goal is connection, not winning", "Classics that work well: Uno, Catan, Ticket to Ride, Codenames, Bananagrams", "Younger children: Sequence for Kids, Sleeping Queens, Outfoxed"]'::jsonb,
+'{"required_checkins": 2, "all_members": true, "description": "Family completes two game nights with no screens during play time"}'::jsonb),
+
+(gen_random_uuid(), 'Digital Kindness Week', 'Every day this week, each family member performs one intentional act of digital kindness — a genuine compliment, a check-in message to a friend, or sharing something helpful. Log each one.', 'family', 7, 150, 'heart', true,
+'["A sincere comment on someone''s post counts more than a like", "Message a friend you haven''t spoken to in a while", "Share a useful article with no agenda", "Write a genuine review for a small business you like", "Send a voice note instead of a text to someone — it feels more personal"]'::jsonb,
+'{"required_checkins": 7, "individual": true, "description": "Each participant logs their daily act of digital kindness"}'::jsonb),
+
+(gen_random_uuid(), 'Password Security Audit', 'Spend one family session reviewing and strengthening your digital security: update weak passwords, enable two-factor authentication on key accounts, and check for any accounts you no longer use.', 'family', 1, 200, 'shield', true,
+'["Use a password manager like 1Password or Bitwarden — do not reuse passwords", "Priority accounts for 2FA: email, banking, Apple/Google ID, social media", "Test if your email has been in a data breach: haveibeenpwned.com", "Delete accounts you no longer use — they are security liabilities", "Make it a family event — do it together over pizza"]'::jsonb,
+'{"required_checkins": 1, "all_members": false, "description": "Parent confirms family completed the security audit together"}'::jsonb);
+
+
+PART 4 — BADGES
+
+sqlINSERT INTO badges (id, name, description, icon, category, criteria) VALUES
+
+-- Learning badges
+(gen_random_uuid(), 'First Steps', 'Completed your first lesson in Digital Village.', 'award', 'learning', '{"type": "lesson_count", "count": 1}'::jsonb),
+(gen_random_uuid(), 'Knowledge Seeker', 'Completed 5 lessons.', 'book', 'learning', '{"type": "lesson_count", "count": 5}'::jsonb),
+(gen_random_uuid(), 'Digital Scholar', 'Completed all 8 core lessons.', 'graduation-cap', 'learning', '{"type": "lesson_count", "count": 8}'::jsonb),
+(gen_random_uuid(), 'Quiz Ace', 'Scored 100% on any quiz.', 'star', 'learning', '{"type": "quiz_perfect_score", "count": 1}'::jsonb),
+(gen_random_uuid(), 'Sharp Mind', 'Scored 100% on 3 quizzes.', 'zap', 'learning', '{"type": "quiz_perfect_score", "count": 3}'::jsonb),
+(gen_random_uuid(), 'Cyber Safety Expert', 'Completed lessons on all 8 safety topics.', 'shield', 'learning', '{"type": "all_categories_complete"}'::jsonb),
+
+-- Challenge badges
+(gen_random_uuid(), 'First Challenge', 'Completed your first family challenge.', 'flag', 'challenges', '{"type": "challenge_count", "count": 1}'::jsonb),
+(gen_random_uuid(), 'Challenge Champion', 'Completed 5 family challenges.', 'trophy', 'challenges', '{"type": "challenge_count", "count": 5}'::jsonb),
+(gen_random_uuid(), 'Unplugged Hero', 'Completed Screen-Free Saturday.', 'wifi-off', 'challenges', '{"type": "specific_challenge", "challenge_title": "Screen-Free Saturday"}'::jsonb),
+(gen_random_uuid(), 'Family Table', 'Completed the full Dinner Without Devices challenge.', 'utensils', 'challenges', '{"type": "specific_challenge", "challenge_title": "Dinner Without Devices"}'::jsonb),
+(gen_random_uuid(), 'Nature Navigator', 'Completed the 7-Day Outdoor Challenge.', 'map', 'challenges', '{"type": "specific_challenge", "challenge_title": "7-Day Outdoor Challenge"}'::jsonb),
+(gen_random_uuid(), 'Bookworm', 'Completed Book Before Bed.', 'book-open', 'challenges', '{"type": "specific_challenge", "challenge_title": "Book Before Bed"}'::jsonb),
+(gen_random_uuid(), 'Morning Mindful', 'Completed Tech-Free Morning.', 'sunrise', 'challenges', '{"type": "specific_challenge", "challenge_title": "Tech-Free Morning"}'::jsonb),
+
+-- Family badges
+(gen_random_uuid(), 'Digital Village Family', 'Created your family profile and added at least one child.', 'users', 'family', '{"type": "family_setup_complete"}'::jsonb),
+(gen_random_uuid(), 'Agreement Makers', 'Created and signed a Family Technology Agreement.', 'file-text', 'family', '{"type": "agreement_signed"}'::jsonb),
+(gen_random_uuid(), 'All Hands In', 'All family members participated in the same challenge.', 'hand', 'family', '{"type": "all_members_same_challenge"}'::jsonb),
+(gen_random_uuid(), 'Safety Assessed', 'Completed the Social Media Readiness Assessment.', 'clipboard', 'family', '{"type": "assessment_complete"}'::jsonb),
+
+-- Milestone badges
+(gen_random_uuid(), 'One Month Strong', 'Active in Digital Village for 30 days.', 'calendar', 'milestones', '{"type": "days_active", "count": 30}'::jsonb),
+(gen_random_uuid(), 'Three Month Journey', 'Active in Digital Village for 90 days.', 'trending-up', 'milestones', '{"type": "days_active", "count": 90}'::jsonb),
+(gen_random_uuid(), 'Dedicated Parent', 'Completed 8 weekly coaching tip readings.', 'heart', 'milestones', '{"type": "coaching_tips_read", "count": 8}'::jsonb),
+(gen_random_uuid(), 'Safety Advocate', 'Completed 10 lessons and 3 challenges.', 'shield-check', 'milestones', '{"type": "compound", "conditions": [{"type": "lesson_count", "count": 10}, {"type": "challenge_count", "count": 3}]}'::jsonb);
+
+
+PART 5 — WEEKLY COACHING TIPS (8 Weeks)
+
+sqlINSERT INTO coaching_tips (id, title, content, category, week_number) VALUES
+
+(gen_random_uuid(), 'Start With Curiosity, Not Control', 
+'This week''s tip: Before setting rules about technology, spend one week in observation mode. Ask curious questions rather than issuing directives.\n\nTry asking:\n• "What''s your favorite thing about that game?"\n• "Show me what you''re doing on there — I want to understand it."\n• "What would feel fair to you for screen time?"\n\nWhy this works: Children who feel their parents understand their digital world are 3x more likely to come to them when something goes wrong online. You cannot protect what you do not understand. This week, your only job is to understand.\n\nAction: Have one 15-minute conversation this week where you genuinely ask your child to show you something they do online — with zero judgment.',
+'connection', 1),
+
+(gen_random_uuid(), 'The Family Technology Agreement', 
+'This week''s tip: Families that create rules together follow rules together. Research on adolescent compliance shows that teens who participate in creating household rules are 40% more likely to follow them compared to rules imposed on them.\n\nA Family Technology Agreement does not have to be long or formal. It just needs to:\n• Cover the basics: device-free times, screen time limits, content boundaries, what to do if something uncomfortable happens online\n• Be created WITH your children, not FOR them\n• Be signed by everyone — including parents\n• Be revisited every 6 months as needs change\n\nThis app''s Agreement Builder walks you through it step by step. Even the act of building it together starts the right conversations.\n\nAction: Open the Agreement Builder this week and build your first draft. Let your child add at least one rule they care about.',
+'family_rules', 2),
+
+(gen_random_uuid(), 'Talk About the Tech You Use — Not Just Theirs', 
+'This week''s tip: Parenting researchers call this ''modeling digital wellbeing.'' Your children learn far more from what you DO with technology than from what you SAY about it.\n\nHonest questions to ask yourself:\n• Do I check my phone during meals?\n• Do I scroll social media before bed?\n• Have I ever said "just a minute" to my child because of my phone and had "a minute" turn into 20?\n\nThis is not about shame — it is about awareness. One powerful move: narrate your own digital choices out loud. "I''m going to put my phone down while we talk." "I noticed I''ve been scrolling for a while — I''m going to go do something else." This kind of self-talk out loud is one of the most effective ways to teach self-regulation.\n\nAction: This week, put your phone face-down or in another room during at least one meal every day.',
+'modeling', 3),
+
+(gen_random_uuid(), 'Privacy Conversations That Actually Land', 
+'This week''s tip: "Be careful online" is too vague to be useful. Children need specific, concrete guidance.\n\nInstead of vague warnings, use specific scenarios:\n• "What would you do if someone you only know online asked for your school name?"\n• "If a friend posted a photo of you that you hated, what would you do?"\n• "What information could someone figure out about you from your Instagram profile right now?"\n\nScenario-based conversations are dramatically more effective than rule-recitation because they build judgment, not just compliance. Judgment works when you are not there. Rules often don''t.\n\nPractical action: This week, do a privacy settings review together on one social media account your child uses. Go through every setting together. Ask "why do you think they offer this option?" to build critical thinking.\n\nBonus: Google your child''s full name together. Discuss what you find.',
+'privacy', 4),
+
+(gen_random_uuid(), 'Responding When Something Goes Wrong', 
+'This week''s tip: How you respond the FIRST TIME your child comes to you with a digital problem determines whether they come to you the SECOND time.\n\nThe most common parental responses that close the door:\n• Taking the device away as a consequence\n• Saying "I told you so"\n• Contacting the other family or the school before consulting your child\n• Asking "why were you even on that?" before asking "are you okay?"\n\nThe response that keeps the door open:\n1. Ask "are you okay?" first — always.\n2. Listen fully before problem-solving.\n3. Ask "what kind of support do you want from me right now?" — sometimes they want advice, sometimes they want to vent, sometimes they want you to handle it.\n4. Handle it together, not for them.\n\nAction: Have a direct conversation this week: "If something ever makes you uncomfortable online, I want you to know I will not punish you for telling me. I will only help you." Say those specific words. Write them in the agreement.',
+'crisis_response', 5),
+
+(gen_random_uuid(), 'Understanding the Platforms They Use', 
+'This week''s tip: You cannot guide your child through a landscape you have never visited. This week, spend 30 minutes exploring the platform your child uses most — not to monitor, but to understand.\n\nWhat to look for:\n• Default privacy settings (most platforms default to PUBLIC)\n• Who can message your child (anyone? friends of friends?)\n• How easy is it to find their location?\n• What content is easily accessible?\n• What does the comment section on popular posts look like?\n\nPlatform-specific things to know:\n\nTikTok: Default for under-16 is private, but it is easily changed. DMs are restricted for under-16 by default — verify this.\n\nInstagram: Default is public. Go to Settings → Privacy → Account Privacy → set to Private.\n\nSnapchat: ''Quick Add'' can suggest your child to strangers. Turn off: Settings → Privacy Controls → See Me in Quick Add.\n\nRoblox: Chat can be restricted to friends only. Settings → Privacy → set Contact Settings to ''Friends Only.''\n\nAction: Spend 30 minutes on your child''s primary platform this week. Then have a conversation about what you found — without alarm.',
+'platform_knowledge', 6),
+
+(gen_random_uuid(), 'Screen Time That Builds vs. Drains', 
+'This week''s tip: Not all screen time is created equal. Helping your child identify HOW they feel after different types of screen use is more powerful than time limits alone.\n\nBuilding screen time (generally positive):\n• Creating: video editing, coding, digital art, writing\n• Connecting: video calls with known friends and family\n• Learning: documentaries, educational content, skill development\n• Active gaming: games that require problem-solving or coordination\n\nDraining screen time (monitor closely):\n• Passive scrolling: infinite scroll feeds designed to maximize time-on-platform\n• Comparison-heavy content: highlight reels on Instagram and TikTok\n• Rage-inducing content: comment sections, controversial videos\n• Late-night use: any screen within 60 minutes of sleep\n\nThe check-in question: After your child has had screen time, simply ask: "Do you feel good, neutral, or worse than before you started?" Build their awareness over time — it becomes self-regulating.\n\nAction: This week, try the check-in question after screen time with genuine curiosity, not judgment.',
+'screen_health', 7),
+
+(gen_random_uuid(), 'Building Long-Term Digital Resilience', 
+'This week''s tip: The goal of digital parenting is not to protect your child from the internet forever. It is to raise someone who can navigate it wisely when you are not there.\n\nDigital resilience looks like:\n• Knowing how to verify information before sharing it\n• Recognizing when an app or interaction is making them feel worse\n• Having the confidence to end or report an uncomfortable conversation\n• Understanding that their digital footprint is their responsibility\n• Knowing they can always come to a trusted adult\n\nHow you build it:\n• Give age-appropriate independence gradually — supervised, then semi-supervised, then independent\n• Debrief after difficult digital situations rather than just punishing them\n• Celebrate good digital judgment out loud: "I noticed you didn''t engage with that negative comment — that was smart."\n• Talk about your own digital mistakes and what you learned\n\nYou have been building this with every conversation you have had, every lesson you have read, and every challenge you have taken on as a family. Digital safety is not a destination — it is an ongoing practice.\n\nAction: Share one thing you have learned or changed because of Digital Village with your child this week. Let them know you are learning too.',
+'resilience', 8);
+
+
+PART 6 — SOCIAL MEDIA READINESS ASSESSMENT
+
+sqlINSERT INTO assessments (id, title, description, category, questions) VALUES
+(
+  gen_random_uuid(),
+  'Social Media Readiness Assessment',
+  'A 15-question assessment to help you evaluate whether your child is ready for social media — and what areas to focus on before their first account.',
+  'social_media_readiness',
+  '[
+    {
+      "id": 1,
+      "category": "emotional_regulation",
+      "weight": 2,
+      "question": "If your child posted something they were proud of and received no likes or negative comments, how would they most likely respond?",
+      "options": [
+        {"text": "Delete the post and feel very upset for several days", "score": 0},
+        {"text": "Feel bad initially but move on within a few hours", "score": 2},
+        {"text": "Feel briefly disappointed but not let it affect their day", "score": 3},
+        {"text": "Not particularly mind — they know their worth isn''t defined by likes", "score": 4}
+      ]
+    },
+    {
+      "id": 2,
+      "category": "privacy_awareness",
+      "weight": 2,
+      "question": "If asked by a classmate, which of the following would your child understand should NOT be shared publicly online?",
+      "options": [
+        {"text": "Their favorite music and movies", "score": 0},
+        {"text": "Their home address, school name, and daily schedule", "score": 4},
+        {"text": "Their opinion on a TV show", "score": 0},
+        {"text": "A photo of their pet", "score": 0}
+      ]
+    },
+    {
+      "id": 3,
+      "category": "critical_thinking",
+      "weight": 2,
+      "question": "Your child sees a post saying a celebrity they love has died. It has 50,000 shares. What does your child most likely do?",
+      "options": [
+        {"text": "Immediately share it because so many people already have", "score": 0},
+        {"text": "Feel very upset and believe it without checking", "score": 0},
+        {"text": "Google the celebrity''s name to verify before sharing or reacting strongly", "score": 4},
+        {"text": "Ask you whether it is true before reacting", "score": 3}
+      ]
+    },
+    {
+      "id": 4,
+      "category": "peer_pressure",
+      "weight": 2,
+      "question": "If a group chat your child is in starts sending mean messages about another student, what would your child most likely do?",
+      "options": [
+        {"text": "Join in to avoid being left out", "score": 0},
+        {"text": "Stay silent but not report it", "score": 1},
+        {"text": "Leave the group chat", "score": 3},
+        {"text": "Stand up for the person and/or tell a trusted adult", "score": 4}
+      ]
+    },
+    {
+      "id": 5,
+      "category": "stranger_awareness",
+      "weight": 2,
+      "question": "A stranger with 5,000 followers sends your child a message saying they love their profile and want to be friends. Your child would:",
+      "options": [
+        {"text": "Be flattered and start chatting", "score": 0},
+        {"text": "Not respond but not tell anyone", "score": 1},
+        {"text": "Block and ignore the message", "score": 3},
+        {"text": "Block, report, and tell a parent", "score": 4}
+      ]
+    },
+    {
+      "id": 6,
+      "category": "digital_permanence",
+      "weight": 1,
+      "question": "Your child is asked ''Does deleting a post mean it''s truly gone?'' What is the correct answer they should know?",
+      "options": [
+        {"text": "Yes, it is completely deleted", "score": 0},
+        {"text": "Not necessarily — others may have screenshotted it and platforms keep records", "score": 4},
+        {"text": "Only if you delete it within 24 hours", "score": 1},
+        {"text": "It depends on the platform", "score": 2}
+      ]
+    },
+    {
+      "id": 7,
+      "category": "emotional_regulation",
+      "weight": 2,
+      "question": "How does your child typically respond when they feel excluded from an online group chat or social event they see posted about?",
+      "options": [
+        {"text": "Becomes very distressed, withdraws, or retaliates online", "score": 0},
+        {"text": "Feels hurt but can talk about it and move past it with support", "score": 2},
+        {"text": "Feels briefly left out but redirects to in-person friendships", "score": 3},
+        {"text": "Understands that they don''t need to be included in everything and isn''t significantly affected", "score": 4}
+      ]
+    },
+    {
+      "id": 8,
+      "category": "parent_communication",
+      "weight": 2,
+      "question": "If your child saw something online that disturbed or confused them — an inappropriate message or upsetting content — what would they most likely do?",
+      "options": [
+        {"text": "Hide it because they are afraid of getting in trouble", "score": 0},
+        {"text": "Try to handle it themselves without telling anyone", "score": 1},
+        {"text": "Tell a friend but not a parent", "score": 2},
+        {"text": "Tell you or another trusted adult", "score": 4}
+      ]
+    },
+    {
+      "id": 9,
+      "category": "privacy_awareness",
+      "weight": 2,
+      "question": "Does your child know how to set a social media account to private and why it matters?",
+      "options": [
+        {"text": "No, they have not thought about it", "score": 0},
+        {"text": "They know private accounts exist but aren''t sure how to do it", "score": 1},
+        {"text": "They know how to do it but don''t see why it is important", "score": 2},
+        {"text": "Yes, and they understand that public accounts can be seen by anyone including strangers", "score": 4}
+      ]
+    },
+    {
+      "id": 10,
+      "category": "critical_thinking",
+      "weight": 1,
+      "question": "Your child sees photos of a classmate''s amazing vacation and starts to feel bad about their own life. What would be a healthy response?",
+      "options": [
+        {"text": "Conclude that the classmate''s life is much better than theirs", "score": 0},
+        {"text": "Feel bad but keep scrolling", "score": 1},
+        {"text": "Recognize that social media shows highlights, not real life, and close the app", "score": 4},
+        {"text": "Post something better to compete", "score": 0}
+      ]
+    },
+    {
+      "id": 11,
+      "category": "digital_citizenship",
+      "weight": 1,
+      "question": "Your child''s friend asks them to share a funny meme that mocks a classmate''s appearance. What does your child do?",
+      "options": [
+        {"text": "Share it because everyone else will", "score": 0},
+        {"text": "Laugh at it but not share", "score": 1},
+        {"text": "Tell the friend it isn''t funny and decline to share", "score": 3},
+        {"text": "Decline and check on the classmate being mocked", "score": 4}
+      ]
+    },
+    {
+      "id": 12,
+      "category": "peer_pressure",
+      "weight": 2,
+      "question": "A friend group is pressuring your child to send an embarrassing photo of another student. Your child would:",
+      "options": [
+        {"text": "Send it to keep the peace", "score": 0},
+        {"text": "Refuse but not report it", "score": 2},
+        {"text": "Refuse, leave the chat, and tell a trusted adult", "score": 4},
+        {"text": "Stall and hope it goes away", "score": 1}
+      ]
+    },
+    {
+      "id": 13,
+      "category": "self_awareness",
+      "weight": 1,
+      "question": "Can your child recognize when social media or gaming is affecting their mood negatively and choose to step away?",
+      "options": [
+        {"text": "No — they get absorbed and struggle to stop", "score": 0},
+        {"text": "Rarely — they usually need a parent to point it out", "score": 1},
+        {"text": "Sometimes — they are getting better at recognizing it", "score": 3},
+        {"text": "Usually — they can self-regulate their own use", "score": 4}
+      ]
+    },
+    {
+      "id": 14,
+      "category": "stranger_awareness",
+      "weight": 2,
+      "question": "An online-only friend your child has been gaming with for a month asks to meet in person. Your child would:",
+      "options": [
+        {"text": "Agree without telling a parent", "score": 0},
+        {"text": "Consider it because they feel they know the person well", "score": 0},
+        {"text": "Decline but feel guilty about it", "score": 2},
+        {"text": "Decline and tell a parent about the request", "score": 4}
+      ]
+    },
+    {
+      "id": 15,
+      "category": "digital_permanence",
+      "weight": 1,
+      "question": "Before posting a photo or comment, does your child think about how it might look to future employers, college admissions officers, or in 10 years?",
+      "options": [
+        {"text": "Never — they just post what feels fun in the moment", "score": 0},
+        {"text": "Rarely — they have thought about it once or twice", "score": 1},
+        {"text": "Sometimes — they are developing this habit", "score": 3},
+        {"text": "Usually — they apply a future-self check before posting", "score": 4}
+      ]
+    }
+  ]'::jsonb
+);
+
+Assessment Scoring Logic (add to your scoring function/Edge Function):
+
+typescript// Scoring categories and their total possible points
+const CATEGORY_MAX_SCORES = {
+  emotional_regulation: 16,   // questions 1, 7 (weight 2 each, max 4 per answer)
+  privacy_awareness: 16,      // questions 2, 9 (weight 2 each)
+  critical_thinking: 12,      // questions 3, 10 (weight 2 and 1)
+  peer_pressure: 16,          // questions 4, 12 (weight 2 each)
+  stranger_awareness: 16,     // questions 5, 14 (weight 2 each)
+  digital_permanence: 8,      // questions 6, 15 (weight 1 each)
+  parent_communication: 8,    // question 8 (weight 2)
+  digital_citizenship: 4,     // question 11 (weight 1)
+  self_awareness: 4           // question 13 (weight 1)
+};
+
+// Recommendation text by category score percentage
+const RECOMMENDATIONS = {
+  emotional_regulation: {
+    low: "Your child may benefit from conversations about self-worth and identity beyond social validation. Consider exploring the difference between real-world friendships and online metrics. The 'Healthy Screen Habits' lesson has practical strategies.",
+    medium: "Your child has some emotional resilience around online interactions. Reinforce that likes and followers are not measures of their value. Practice the 'how do you feel after scrolling?' check-in.",
+    high: "Your child shows strong emotional self-regulation online. This is one of the most important readiness factors. Continue reinforcing that their worth is not determined by online metrics."
+  },
+  privacy_awareness: {
+    low: "Privacy is a critical gap to address before social media access. Work through the 'Is Your Child Ready for Social Media?' lesson together. Practice identifying what is and isn't safe to share using real scenarios.",
+    medium: "Your child has basic privacy awareness but may not apply it consistently. Do a privacy settings review together on any accounts they currently have and discuss why each setting matters.",
+    high: "Your child has strong privacy awareness. Reinforce it semi-annually as platforms change their defaults, and revisit when they gain access to new platforms."
+  },
+  critical_thinking: {
+    low: "Media literacy is a key area to develop. Practice the habit of verifying information before sharing or reacting. The 'Scams, Schemes & Digital Traps' lesson introduces practical verification skills.",
+    medium: "Your child is developing critical thinking skills online. Practice the verification habit together: when you see surprising news, model checking a primary source out loud.",
+    high: "Your child demonstrates solid media literacy. This skill will serve them throughout their life. Consider introducing more advanced topics like algorithmic bias and AI-generated content."
+  },
+  peer_pressure: {
+    low: "Peer pressure is one of the most common causes of digital regret. Role-play scenarios where your child practices saying no online. The key is having a script ready — 'That''s not something I''m comfortable with' — before the moment arrives.",
+    medium: "Your child shows some resistance to peer pressure but may not always act on it. Practice the exit strategy: it is okay to leave a chat or group without explanation when it crosses a line.",
+    high: "Your child demonstrates strong resistance to negative peer pressure online. This is closely linked to confident in-person identity. Acknowledge and reinforce this quality."
+  },
+  stranger_awareness: {
+    low: "This is an urgent area to address before any social media access. Work through the 'Online Predators' lesson together. The most important message: any adult who wants to keep a friendship with a child secret is not safe.",
+    medium: "Your child has some awareness but may not always act on it. Reinforce: the test of a safe online friend is that they are fine with your child telling a parent about them.",
+    high: "Your child shows strong stranger awareness. Reinforce the ''tell a parent'' habit regularly and ensure they know there will be no punishment for reporting an uncomfortable interaction."
+  },
+  parent_communication: {
+    low: "This is the most important gap to address. Your child not feeling safe to come to you with digital problems means problems will grow in the dark. Make an explicit promise: no device confiscation for reporting a problem. Say it out loud. Write it in your family agreement.",
+    medium: "Your child would sometimes come to you — work on removing any perceived barriers. Ask yourself: have there been moments where coming to you led to punishment? Acknowledge those moments if so.",
+    high: "Your child feels safe coming to you with digital problems. This is the single most protective factor in digital safety. Protect it by continuing to respond with curiosity rather than alarm."
+  }
+};
+
+// Overall scoring
+function getOverallReadinessLevel(totalScore: number, maxScore: number): {
+  level: 'not_ready' | 'approaching_ready' | 'ready_with_guidance' | 'ready';
+  label: string;
+  color: string;
+  description: string;
+} {
+  const percentage = (totalScore / maxScore) * 100;
+  if (percentage < 40) return {
+    level: 'not_ready',
+    label: 'Not Yet Ready',
+    color: '#EF4444',
+    description: 'There are several important readiness gaps to address before social media access. This is not a judgment — it is a roadmap. Focus on the highlighted areas and reassess in 3–6 months.'
+  };
+  if (percentage < 60) return {
+    level: 'approaching_ready',
+    label: 'Approaching Readiness',
+    color: '#F59E0B',
+    description: 'Your child is building the skills needed for social media. A few key areas need more development. Consider limited, supervised access on one platform while you work on the highlighted areas.'
+  };
+  if (percentage < 80) return {
+    level: 'ready_with_guidance',
+    label: 'Ready with Parental Guidance',
+    color: '#3B82F6',
+    description: 'Your child shows solid readiness with a few areas still developing. Social media with ongoing parental involvement — regular check-ins, privacy reviews, and open communication — is appropriate.'
+  };
+  return {
+    level: 'ready',
+    label: 'Ready',
+    color: '#10B981',
+    description: 'Your child demonstrates strong digital readiness across most areas. Social media with age-appropriate independence is suitable. Continue building their skills with periodic check-ins.'
+  };
+}
+
+
+PART 7 — CHILD MODE LESSONS (Ages 6–9)
+
+sqlINSERT INTO lessons (id, title, description, category, age_band, difficulty, duration_minutes, order_index, is_published, content) VALUES
+
+(gen_random_uuid(), 'What Is a Digital Footprint?', 'Everything you do online leaves a little trace, like footprints in the sand. Let''s learn what that means!', 'digital_footprint', '6-9', 'beginner', 8, 1, true,
+'{
+  "sections": [
+    {
+      "type": "text",
+      "heading": "Footprints everywhere!",
+      "content": "When you walk on a beach, you leave footprints in the sand. The internet works the same way! Every time you watch a video, send a message, or post a photo, you leave a little trace behind. We call this your Digital Footprint.\n\nHere is the cool part: unlike sand footprints that wash away, internet footprints can stick around for a really long time!"
+    },
+    {
+      "type": "tip",
+      "icon": "thumbs-up",
+      "content": "Good footprints to leave online: kind messages to friends, cool artwork you made, helpful answers to questions. Bad footprints to avoid: mean comments, private information like your home address, or photos that might embarrass you later."
+    },
+    {
+      "type": "text",
+      "heading": "The golden rule of posting",
+      "content": "Before posting anything online, ask yourself three questions:\n1. Would I be okay if my teacher saw this?\n2. Would I be okay if my grandparents saw this?\n3. Would I be okay if it stayed online forever?\n\nIf yes to all three — go for it! If no to any — think again."
+    }
+  ],
+  "key_takeaways": [
+    "Everything you post online leaves a trace",
+    "Internet footprints last much longer than sand footprints",
+    "Ask the three questions before posting anything"
+  ]
+}'::jsonb),
+
+(gen_random_uuid(), 'Strangers Online Are Different from Strangers in Real Life', 'You know not to talk to strangers on the street. But online strangers are trickier. Here''s what you need to know!', 'predators', '6-9', 'beginner', 8, 2, true,
+'{
+  "sections": [
+    {
+      "type": "text",
+      "heading": "Why online strangers are tricky",
+      "content": "In real life, you can see a stranger and know they are a grown-up or a kid. Online, people can pretend to be anyone! A grown-up could pretend to be a kid your age. Someone unfriendly could pretend to be super nice.\n\nThis is why the rule is: only chat online with people you already know in real life — like classmates, cousins, or friends from your neighborhood."
+    },
+    {
+      "type": "tip",
+      "icon": "alert-circle",
+      "content": "If an online stranger asks for your name, school, home address, or a photo of you — that is a ''Tell a Grown-Up'' moment. Right away. You won''t be in trouble. You''ll actually be really brave."
+    },
+    {
+      "type": "text",
+      "heading": "The SMART rules",
+      "content": "S — SAFE: Keep personal info safe. Never share your name, address, school, or phone number.\nM — MEET: Never agree to meet an online friend in real life without telling a parent first.\nA — ACCEPT: Do not accept files or images from people you do not know.\nR — RELIABLE: Not everything online is true. If something seems weird, check with a grown-up.\nT — TELL: Tell a trusted adult if anything online makes you feel uncomfortable or scared."
+    }
+  ],
+  "key_takeaways": [
+    "Online strangers can pretend to be anyone",
+    "Only chat with people you know in real life",
+    "Remember SMART: Safe, Meet, Accept, Reliable, Tell"
+  ]
+}'::jsonb);
+
+
+PART 8 — TECHNOLOGY AGREEMENT — DEFAULT TEMPLATE
+
+Use this as the default content for new Technology Agreements in the builder:
+
+typescriptexport const DEFAULT_AGREEMENT_TEMPLATE = {
+  sections: [
+    {
+      category: "Screen Time",
+      icon: "clock",
+      rules: [
+        { id: "st1", rule: "Weekday screen time (non-homework) is limited to __ hours per day.", enabled: true, customText: "" },
+        { id: "st2", rule: "Weekend screen time is limited to __ hours per day.", enabled: true, customText: "" },
+        { id: "st3", rule: "Screens are put away at __ PM on school nights.", enabled: true, customText: "" },
+        { id: "st4", rule: "Homework and chores are completed before recreational screen time begins.", enabled: true, customText: "" }
+      ]
+    },
+    {
+      category: "Device-Free Zones & Times",
+      icon: "home",
+      rules: [
+        { id: "df1", rule: "No devices at the dinner table. All phones go in the basket before meals.", enabled: true, customText: "" },
+        { id: "df2", rule: "No devices in bedrooms after __ PM. All devices charge in the common area overnight.", enabled: true, customText: "" },
+        { id: "df3", rule: "The first 30 minutes after school is screen-free.", enabled: false, customText: "" },
+        { id: "df4", rule: "Sunday mornings are device-free until noon.", enabled: false, customText: "" }
+      ]
+    },
+    {
+      category: "Online Safety",
+      icon: "shield",
+      rules: [
+        { id: "os1", rule: "I will never share my full name, home address, school name, or phone number with anyone I do not know in real life.", enabled: true, customText: "" },
+        { id: "os2", rule: "I will tell a parent immediately if anyone online makes me uncomfortable, asks for photos, or wants to meet in person.", enabled: true, customText: "" },
+        { id: "os3", rule: "I will not click on links or download files from people I do not know.", enabled: true, customText: "" },
+        { id: "os4", rule: "I will not make accounts on new platforms without talking to my parents first.", enabled: true, customText: "" }
+      ]
+    },
+    {
+      category: "Social Media & Posting",
+      icon: "image",
+      rules: [
+        { id: "sm1", rule: "Before posting, I will ask: would I be okay if my teacher, grandparent, and future self all saw this?", enabled: true, customText: "" },
+        { id: "sm2", rule: "I will not post photos of other people without their permission.", enabled: true, customText: "" },
+        { id: "sm3", rule: "I will not post mean comments, join pile-ons, or share content that mocks someone.", enabled: true, customText: "" },
+        { id: "sm4", rule: "My social media accounts are set to private.", enabled: true, customText: "" }
+      ]
+    },
+    {
+      category: "Gaming",
+      icon: "gamepad",
+      rules: [
+        { id: "g1", rule: "I will not share personal information with people I meet in online games.", enabled: true, customText: "" },
+        { id: "g2", rule: "I will tell a parent if someone in a game wants to move our conversation to another app or platform.", enabled: true, customText: "" },
+        { id: "g3", rule: "In-game purchases require parent approval.", enabled: true, customText: "" },
+        { id: "g4", rule: "Monthly gaming budget is $___.", enabled: false, customText: "" }
+      ]
+    },
+    {
+      category: "Parent Commitments",
+      icon: "heart",
+      rules: [
+        { id: "p1", rule: "If my child comes to me with a digital problem, I will listen first and not take their device away as a first response.", enabled: true, customText: "" },
+        { id: "p2", rule: "I will also follow the device-free zones and times — the rules apply to me too.", enabled: true, customText: "" },
+        { id: "p3", rule: "I will give more digital independence as my child demonstrates responsible use.", enabled: true, customText: "" },
+        { id: "p4", rule: "I will not secretly monitor my child''s messages. If I have concerns, I will talk to them directly.", enabled: true, customText: "" }
+      ]
+    }
+  ],
+  footer: "This agreement is a living document. We will review it together every 6 months or whenever something significant changes. Signing this means we both agree to try our best and talk openly when things aren't working."
+};
+
+
+PART 9 — APP COPY (UI TEXT)
+
+Add this to a constants/copy.ts file:
+
+typescriptexport const APP_COPY = {
+  onboarding: {
+    welcome: {
+      headline: "Raise digitally wise kids",
+      subheadline: "Digital Village helps your family build healthy tech habits, real safety skills, and open conversations — together.",
+      cta: "Get Started"
+    },
+    steps: [
+      { title: "Tell us about yourself", subtitle: "You're the parent — this app is built for you." },
+      { title: "Create your family", subtitle: "Give your family a name. It'll appear on your Family Agreement." },
+      { title: "Add your children", subtitle: "Add each child so we can personalize their experience." },
+      { title: "Your first step", subtitle: "A Family Technology Agreement brings everyone onto the same page." }
+    ]
+  },
+  emptyStates: {
+    noLessons: { title: "Ready to learn?", body: "Your personalized lesson library is waiting. Start with the topic that feels most relevant right now.", cta: "Browse Lessons" },
+    noChallenges: { title: "Start your first challenge", body: "Family challenges are the most fun part. Pick one and see how it changes things at home.", cta: "See Challenges" },
+    noBadges: { title: "Badges start here", body: "Complete lessons and challenges to earn your first badge.", cta: "Start a Lesson" },
+    noChildren: { title: "Add your first child", body: "Child profiles let you track their progress and customize content for their age.", cta: "Add Child" },
+    noAgreement: { title: "Create your Family Agreement", body: "A Technology Agreement is the single most effective tool for reducing family screen conflicts.", cta: "Build Agreement" }
+  },
+  premiumFeatures: [
+    "Unlimited lessons across all topics",
+    "Full Social Media Readiness Assessment",
+    "Family Technology Agreement Builder with digital signatures",
+    "All 8 family challenges with badges",
+    "8-week parent coaching program",
+    "Child companion mode",
+    "Screen Time Reflection Dashboard",
+    "Priority support"
+  ],
+  freeFeatures: [
+    "2 introductory lessons",
+    "1 family challenge",
+    "Basic family profile"
+  ]
+};
+
+
+SUMMARY FOR REPLIT AI
+
+The above content covers:
+
+
+8 full parent/family lessons with real educational text, scenario exercises, tips, and key takeaways
+5 complete quizzes with questions, answer options, correct answers, and explanations
+8 family challenges with tips and success criteria
+21 badges across 4 categories with criteria logic
+8 weekly coaching tips with full text
+15-question Social Media Readiness Assessment with scoring logic and category-level recommendations
+2 child-mode lessons (ages 6–9)
+Default Technology Agreement template with 6 sections and 24 rules
+UI copy for empty states, onboarding, and premium features

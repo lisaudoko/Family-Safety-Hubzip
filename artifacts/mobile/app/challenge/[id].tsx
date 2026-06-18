@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -9,12 +9,23 @@ import { useFamily } from "@/context/FamilyContext";
 import { CHALLENGES } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
 
+function StepRing({ done, total, color, size = 60 }: { done: number; total: number; color: string; size?: number }) {
+  const colors = useColors();
+  const pct = total > 0 ? done / total : 0;
+  const ringColor = pct >= 1 ? colors.success : color;
+  return (
+    <View style={[styles.ring, { width: size, height: size, borderRadius: size / 2, borderColor: ringColor, backgroundColor: ringColor + "14" }]}>
+      <Text style={[styles.ringCount, { color: ringColor, fontFamily: "Inter_700Bold", fontSize: size * 0.3 }]}>{done}/{total}</Text>
+    </View>
+  );
+}
+
 export default function ChallengeDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { progress, startChallenge, completeChallenge, awardBadge } = useFamily();
+  const { progress, startChallenge, completeChallengeStep, awardBadge } = useFamily();
 
   const challenge = CHALLENGES.find(c => c.id === id);
   if (!challenge) { router.back(); return null; }
@@ -24,6 +35,10 @@ export default function ChallengeDetailScreen() {
   const isLocked = challenge.isPremium && !user?.isPremium;
 
   const status = isComplete ? "completed" : isActive ? "active" : "available";
+  const totalSteps = challenge.steps.length;
+  const completedSteps = progress.challengeSteps[challenge.id] ?? [];
+  const isStepDone = (idx: number) => isComplete || completedSteps.includes(idx);
+  const doneCount = isComplete ? totalSteps : completedSteps.length;
 
   const handleStart = async () => {
     if (isLocked) { router.push("/subscription"); return; }
@@ -31,17 +46,17 @@ export default function ChallengeDetailScreen() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleComplete = () => {
-    Alert.alert("Complete Challenge", `Mark "${challenge.title}" as complete?`, [
-      { text: "Not yet", style: "cancel" },
-      { text: "Yes, we did it!", onPress: async () => {
-        await completeChallenge(challenge.id);
-        await awardBadge("b6");
-        if (challenge.id === "ch1") await awardBadge("b8");
-        if (challenge.id === "ch5") await awardBadge("b9");
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }},
-    ]);
+  const handleToggleStep = async (idx: number) => {
+    if (!isActive) return;
+    const justCompleted = await completeChallengeStep(challenge.id, idx, totalSteps);
+    if (justCompleted) {
+      await awardBadge("b6");
+      if (challenge.id === "ch1") await awardBadge("b8");
+      if (challenge.id === "ch5") await awardBadge("b9");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
   };
 
   const statusColors = { available: colors.primary, active: colors.accent, completed: colors.success };
@@ -80,16 +95,44 @@ export default function ChallengeDetailScreen() {
         </View>
       </View>
 
+      {(isActive || isComplete) && (
+        <View style={[styles.progressCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <StepRing done={doneCount} total={totalSteps} color={challenge.color} />
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={[styles.progressTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+              {isComplete ? "All steps complete!" : `${doneCount} of ${totalSteps} steps done`}
+            </Text>
+            <Text style={[styles.progressSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              {isComplete ? "Great job finishing this challenge together." : "Check off each step as your family completes it."}
+            </Text>
+          </View>
+        </View>
+      )}
+
       <View>
         <Text style={[styles.stepsTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Challenge Steps</Text>
-        {challenge.steps.map((step, idx) => (
-          <View key={idx} style={[styles.stepRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.stepNum, { backgroundColor: isComplete ? colors.success : challenge.color + "22" }]}>
-              {isComplete ? <Feather name="check" size={12} color="#FFFFFF" /> : <Text style={[styles.stepNumText, { color: challenge.color, fontFamily: "Inter_700Bold" }]}>{idx + 1}</Text>}
-            </View>
-            <Text style={[styles.stepText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{step}</Text>
-          </View>
-        ))}
+        {challenge.steps.map((step, idx) => {
+          const done = isStepDone(idx);
+          const checkable = isActive;
+          return (
+            <TouchableOpacity
+              key={idx}
+              style={[styles.stepRow, { backgroundColor: colors.card, borderColor: done ? colors.success + "55" : colors.border }]}
+              onPress={() => handleToggleStep(idx)}
+              activeOpacity={checkable ? 0.7 : 1}
+              disabled={!checkable}
+            >
+              <View style={[styles.stepNum, {
+                backgroundColor: done ? colors.success : challenge.color + "22",
+                borderWidth: checkable && !done ? 2 : 0,
+                borderColor: challenge.color,
+              }]}>
+                {done ? <Feather name="check" size={14} color="#FFFFFF" /> : <Text style={[styles.stepNumText, { color: challenge.color, fontFamily: "Inter_700Bold" }]}>{idx + 1}</Text>}
+              </View>
+              <Text style={[styles.stepText, { color: done ? colors.mutedForeground : colors.foreground, fontFamily: "Inter_400Regular", textDecorationLine: done && !isComplete ? "line-through" : "none" }]}>{step}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <View style={[styles.whyCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -112,10 +155,10 @@ export default function ChallengeDetailScreen() {
         </TouchableOpacity>
       )}
       {status === "active" && (
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.success }]} onPress={handleComplete} activeOpacity={0.85}>
-          <Feather name="check-circle" size={18} color="#FFFFFF" />
-          <Text style={[styles.actionBtnText, { fontFamily: "Inter_700Bold" }]}>Mark as Complete</Text>
-        </TouchableOpacity>
+        <View style={[styles.hintBanner, { backgroundColor: colors.accent + "14", borderColor: colors.accent + "33" }]}>
+          <Feather name="check-square" size={18} color={colors.accent} />
+          <Text style={[styles.hintText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Tap each step above to check it off. The challenge completes automatically when all steps are done.</Text>
+        </View>
       )}
       {status === "completed" && (
         <View style={[styles.completedBanner, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
@@ -143,6 +186,11 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 13 },
   premiumTag: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   premiumTagText: { fontSize: 12 },
+  progressCard: { flexDirection: "row", alignItems: "center", gap: 16, padding: 16, borderRadius: 16, borderWidth: 1 },
+  progressTitle: { fontSize: 16 },
+  progressSub: { fontSize: 13, lineHeight: 18 },
+  ring: { alignItems: "center", justifyContent: "center", borderWidth: 4 },
+  ringCount: {},
   stepsTitle: { fontSize: 18, marginBottom: 10 },
   stepRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
   stepNum: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
@@ -153,6 +201,8 @@ const styles = StyleSheet.create({
   whyText: { fontSize: 13, lineHeight: 20 },
   actionBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10 },
   actionBtnText: { color: "#FFFFFF", fontSize: 16 },
+  hintBanner: { borderRadius: 14, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
+  hintText: { flex: 1, fontSize: 13, lineHeight: 19 },
   completedBanner: { borderRadius: 14, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
   completedText: { fontSize: 16 },
 });

@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
 import { COURSES } from "@/data/seed";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
 
 export default function LessonScreen() {
@@ -38,7 +39,8 @@ export default function LessonScreen() {
   const paragraphs = lesson.content.split("\n\n");
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: 32 }]} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
@@ -101,6 +103,8 @@ export default function LessonScreen() {
         <Feather name={isDone ? "arrow-right" : "check"} size={18} color={isDone ? colors.foreground : "#FFFFFF"} />
       </TouchableOpacity>
     </ScrollView>
+    <BottomTabBar active="learn" />
+    </View>
   );
 }
 

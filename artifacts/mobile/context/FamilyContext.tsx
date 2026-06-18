@@ -41,6 +41,12 @@ export interface FamilyAgreement {
   customRules: string[];
 }
 
+export interface AssessmentResult {
+  score: number;
+  completedAt: string;
+  categoryScores: Record<string, { score: number; max: number }>;
+}
+
 export interface UserProgress {
   completedLessons: string[];
   completedQuizzes: string[];
@@ -50,6 +56,10 @@ export interface UserProgress {
   earnedBadges: string[];
   assessmentScore: number | null;
   assessmentCompletedAt: string | null;
+  // Per-assessment results, keyed by assessment id.
+  assessmentResults: Record<string, AssessmentResult>;
+  // Completed step indices per challenge id.
+  challengeSteps: Record<string, number[]>;
   weeklyTipIndex: number;
 }
 
@@ -68,7 +78,12 @@ interface FamilyContextType {
   completeQuiz: (quizId: string) => Promise<void>;
   startChallenge: (challengeId: string) => Promise<void>;
   completeChallenge: (challengeId: string) => Promise<void>;
-  setAssessmentScore: (score: number) => Promise<void>;
+  completeChallengeStep: (challengeId: string, stepIndex: number, totalSteps: number) => Promise<boolean>;
+  setAssessmentResult: (
+    assessmentId: string,
+    score: number,
+    categoryScores: Record<string, { score: number; max: number }>,
+  ) => Promise<void>;
   awardBadge: (badgeId: string) => Promise<void>;
   advanceWeeklyTip: () => Promise<void>;
 }
@@ -97,6 +112,8 @@ const defaultProgress: UserProgress = {
   earnedBadges: [],
   assessmentScore: null,
   assessmentCompletedAt: null,
+  assessmentResults: {},
+  challengeSteps: {},
   weeklyTipIndex: 0,
 };
 
@@ -130,6 +147,10 @@ function rowToProgress(row: UserProgressRow): UserProgress {
     earnedBadges: row.earned_badges ?? [],
     assessmentScore: row.assessment_score,
     assessmentCompletedAt: row.assessment_completed_at,
+    // Local-only fields (not yet persisted to Supabase — see Task #5 sync).
+    // Merged from the local cache in loadFromSupabase so they survive hydration.
+    assessmentResults: {},
+    challengeSteps: {},
     weeklyTipIndex: row.weekly_tip_index ?? 0,
   };
 }
@@ -270,8 +291,17 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .limit(1);
       if (prog?.[0]) {
         const p = rowToProgress(prog[0] as UserProgressRow);
-        setProgress(p);
-        await AsyncStorage.setItem(keys.progress, JSON.stringify(p));
+        // Preserve local-only fields (not yet persisted to Supabase) so they
+        // are not wiped when the remote row hydrates over the local cache.
+        const localRaw = await AsyncStorage.getItem(keys.progress);
+        const local = localRaw ? (JSON.parse(localRaw) as Partial<UserProgress>) : null;
+        const merged: UserProgress = {
+          ...p,
+          assessmentResults: local?.assessmentResults ?? p.assessmentResults,
+          challengeSteps: local?.challengeSteps ?? p.challengeSteps,
+        };
+        setProgress(merged);
+        await AsyncStorage.setItem(keys.progress, JSON.stringify(merged));
       }
     } catch {
       // network/table errors: keep the local cache we already loaded
@@ -458,8 +488,44 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
-  const setAssessmentScore = useCallback(async (score: number) => {
-    const updated = { ...progress, assessmentScore: score, assessmentCompletedAt: new Date().toISOString() };
+  const completeChallengeStep = useCallback(async (challengeId: string, stepIndex: number, totalSteps: number): Promise<boolean> => {
+    const current = progress.challengeSteps[challengeId] ?? [];
+    const next = current.includes(stepIndex)
+      ? current.filter(i => i !== stepIndex)
+      : [...current, stepIndex];
+    const updated: UserProgress = {
+      ...progress,
+      challengeSteps: { ...progress.challengeSteps, [challengeId]: next },
+    };
+    let justCompleted = false;
+    if (totalSteps > 0 && next.length >= totalSteps && !updated.completedChallenges.includes(challengeId)) {
+      updated.completedChallenges = [...updated.completedChallenges, challengeId];
+      updated.activeChallenges = updated.activeChallenges.filter(id => id !== challengeId);
+      justCompleted = true;
+    }
+    await saveProgress(updated);
+    return justCompleted;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress, useSupabaseSync, syncProgressToSupabase]);
+
+  const setAssessmentResult = useCallback(async (
+    assessmentId: string,
+    score: number,
+    categoryScores: Record<string, { score: number; max: number }>,
+  ) => {
+    const completedAt = new Date().toISOString();
+    const updated: UserProgress = {
+      ...progress,
+      assessmentResults: {
+        ...progress.assessmentResults,
+        [assessmentId]: { score, completedAt, categoryScores },
+      },
+    };
+    // Keep the legacy single-score fields in sync for the original assessment.
+    if (assessmentId === "social-media") {
+      updated.assessmentScore = score;
+      updated.assessmentCompletedAt = completedAt;
+    }
     await saveProgress(updated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, useSupabaseSync, syncProgressToSupabase]);
@@ -478,7 +544,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   }, [progress, useSupabaseSync, syncProgressToSupabase]);
 
   return (
-    <FamilyContext.Provider value={{ family, agreement, progress, isLoading, initFamily, addChild, removeChild, updateChild, saveAgreement, signAgreement, completeLesson, completeQuiz, startChallenge, completeChallenge, setAssessmentScore, awardBadge, advanceWeeklyTip }}>
+    <FamilyContext.Provider value={{ family, agreement, progress, isLoading, initFamily, addChild, removeChild, updateChild, saveAgreement, signAgreement, completeLesson, completeQuiz, startChallenge, completeChallenge, completeChallengeStep, setAssessmentResult, awardBadge, advanceWeeklyTip }}>
       {children}
     </FamilyContext.Provider>
   );

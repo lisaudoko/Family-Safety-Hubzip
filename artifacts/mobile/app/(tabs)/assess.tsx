@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
-import { ASSESSMENT_QUESTIONS } from "@/data/seed";
+import { ASSESSMENTS } from "@/data/seed";
 import { ProgressBar, ScoreRing } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
 
@@ -27,66 +27,53 @@ const CATEGORY_RECOMMENDATIONS: Record<string, string> = {
   Scams: "Practice spotting fake messages together — make it a game to identify phishing red flags.",
 };
 
+type Answer = { optionIndex: number; score: number; category: string };
+
 export default function AssessScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { progress, setAssessmentScore, awardBadge } = useFamily();
+  const { progress, setAssessmentResult, awardBadge } = useFamily();
+
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<{ optionIndex: number; score: number; category: string }[]>([]);
+  const [answers, setAnswers] = useState<Answer[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
-  const totalScore = progress.assessmentScore;
-  const maxScore = ASSESSMENT_QUESTIONS.length * 3;
-  const hasCompleted = totalScore !== null;
+  const assessment = ASSESSMENTS.find(a => a.id === selectedId) ?? null;
+  const result = selectedId ? progress.assessmentResults[selectedId] : undefined;
+  const maxScore = assessment ? assessment.questions.length * 3 : 30;
 
-  const handleSelect = (optionIndex: number) => {
-    setSelected(optionIndex);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handleNext = () => {
-    if (selected === null) return;
-    const q = ASSESSMENT_QUESTIONS[currentQ]!;
-    const score = q.options[selected]?.score ?? 0;
-    const newAnswers = [...answers, { optionIndex: selected, score, category: q.category }];
-    setAnswers(newAnswers);
-    setSelected(null);
-    if (currentQ < ASSESSMENT_QUESTIONS.length - 1) {
-      setCurrentQ(currentQ + 1);
-    } else {
-      finishAssessment(newAnswers);
-    }
-  };
-
-  const finishAssessment = async (finalAnswers: typeof answers) => {
-    const score = finalAnswers.reduce((sum, a) => sum + a.score, 0);
-    await setAssessmentScore(score);
-    if (score / maxScore >= 0.75) await awardBadge("b10");
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  const restart = () => {
+  const resetQuizState = () => {
     setStarted(false);
     setCurrentQ(0);
     setAnswers([]);
     setSelected(null);
   };
 
-  const getLevel = (score: number) => {
-    const pct = score / maxScore;
-    if (pct >= 0.75) return { label: "Digital Safety Leader", color: colors.success, icon: "award" as const, desc: "Your family has strong digital safety foundations. Keep up the great work!" };
-    if (pct >= 0.5) return { label: "Building Solid Ground", color: colors.accent, icon: "trending-up" as const, desc: "Good start! A few more conversations and practices will make your family even safer online." };
-    return { label: "Starting the Journey", color: colors.info, icon: "compass" as const, desc: "Every expert starts somewhere. The courses in Learn will help you build your family's digital safety toolkit." };
+  const openAssessment = (id: string) => {
+    resetQuizState();
+    setSelectedId(id);
   };
 
-  const getCategoryScores = (finalAnswers: typeof answers) => {
+  const backToList = () => {
+    resetQuizState();
+    setSelectedId(null);
+  };
+
+  const handleSelect = (optionIndex: number) => {
+    setSelected(optionIndex);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const computeCategoryScores = (finalAnswers: Answer[]) => {
     const cats: Record<string, { score: number; max: number }> = {};
-    for (let i = 0; i < ASSESSMENT_QUESTIONS.length; i++) {
-      const q = ASSESSMENT_QUESTIONS[i]!;
+    if (!assessment) return cats;
+    for (let i = 0; i < assessment.questions.length; i++) {
+      const q = assessment.questions[i]!;
       if (!cats[q.category]) cats[q.category] = { score: 0, max: 0 };
       cats[q.category]!.max += 3;
       const ans = finalAnswers[i];
@@ -95,37 +82,104 @@ export default function AssessScreen() {
     return cats;
   };
 
-  const q = ASSESSMENT_QUESTIONS[currentQ];
+  const finishAssessment = async (finalAnswers: Answer[]) => {
+    if (!assessment) return;
+    const score = finalAnswers.reduce((sum, a) => sum + a.score, 0);
+    const categoryScores = computeCategoryScores(finalAnswers);
+    await setAssessmentResult(assessment.id, score, categoryScores);
+    if (score / maxScore >= 0.75) await awardBadge("b10");
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setStarted(false);
+  };
 
-  if (!started && !hasCompleted) {
+  const handleNext = () => {
+    if (selected === null || !assessment) return;
+    const q = assessment.questions[currentQ]!;
+    const score = q.options[selected]?.score ?? 0;
+    const newAnswers = [...answers, { optionIndex: selected, score, category: q.category }];
+    setAnswers(newAnswers);
+    setSelected(null);
+    if (currentQ < assessment.questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
+      finishAssessment(newAnswers);
+    }
+  };
+
+  const getLevel = (score: number) => {
+    const pct = score / maxScore;
+    if (pct >= 0.75) return { label: "Digital Safety Leader", color: colors.success, icon: "award" as const, desc: "Your family has strong foundations in this area. Keep up the great work!" };
+    if (pct >= 0.5) return { label: "Building Solid Ground", color: colors.accent, icon: "trending-up" as const, desc: "Good start! A few more conversations and practices will make your family even safer." };
+    return { label: "Starting the Journey", color: colors.info, icon: "compass" as const, desc: "Every expert starts somewhere. The courses in Learn will help you build your toolkit." };
+  };
+
+  // --- Assessment list -----------------------------------------------------
+  if (!selectedId) {
     return (
       <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
-        <View style={styles.introHeader}>
-          <View style={[styles.introIcon, { backgroundColor: colors.secondary }]}>
-            <Feather name="clipboard" size={36} color={colors.primary} />
-          </View>
-          <Text style={[styles.introTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Social Media Readiness Assessment</Text>
-          <Text style={[styles.introDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            {ASSESSMENT_QUESTIONS.length} questions · ~5 minutes{"\n\n"}Understand your family's digital safety readiness and get personalized recommendations. No wrong answers — be honest for the most useful results.
+        <View style={{ gap: 6 }}>
+          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Assessments</Text>
+          <Text style={[styles.introDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "left" }]}>
+            Quick, honest check-ins to understand your family's digital readiness and get personalized recommendations.
           </Text>
         </View>
-        <View style={styles.features}>
-          {[
-            { icon: "shield" as const, label: "Privacy & Safety", desc: "What information is safe to share online?" },
-            { icon: "users" as const, label: "Family Communication", desc: "How open is your family about digital life?" },
-            { icon: "eye" as const, label: "Screen Wellness", desc: "Are devices balanced with other activities?" },
-            { icon: "trending-up" as const, label: "Digital Footprints", desc: "What traces do you leave online?" },
-          ].map(f => (
-            <View key={f.label} style={[styles.featureRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.featureIcon, { backgroundColor: colors.secondary }]}>
-                <Feather name={f.icon} size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.featureLabel, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>{f.label}</Text>
-                <Text style={[styles.featureDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{f.desc}</Text>
-              </View>
-            </View>
-          ))}
+
+        <View style={{ gap: 12 }}>
+          {ASSESSMENTS.map(a => {
+            const r = progress.assessmentResults[a.id];
+            const max = a.questions.length * 3;
+            const pct = r ? Math.round((r.score / max) * 100) : null;
+            return (
+              <TouchableOpacity
+                key={a.id}
+                style={[styles.assessCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => openAssessment(a.id)}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.assessIcon, { backgroundColor: a.color + "18" }]}>
+                  <Feather name={a.iconName as never} size={24} color={a.color} />
+                </View>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={[styles.assessTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{a.title}</Text>
+                  <Text style={[styles.assessDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>{a.description}</Text>
+                  <View style={styles.assessMeta}>
+                    <Feather name="help-circle" size={12} color={colors.mutedForeground} />
+                    <Text style={[styles.assessMetaText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>{a.questions.length} questions · {a.duration}</Text>
+                  </View>
+                </View>
+                <View style={styles.assessRight}>
+                  {pct !== null ? (
+                    <View style={[styles.scorePill, { backgroundColor: a.color + "18" }]}>
+                      <Text style={[styles.scorePillText, { color: a.color, fontFamily: "Inter_700Bold" }]}>{pct}%</Text>
+                    </View>
+                  ) : (
+                    <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // --- Intro ---------------------------------------------------------------
+  if (assessment && !started && !result) {
+    return (
+      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
+        <TouchableOpacity style={styles.backRow} onPress={backToList}>
+          <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
+          <Text style={[styles.backText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>All assessments</Text>
+        </TouchableOpacity>
+        <View style={styles.introHeader}>
+          <View style={[styles.introIcon, { backgroundColor: assessment.color + "18" }]}>
+            <Feather name={assessment.iconName as never} size={36} color={assessment.color} />
+          </View>
+          <Text style={[styles.introTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{assessment.title}</Text>
+          <Text style={[styles.introDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            {assessment.questions.length} questions · {assessment.duration}{"\n\n"}{assessment.description} No wrong answers — be honest for the most useful results.
+          </Text>
         </View>
         <TouchableOpacity style={[styles.startBtn, { backgroundColor: colors.primary }]} onPress={() => setStarted(true)} activeOpacity={0.85}>
           <Text style={[styles.startBtnText, { fontFamily: "Inter_700Bold" }]}>Start Assessment</Text>
@@ -134,18 +188,23 @@ export default function AssessScreen() {
     );
   }
 
-  if (hasCompleted) {
-    const level = getLevel(totalScore!);
-    const pct = Math.round((totalScore! / maxScore) * 100);
-    const catScores = getCategoryScores(answers);
+  // --- Results -------------------------------------------------------------
+  if (assessment && !started && result) {
+    const level = getLevel(result.score);
+    const pct = Math.round((result.score / maxScore) * 100);
+    const catScores = result.categoryScores;
     const weakCategories = Object.entries(catScores).filter(([, v]) => v.max > 0 && v.score / v.max < 0.5).map(([k]) => k);
 
     return (
       <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Your Results</Text>
+        <TouchableOpacity style={styles.backRow} onPress={backToList}>
+          <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
+          <Text style={[styles.backText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>All assessments</Text>
+        </TouchableOpacity>
+        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{assessment.title}</Text>
 
         <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <ScoreRing score={totalScore!} max={maxScore} size={110} />
+          <ScoreRing score={result.score} max={maxScore} size={110} />
           <View style={[styles.levelBadge, { backgroundColor: level.color + "22" }]}>
             <Feather name={level.icon} size={16} color={level.color} />
             <Text style={[styles.levelLabel, { color: level.color, fontFamily: "Inter_700Bold" }]}>{level.label}</Text>
@@ -180,7 +239,7 @@ export default function AssessScreen() {
               <Feather name="book-open" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.recoTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Start with a course</Text>
-                <Text style={[styles.recoDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Cyberbullying Prevention and Digital Footprints are great starting points for most families.</Text>
+                <Text style={[styles.recoDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>The courses in Learn are great starting points for building this skill as a family.</Text>
               </View>
             </View>
           )}
@@ -203,7 +262,7 @@ export default function AssessScreen() {
         </View>
 
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.retakeBtn, { borderColor: colors.border, flex: 1 }]} onPress={restart}>
+          <TouchableOpacity style={[styles.retakeBtn, { borderColor: colors.border, flex: 1 }]} onPress={() => { setStarted(true); setCurrentQ(0); setAnswers([]); setSelected(null); }}>
             <Text style={[styles.retakeText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Retake</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.startBtn, { backgroundColor: colors.primary, flex: 2 }]} onPress={() => router.push("/(tabs)/learn")} activeOpacity={0.85}>
@@ -214,16 +273,19 @@ export default function AssessScreen() {
     );
   }
 
+  // --- Quiz ----------------------------------------------------------------
+  const q = assessment?.questions[currentQ];
+
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]} keyboardShouldPersistTaps="handled">
       <View style={styles.qProgress}>
         <View style={styles.qProgressRow}>
-          <Text style={[styles.qCount, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Question {currentQ + 1} of {ASSESSMENT_QUESTIONS.length}</Text>
-          <TouchableOpacity onPress={() => Alert.alert("Quit Assessment", "Your progress won't be saved.", [{ text: "Cancel", style: "cancel" }, { text: "Quit", style: "destructive", onPress: restart }])}>
+          <Text style={[styles.qCount, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Question {currentQ + 1} of {assessment?.questions.length ?? 0}</Text>
+          <TouchableOpacity onPress={() => Alert.alert("Quit Assessment", "Your progress won't be saved.", [{ text: "Cancel", style: "cancel" }, { text: "Quit", style: "destructive", onPress: result ? () => setStarted(false) : backToList }])}>
             <Feather name="x" size={20} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
-        <ProgressBar value={currentQ} total={ASSESSMENT_QUESTIONS.length} color={colors.primary} />
+        <ProgressBar value={currentQ} total={assessment?.questions.length ?? 1} color={colors.primary} />
       </View>
 
       {q && (
@@ -262,9 +324,9 @@ export default function AssessScreen() {
             activeOpacity={0.85}
           >
             <Text style={[styles.nextBtnText, { fontFamily: "Inter_700Bold" }]}>
-              {currentQ === ASSESSMENT_QUESTIONS.length - 1 ? "See Results" : "Next"}
+              {currentQ === (assessment?.questions.length ?? 1) - 1 ? "See Results" : "Next"}
             </Text>
-            <Feather name={currentQ === ASSESSMENT_QUESTIONS.length - 1 ? "check" : "arrow-right"} size={18} color="#FFFFFF" />
+            <Feather name={currentQ === (assessment?.questions.length ?? 1) - 1 ? "check" : "arrow-right"} size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </>
       )}
@@ -275,15 +337,21 @@ export default function AssessScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 20 },
   pageTitle: { fontSize: 28 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  backText: { fontSize: 14 },
+  assessCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 18, borderWidth: 1 },
+  assessIcon: { width: 52, height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  assessTitle: { fontSize: 16 },
+  assessDesc: { fontSize: 13, lineHeight: 18 },
+  assessMeta: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  assessMetaText: { fontSize: 12 },
+  assessRight: { marginLeft: 4, alignItems: "center", justifyContent: "center" },
+  scorePill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
+  scorePillText: { fontSize: 14 },
   introHeader: { alignItems: "center", gap: 14 },
   introIcon: { width: 80, height: 80, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   introTitle: { fontSize: 22, textAlign: "center" },
   introDesc: { fontSize: 14, textAlign: "center", lineHeight: 22 },
-  features: { gap: 8 },
-  featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
-  featureIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  featureLabel: { fontSize: 14, marginBottom: 2 },
-  featureDesc: { fontSize: 12, lineHeight: 17 },
   startBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
   startBtnText: { color: "#FFFFFF", fontSize: 16 },
   scoreCard: { borderRadius: 20, padding: 24, alignItems: "center", borderWidth: 1, gap: 14 },

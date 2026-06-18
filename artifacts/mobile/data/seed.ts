@@ -732,6 +732,276 @@ export const ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
   },
 ];
 
+export const SCREEN_TIME_QUESTIONS: AssessmentQuestion[] = [
+  {
+    id: "st1",
+    question: "Does your family have device-free times during the day (like meals or bedtime)?",
+    options: [
+      { label: "Yes, and we stick to them consistently", score: 3 },
+      { label: "Yes, but we're not always consistent", score: 2 },
+      { label: "We've talked about it but haven't set any", score: 1 },
+      { label: "No, screens are allowed anytime", score: 0 },
+    ],
+    category: "Wellness",
+  },
+  {
+    id: "st2",
+    question: "Are screens kept out of bedrooms overnight?",
+    options: [
+      { label: "Yes, devices charge outside bedrooms every night", score: 3 },
+      { label: "Usually, with occasional exceptions", score: 2 },
+      { label: "Rarely — devices often stay in bedrooms", score: 1 },
+      { label: "No, devices are always in bedrooms", score: 0 },
+    ],
+    category: "Wellness",
+  },
+  {
+    id: "st3",
+    question: "Does your child take regular breaks from screens for physical activity?",
+    options: [
+      { label: "Yes, active breaks are part of every day", score: 3 },
+      { label: "Most days they get active time", score: 2 },
+      { label: "Only occasionally", score: 1 },
+      { label: "Rarely or never", score: 0 },
+    ],
+    category: "Wellness",
+  },
+  {
+    id: "st4",
+    question: "Do you use built-in screen time tools or app timers to manage device use?",
+    options: [
+      { label: "Yes, they're set up and we review them together", score: 3 },
+      { label: "Yes, but I don't check them often", score: 2 },
+      { label: "I've looked into them but not set them up", score: 1 },
+      { label: "No, I don't use any tools", score: 0 },
+    ],
+    category: "Safety",
+  },
+  {
+    id: "st5",
+    question: "Do you talk with your child about how screen time makes them feel?",
+    options: [
+      { label: "Yes, we check in about this regularly", score: 3 },
+      { label: "Sometimes, when something comes up", score: 2 },
+      { label: "Rarely", score: 1 },
+      { label: "No, we haven't discussed feelings around screens", score: 0 },
+    ],
+    category: "Communication",
+  },
+  {
+    id: "st6",
+    question: "Is there a screen-free wind-down routine before bed?",
+    options: [
+      { label: "Yes, screens are off well before bedtime", score: 3 },
+      { label: "Usually, but it varies", score: 2 },
+      { label: "Occasionally", score: 1 },
+      { label: "No, screens are often used right up to sleep", score: 0 },
+    ],
+    category: "Wellness",
+  },
+  {
+    id: "st7",
+    question: "Are weekends balanced between screen time and offline activities?",
+    options: [
+      { label: "Yes, we keep a healthy balance", score: 3 },
+      { label: "Mostly balanced", score: 2 },
+      { label: "Weekends skew heavily toward screens", score: 1 },
+      { label: "No, weekends are mostly screen time", score: 0 },
+    ],
+    category: "Wellness",
+  },
+  {
+    id: "st8",
+    question: "Have you and your child agreed on screen time limits together?",
+    options: [
+      { label: "Yes, we set the limits as a family", score: 3 },
+      { label: "I set them and explained why", score: 2 },
+      { label: "There are limits but they weren't discussed", score: 1 },
+      { label: "No, there are no agreed limits", score: 0 },
+    ],
+    category: "Communication",
+  },
+  {
+    id: "st9",
+    question: "Do you talk as a family about the content and apps everyone spends time on?",
+    options: [
+      { label: "Yes, we regularly share what we watch and play", score: 3 },
+      { label: "Sometimes", score: 2 },
+      { label: "Rarely", score: 1 },
+      { label: "No, we don't discuss it", score: 0 },
+    ],
+    category: "Communication",
+  },
+  {
+    id: "st10",
+    question: "Does your child have offline hobbies they enjoy regularly?",
+    options: [
+      { label: "Yes, several they're passionate about", score: 3 },
+      { label: "Yes, at least one regular hobby", score: 2 },
+      { label: "Not really, but they're open to it", score: 1 },
+      { label: "No, free time is mostly screens", score: 0 },
+    ],
+    category: "Wellness",
+  },
+];
+
+export const CYBERBULLYING_QUESTIONS: AssessmentQuestion[] = [
+  {
+    id: "cb1",
+    question: "Does your child know what cyberbullying looks like?",
+    options: [
+      { label: "Yes, we've discussed examples clearly", score: 3 },
+      { label: "They have a general idea", score: 2 },
+      { label: "We've mentioned it briefly", score: 1 },
+      { label: "No, we haven't covered this", score: 0 },
+    ],
+    category: "Safety",
+  },
+  {
+    id: "cb2",
+    question: "Would your child tell you if they were being bullied online?",
+    options: [
+      { label: "Yes, I'm confident they would", score: 3 },
+      { label: "I think so, but I'm not certain", score: 2 },
+      { label: "Probably not — they'd handle it alone", score: 1 },
+      { label: "No, they likely wouldn't tell me", score: 0 },
+    ],
+    category: "Communication",
+  },
+  {
+    id: "cb3",
+    question: "Does your child know how to block and report a bully on their platforms?",
+    options: [
+      { label: "Yes, they know how on all their apps", score: 3 },
+      { label: "Yes, on some apps", score: 2 },
+      { label: "We've talked about it but not practiced", score: 1 },
+      { label: "No, they don't know how", score: 0 },
+    ],
+    category: "Safety",
+  },
+  {
+    id: "cb4",
+    question: "Does your child understand they shouldn't retaliate against an online bully?",
+    options: [
+      { label: "Yes, we've discussed why retaliating makes it worse", score: 3 },
+      { label: "They generally understand", score: 2 },
+      { label: "We haven't really covered this", score: 1 },
+      { label: "No, they might fight back online", score: 0 },
+    ],
+    category: "Safety",
+  },
+  {
+    id: "cb5",
+    question: "Does your child know to save evidence (like screenshots) of bullying?",
+    options: [
+      { label: "Yes, they know how and why to keep records", score: 3 },
+      { label: "They have a rough idea", score: 2 },
+      { label: "We haven't discussed this", score: 1 },
+      { label: "No, they'd likely just delete it", score: 0 },
+    ],
+    category: "Digital Footprint",
+  },
+  {
+    id: "cb6",
+    question: "Have you discussed what to do if they witness someone else being bullied?",
+    options: [
+      { label: "Yes, they know how to support and report it", score: 3 },
+      { label: "We've touched on it", score: 2 },
+      { label: "Not really", score: 1 },
+      { label: "No, we haven't discussed bystander situations", score: 0 },
+    ],
+    category: "Communication",
+  },
+  {
+    id: "cb7",
+    question: "Does your child understand that being bullied is never their fault?",
+    options: [
+      { label: "Yes, we've reinforced this clearly", score: 3 },
+      { label: "I believe they understand", score: 2 },
+      { label: "We haven't emphasized it", score: 1 },
+      { label: "No, they might blame themselves", score: 0 },
+    ],
+    category: "Wellness",
+  },
+  {
+    id: "cb8",
+    question: "Have you talked about being kind online and not bullying others?",
+    options: [
+      { label: "Yes, kindness online is an ongoing conversation", score: 3 },
+      { label: "We've discussed it a few times", score: 2 },
+      { label: "Only briefly", score: 1 },
+      { label: "No, we haven't discussed their own behavior", score: 0 },
+    ],
+    category: "Safety",
+  },
+  {
+    id: "cb9",
+    question: "Do you regularly check in about your child's online social experiences?",
+    options: [
+      { label: "Yes, we talk about it often", score: 3 },
+      { label: "Sometimes", score: 2 },
+      { label: "Rarely", score: 1 },
+      { label: "No, I don't ask about their online life", score: 0 },
+    ],
+    category: "Communication",
+  },
+  {
+    id: "cb10",
+    question: "Does your child know which trusted adults they can turn to beyond you?",
+    options: [
+      { label: "Yes, they can name several trusted adults", score: 3 },
+      { label: "Yes, at least one besides me", score: 2 },
+      { label: "They're unsure", score: 1 },
+      { label: "No, they don't know who else to turn to", score: 0 },
+    ],
+    category: "Safety",
+  },
+];
+
+export interface Assessment {
+  id: string;
+  title: string;
+  shortTitle: string;
+  description: string;
+  iconName: string;
+  color: string;
+  duration: string;
+  questions: AssessmentQuestion[];
+}
+
+export const ASSESSMENTS: Assessment[] = [
+  {
+    id: "social-media",
+    title: "Social Media Readiness",
+    shortTitle: "Social Media",
+    description: "Gauge how ready your family is for social media — privacy, safety, and healthy habits.",
+    iconName: "share-2",
+    color: "#7B5EA7",
+    duration: "~5 min",
+    questions: ASSESSMENT_QUESTIONS,
+  },
+  {
+    id: "screen-time",
+    title: "Screen Time Habits",
+    shortTitle: "Screen Time",
+    description: "See how balanced your family's screen time is and where small routines could help.",
+    iconName: "clock",
+    color: "#4A90A4",
+    duration: "~5 min",
+    questions: SCREEN_TIME_QUESTIONS,
+  },
+  {
+    id: "cyberbullying",
+    title: "Cyberbullying Awareness",
+    shortTitle: "Cyberbullying",
+    description: "Check whether your child can recognize, respond to, and recover from cyberbullying.",
+    iconName: "shield",
+    color: "#E07B39",
+    duration: "~5 min",
+    questions: CYBERBULLYING_QUESTIONS,
+  },
+];
+
 export const BADGES: Badge[] = [
   { id: "b1", title: "First Step", description: "Completed your first lesson", iconName: "star", color: "#F5A623", condition: "complete_first_lesson" },
   { id: "b2", title: "Quiz Master", description: "Passed 5 quizzes", iconName: "award", color: "#4A90A4", condition: "pass_5_quizzes" },

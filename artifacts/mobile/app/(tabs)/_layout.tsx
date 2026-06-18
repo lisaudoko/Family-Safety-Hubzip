@@ -17,7 +17,7 @@ function NativeTabLayout() {
         <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="learn">
-        <Icon sf={{ default: "book.open", selected: "book.open.fill" }} />
+        <Icon sf={{ default: "book", selected: "book.fill" }} />
         <Label>Learn</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="assess">
@@ -92,7 +92,7 @@ function ClassicTabLayout() {
           title: "Learn",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="book.open" tintColor={color} size={24} />
+              <SymbolView name="book" tintColor={color} size={24} />
             ) : (
               <Feather name="book-open" size={22} color={color} />
             ),
