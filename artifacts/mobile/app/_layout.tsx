@@ -16,11 +16,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { FamilyProvider } from "@/context/FamilyContext";
-import { configureApi } from "@/lib/api";
+import { configureApiBase } from "@/lib/apiClient";
 
 SplashScreen.preventAutoHideAsync();
 
-configureApi();
+configureApiBase();
 
 const queryClient = new QueryClient();
 

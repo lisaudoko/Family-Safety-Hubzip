@@ -4,6 +4,10 @@ packages:
   - lib/integrations/*
   - scripts
 
+allowBuilds:
+  '@anthropic-ai/claude-code': true
+  esbuild: false
+
 autoInstallPeers: false
 
 catalog:
