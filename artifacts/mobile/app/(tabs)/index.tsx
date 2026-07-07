@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import React from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useRef } from "react";
 import { Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -18,6 +18,13 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const { family, progress, advanceWeeklyTip } = useFamily();
   const [refreshing, setRefreshing] = React.useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
   const tip = WEEKLY_TIPS[progress.weeklyTipIndex % WEEKLY_TIPS.length] ?? WEEKLY_TIPS[0]!;
 
@@ -37,6 +44,7 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad + 100 }]}
       showsVerticalScrollIndicator={false}

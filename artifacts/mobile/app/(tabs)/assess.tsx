@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -39,6 +39,13 @@ export default function AssessScreen() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -115,7 +122,7 @@ export default function AssessScreen() {
   // --- Assessment list -----------------------------------------------------
   if (!selectedId) {
     return (
-      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
+      <ScrollView ref={scrollRef} style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
         <View style={{ gap: 6 }}>
           <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Assessments</Text>
           <Text style={[styles.introDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "left" }]}>
@@ -166,7 +173,7 @@ export default function AssessScreen() {
   // --- Intro ---------------------------------------------------------------
   if (assessment && !started && !result) {
     return (
-      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
+      <ScrollView ref={scrollRef} style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
         <TouchableOpacity style={styles.backRow} onPress={backToList}>
           <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
           <Text style={[styles.backText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>All assessments</Text>
@@ -195,7 +202,7 @@ export default function AssessScreen() {
     const weakCategories = Object.entries(catScores).filter(([, v]) => v.max > 0 && v.score / v.max < 0.5).map(([k]) => k);
 
     return (
-      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
+      <ScrollView ref={scrollRef} style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]}>
         <TouchableOpacity style={styles.backRow} onPress={backToList}>
           <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
           <Text style={[styles.backText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>All assessments</Text>
@@ -276,7 +283,7 @@ export default function AssessScreen() {
   const q = assessment?.questions[currentQ];
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: bottomPad + 100 }]} keyboardShouldPersistTaps="handled">
       <View style={styles.qProgress}>
         <View style={styles.qProgressRow}>
           <Text style={[styles.qCount, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Question {currentQ + 1} of {assessment?.questions.length ?? 0}</Text>

@@ -1,13 +1,15 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { randomUUID } from "crypto";
+import { randomInt, randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import {
+  passwordResetCodesTable,
   profilesTable,
   sessionsTable,
 } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth-middleware.js";
+import { sendPasswordResetEmail } from "../lib/email.js";
 
 const router = Router();
 
@@ -127,6 +129,120 @@ router.post("/auth/login", async (req, res, next) => {
     });
 
     res.json({ token, user: safeUser(profile) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const RESET_CODE_TTL_MINUTES = 15;
+
+// POST /api/auth/forgot-password
+router.post("/auth/forgot-password", async (req, res, next) => {
+  try {
+    const { email } = req.body as { email?: string };
+    if (!email?.trim()) {
+      res.status(400).json({ error: "email required" });
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const [profile] = await db
+      .select({ id: profilesTable.id, email: profilesTable.email })
+      .from(profilesTable)
+      .where(eq(profilesTable.email, normalizedEmail))
+      .limit(1);
+
+    // Always respond the same way whether or not the account exists, so the
+    // response can't be used to discover which emails are registered.
+    if (profile) {
+      const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+      const codeHash = await bcrypt.hash(code, 12);
+      const expiresAt = new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60_000);
+
+      await db.insert(passwordResetCodesTable).values({
+        id: randomUUID(),
+        user_id: profile.id,
+        code_hash: codeHash,
+        expires_at: expiresAt,
+      });
+
+      await sendPasswordResetEmail(profile.email, code);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/reset-password
+router.post("/auth/reset-password", async (req, res, next) => {
+  try {
+    const { email, code, newPassword } = req.body as {
+      email?: string;
+      code?: string;
+      newPassword?: string;
+    };
+
+    if (!email?.trim() || !code?.trim() || !newPassword || newPassword.length < 6) {
+      res.status(400).json({ error: "email, code, and newPassword (min 6 chars) required" });
+      return;
+    }
+
+    const invalidCodeError = () => res.status(400).json({ error: "Invalid or expired code" });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const [profile] = await db
+      .select({ id: profilesTable.id })
+      .from(profilesTable)
+      .where(eq(profilesTable.email, normalizedEmail))
+      .limit(1);
+
+    if (!profile) {
+      invalidCodeError();
+      return;
+    }
+
+    const candidates = await db
+      .select()
+      .from(passwordResetCodesTable)
+      .where(
+        and(
+          eq(passwordResetCodesTable.user_id, profile.id),
+          isNull(passwordResetCodesTable.used_at),
+          gt(passwordResetCodesTable.expires_at, new Date()),
+        ),
+      )
+      .orderBy(desc(passwordResetCodesTable.created_at));
+
+    let matched: (typeof candidates)[number] | undefined;
+    for (const candidate of candidates) {
+      if (await bcrypt.compare(code, candidate.code_hash)) {
+        matched = candidate;
+        break;
+      }
+    }
+
+    if (!matched) {
+      invalidCodeError();
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await db
+      .update(profilesTable)
+      .set({ password_hash: passwordHash, updated_at: new Date() })
+      .where(eq(profilesTable.id, profile.id));
+
+    await db
+      .update(passwordResetCodesTable)
+      .set({ used_at: new Date() })
+      .where(eq(passwordResetCodesTable.id, matched.id));
+
+    // Force re-login everywhere after a password reset.
+    await db.delete(sessionsTable).where(eq(sessionsTable.user_id, profile.id));
+
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

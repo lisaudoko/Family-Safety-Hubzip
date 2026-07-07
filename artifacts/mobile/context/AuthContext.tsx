@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 import {
   apiCompleteOnboarding,
   apiGetMe,
@@ -12,6 +13,11 @@ import {
   getToken,
   setToken,
 } from "@/lib/apiClient";
+import {
+  clearPendingLocalPassword,
+  setPendingLocalPassword,
+  syncLocalAccountToServer,
+} from "@/lib/localAccountSync";
 
 export interface User {
   id: string;
@@ -80,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (localRaw) {
         const user: User = JSON.parse(localRaw);
         setState({ user, isLoading: false, isAuthenticated: true });
+        trySyncLocalAccount();
         return;
       }
     } catch {
@@ -87,6 +94,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setState({ user: null, isLoading: false, isAuthenticated: false });
   };
+
+  // Retries pushing a local-only account to the server in the background so
+  // the user ends up on a real, restart-proof account without noticing.
+  const trySyncLocalAccount = useCallback(async () => {
+    const localRaw = await AsyncStorage.getItem(LOCAL_USER_KEY);
+    if (!localRaw) return;
+    const localUser: User = JSON.parse(localRaw);
+    if (!localUser.id.startsWith("local_")) return;
+
+    const synced = await syncLocalAccountToServer(localUser);
+    if (!synced) return;
+
+    await AsyncStorage.removeItem(LOCAL_USER_KEY);
+    const updated = apiUserToUser(synced);
+    // Re-apply state the user changed while offline that a fresh server
+    // registration wouldn't know about.
+    if (localUser.hasCompletedOnboarding && !updated.hasCompletedOnboarding) {
+      try {
+        const { user } = await apiCompleteOnboarding();
+        Object.assign(updated, apiUserToUser(user));
+      } catch {
+        // best-effort
+      }
+    }
+    if (localUser.isPremium && !updated.isPremium) {
+      try {
+        const { user } = await apiUpgradePremium();
+        Object.assign(updated, apiUserToUser(user));
+      } catch {
+        // best-effort
+      }
+    }
+    setState({ user: updated, isLoading: false, isAuthenticated: true });
+  }, []);
+
+  // Retry whenever the app comes back to the foreground — covers the case
+  // where connectivity returns while the app is already open.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", next => {
+      if (next === "active") trySyncLocalAccount();
+    });
+    return () => sub.remove();
+  }, [trySyncLocalAccount]);
 
   // Maps the API response shape to our internal User shape
   function apiUserToUser(u: {
@@ -121,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       // If the server is unreachable, try local fallback
       if (isNetworkError(err)) {
-        await localLoginFallback(email);
+        await localLoginFallback(email, password);
         return;
       }
       throw err;
@@ -137,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       // If the server is unreachable, create a local-only account
       if (isNetworkError(err)) {
-        await localRegisterFallback(name, email);
+        await localRegisterFallback(name, email, password);
         return;
       }
       throw err;
@@ -148,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiLogout();
     await clearToken();
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
+    await clearPendingLocalPassword();
     setState({ user: null, isLoading: false, isAuthenticated: false });
   }, []);
 
@@ -206,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── Offline fallbacks ─────────────────────────────────────────────────────
 
-  const localLoginFallback = async (email: string) => {
+  const localLoginFallback = async (email: string, password: string) => {
     const raw = await AsyncStorage.getItem(LOCAL_USER_KEY);
     if (raw) {
       const u: User = JSON.parse(raw);
@@ -215,11 +266,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
     }
-    // Create new offline account so user is never blocked
-    await localRegisterFallback(email.split("@")[0] ?? "Parent", email);
+    // No offline account to fall back to — surface this rather than
+    // silently creating a blank one, which looked like a successful
+    // login into an empty account.
+    throw new Error(
+      "We couldn't reach the server to sign you in, and no offline account was found on this device. Please check your connection and try again.",
+    );
   };
 
-  const localRegisterFallback = async (name: string, email: string) => {
+  const localRegisterFallback = async (name: string, email: string, password: string) => {
     const id = "local_" + Date.now();
     const user: User = {
       id,
@@ -232,6 +287,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       familyId: "f" + id,
     };
     await AsyncStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
+    // Stash the password so we can register this account for real once the
+    // server becomes reachable again — see trySyncLocalAccount.
+    await setPendingLocalPassword(password);
     setState({ user, isLoading: false, isAuthenticated: true });
   };
 

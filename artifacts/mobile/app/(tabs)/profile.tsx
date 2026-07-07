@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -17,6 +17,13 @@ export default function ProfileScreen() {
   const { progress } = useFamily();
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? "");
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -24,10 +31,23 @@ export default function ProfileScreen() {
   const earnedBadges = BADGES.filter(b => progress.earnedBadges.includes(b.id));
   const unearnedBadges = BADGES.filter(b => !progress.earnedBadges.includes(b.id));
 
+  const performLogout = async () => {
+    await logout();
+    router.replace("/welcome");
+  };
+
   const handleLogout = () => {
+    // react-native-web's Alert.alert() is a no-op, so the native confirm
+    // dialog never appears there — fall back to window.confirm on web.
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to sign out?")) {
+        performLogout();
+      }
+      return;
+    }
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: async () => { await logout(); router.replace("/welcome"); } },
+      { text: "Sign Out", style: "destructive", onPress: performLogout },
     ]);
   };
 
@@ -63,6 +83,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad + 100 }]}
       showsVerticalScrollIndicator={false}

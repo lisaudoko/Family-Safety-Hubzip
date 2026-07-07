@@ -1,12 +1,12 @@
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFamily } from "@/context/FamilyContext";
 import { CHALLENGES, COURSES } from "@/data/seed";
 import ChallengeCard from "@/components/ChallengeCard";
 import CourseCard from "@/components/CourseCard";
-import { SectionHeader } from "@/components/UI";
+import { EmptyState, SectionHeader } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
 
 const TABS = ["Courses", "Challenges"] as const;
@@ -18,9 +18,31 @@ export default function LearnScreen() {
   const { progress } = useFamily();
   const [activeTab, setActiveTab] = useState<"Courses" | "Challenges">("Courses");
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, []),
+  );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  // Only show categories that have at least one item for the active tab,
+  // so users never tap into a chip that silently shows nothing.
+  const sourceItems = activeTab === "Courses" ? COURSES : CHALLENGES;
+  const visibleCategories = CATEGORIES.filter(
+    cat => cat === "All" || sourceItems.some(i => i.category === cat),
+  );
+
+  const handleTabChange = (tab: "Courses" | "Challenges") => {
+    setActiveTab(tab);
+    const items = tab === "Courses" ? COURSES : CHALLENGES;
+    if (activeCategory !== "All" && !items.some(i => i.category === activeCategory)) {
+      setActiveCategory("All");
+    }
+  };
 
   const filteredCourses = COURSES.filter(c => activeCategory === "All" || c.category === activeCategory);
   const filteredChallenges = CHALLENGES.filter(c => activeCategory === "All" || c.category === activeCategory);
@@ -33,6 +55,7 @@ export default function LearnScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad + 100 }]}
       showsVerticalScrollIndicator={false}
@@ -45,7 +68,7 @@ export default function LearnScreen() {
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && { backgroundColor: colors.card }]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => handleTabChange(tab)}
             >
               <Text style={[styles.tabText, { color: activeTab === tab ? colors.foreground : colors.mutedForeground, fontFamily: activeTab === tab ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
                 {tab}
@@ -56,7 +79,7 @@ export default function LearnScreen() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-        {CATEGORIES.map(cat => (
+        {visibleCategories.map(cat => (
           <TouchableOpacity
             key={cat}
             style={[styles.catBtn, { backgroundColor: activeCategory === cat ? colors.primary : colors.card, borderColor: activeCategory === cat ? colors.primary : colors.border }]}
@@ -70,28 +93,44 @@ export default function LearnScreen() {
       {activeTab === "Courses" && (
         <View style={styles.list}>
           <SectionHeader title={`${filteredCourses.length} ${activeCategory === "All" ? "Courses" : activeCategory + " Courses"}`} />
-          {filteredCourses.map(course => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              progress={progress.courseProgress[course.id] ?? 0}
-              onPress={() => router.push({ pathname: "/course/[id]", params: { id: course.id } })}
+          {filteredCourses.length === 0 ? (
+            <EmptyState
+              icon="book-open"
+              title="No courses here yet"
+              subtitle="Try a different category to find more courses."
             />
-          ))}
+          ) : (
+            filteredCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                progress={progress.courseProgress[course.id] ?? 0}
+                onPress={() => router.push({ pathname: "/course/[id]", params: { id: course.id } })}
+              />
+            ))
+          )}
         </View>
       )}
 
       {activeTab === "Challenges" && (
         <View style={styles.list}>
           <SectionHeader title={`${filteredChallenges.length} Family Challenges`} />
-          {filteredChallenges.map(challenge => (
-            <ChallengeCard
-              key={challenge.id}
-              challenge={challenge}
-              status={getChallengeStatus(challenge.id)}
-              onPress={() => router.push({ pathname: "/challenge/[id]", params: { id: challenge.id } })}
+          {filteredChallenges.length === 0 ? (
+            <EmptyState
+              icon="flag"
+              title="No challenges here yet"
+              subtitle="Try a different category to find more challenges."
             />
-          ))}
+          ) : (
+            filteredChallenges.map(challenge => (
+              <ChallengeCard
+                key={challenge.id}
+                challenge={challenge}
+                status={getChallengeStatus(challenge.id)}
+                onPress={() => router.push({ pathname: "/challenge/[id]", params: { id: challenge.id } })}
+              />
+            ))
+          )}
         </View>
       )}
     </ScrollView>

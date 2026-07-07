@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm run *)",
+      "Bash(PORT=8091 node --enable-source-maps ./dist/index.mjs)",
+      "Read(//tmp/**)"
+    ]
+  }
+}

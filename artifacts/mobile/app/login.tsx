@@ -28,7 +28,14 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     } catch (err: any) {
       console.error("[login] unexpected error:", err?.message || err);
-      Alert.alert("Sign In Failed", "Please check your credentials and try again.");
+      const message =
+        typeof err?.message === "string" && err.message.length > 0
+          ? err.message
+          : "Please check your credentials and try again.";
+      Alert.alert("Sign In Failed", message, [
+        { text: "Try Again", style: "cancel" },
+        { text: "Create Account", onPress: () => router.push("/register") },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -130,6 +137,12 @@ export default function LoginScreen() {
             </View>
           </View>
 
+          <TouchableOpacity onPress={() => router.push("/forgot-password")} style={styles.forgotRow}>
+            <Text style={[styles.forgotText, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>
+              Forgot password?
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[
               styles.btn,
@@ -195,6 +208,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   inputInner: { flex: 1, fontSize: 15 },
+  forgotRow: { alignSelf: "flex-end" },
+  forgotText: { fontSize: 13 },
   btn: {
     borderRadius: 16,
     paddingVertical: 16,

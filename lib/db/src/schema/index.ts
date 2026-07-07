@@ -54,6 +54,24 @@ export const sessionsTable = pgTable(
 
 export type Session = typeof sessionsTable.$inferSelect;
 
+// ── password_reset_codes ────────────────────────────────────────────────────────
+export const passwordResetCodesTable = pgTable(
+  "password_reset_codes",
+  {
+    id: text("id").primaryKey(),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: "cascade" }),
+    code_hash: text("code_hash").notNull(),
+    expires_at: timestamp("expires_at").notNull(),
+    used_at: timestamp("used_at"),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("password_reset_codes_user_id_idx").on(t.user_id)],
+);
+
+export type PasswordResetCode = typeof passwordResetCodesTable.$inferSelect;
+
 // ── families ───────────────────────────────────────────────────────────────────
 export const familiesTable = pgTable(
   "families",

@@ -103,6 +103,24 @@ export async function apiLogin(
   });
 }
 
+export async function apiForgotPassword(email: string): Promise<void> {
+  await apiFetch("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function apiResetPassword(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  await apiFetch("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ email, code, newPassword }),
+  });
+}
+
 export async function apiLogout(): Promise<void> {
   try {
     await apiFetch("/auth/logout", { method: "POST" });

@@ -41,7 +41,8 @@ function AuthRedirect() {
     const inLogin = pathname === "/login";
     const inRegister = pathname === "/register";
     const inOnboarding = pathname === "/onboarding";
-    const inAuthFlow = inWelcome || inLogin || inRegister || inOnboarding;
+    const inForgotPassword = pathname === "/forgot-password";
+    const inAuthFlow = inWelcome || inLogin || inRegister || inOnboarding || inForgotPassword;
 
     if (!isAuthenticated && !inAuthFlow) {
       router.replace("/welcome");
@@ -63,6 +64,7 @@ function RootLayoutNav() {
         <Stack.Screen name="welcome" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="course/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
