@@ -4,69 +4,6 @@ settings:
   autoInstallPeers: false
   excludeLinksFromLockfile: false
 
-catalogs:
-  default:
-    '@replit/vite-plugin-cartographer':
-      specifier: ^0.5.21
-      version: 0.5.21
-    '@replit/vite-plugin-runtime-error-modal':
-      specifier: ^0.0.6
-      version: 0.0.6
-    '@tailwindcss/vite':
-      specifier: ^4.1.14
-      version: 4.3.0
-    '@tanstack/react-query':
-      specifier: ^5.90.21
-      version: 5.100.9
-    '@types/node':
-      specifier: ^25.3.3
-      version: 25.6.2
-    '@types/react':
-      specifier: ^19.2.0
-      version: 19.2.14
-    '@types/react-dom':
-      specifier: ^19.2.0
-      version: 19.2.3
-    '@vitejs/plugin-react':
-      specifier: ^5.0.4
-      version: 5.2.0
-    class-variance-authority:
-      specifier: ^0.7.1
-      version: 0.7.1
-    clsx:
-      specifier: ^2.1.1
-      version: 2.1.1
-    drizzle-orm:
-      specifier: ^0.45.2
-      version: 0.45.2
-    framer-motion:
-      specifier: ^12.23.24
-      version: 12.38.0
-    lucide-react:
-      specifier: ^0.545.0
-      version: 0.545.0
-    react:
-      specifier: 19.1.0
-      version: 19.1.0
-    react-dom:
-      specifier: 19.1.0
-      version: 19.1.0
-    tailwind-merge:
-      specifier: ^3.3.1
-      version: 3.5.0
-    tailwindcss:
-      specifier: ^4.1.14
-      version: 4.3.0
-    tsx:
-      specifier: ^4.21.0
-      version: 4.21.0
-    vite:
-      specifier: ^7.3.2
-      version: 7.3.3
-    zod:
-      specifier: ^3.25.76
-      version: 3.25.76
-
 overrides:
   esbuild>@esbuild/darwin-arm64: '-'
   esbuild>@esbuild/darwin-x64: '-'
@@ -153,6 +90,10 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      '@anthropic-ai/claude-code':
+        specifier: ^2.1.201
+        version: 2.1.201
     devDependencies:
       prettier:
         specifier: ^3.8.3
@@ -160,6 +101,12 @@ importers:
       typescript:
         specifier: ~5.9.3
         version: 5.9.3
+
+  .local/share/pnpm/.tools/pnpm/11.10.0_tmp_2230:
+    dependencies:
+      pnpm:
+        specifier: 11.10.0
+        version: 11.10.0
 
   artifacts/api-server:
     dependencies:
@@ -621,6 +568,55 @@ packages:
     peerDependenciesMeta:
       graphql:
         optional: true
+
+  '@anthropic-ai/claude-code-darwin-arm64@2.1.201':
+    resolution: {integrity: sha512-XCvnGO2PwNkR5K6LHC4r7jJwOLLNsypzfTwJFvWaV3D0VdhdCcrXT5TtdVL+fiLn+wNWHzKs1ztpzcXHI/uh8A==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@anthropic-ai/claude-code-darwin-x64@2.1.201':
+    resolution: {integrity: sha512-q+FKESkjK32ddgVtnm0n7OmbvmjrrSF5KllzvKpZ+U61FSn4kvxertSNdmO12nXRzLyf3KsDVN5bL7052BtScg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.201':
+    resolution: {integrity: sha512-ptHKbcyMtKEYf9Uus3xzoRe/LonUHr3M8z2BQ/LqbiPgAPpa2c5aflR7ozJudebdXbRTZtFoOIVJpf4ePMofoA==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@anthropic-ai/claude-code-linux-arm64@2.1.201':
+    resolution: {integrity: sha512-3/5r/T5+zb8oxhkoO6nGNfaSpmRxCKfDxMx1oIEXVUhjXhqGCP1DAp+DgL5o76HaJgerL9euBKxSNuDiDAfrjg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@anthropic-ai/claude-code-linux-x64-musl@2.1.201':
+    resolution: {integrity: sha512-/qKrs30pWM8vF4i+K3lgnXdpljCrgcSdAcGp8GGoXGze32vm6PnqsuRaoo950PT0q7FPdS+jXRm6owzm9xYgRg==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@anthropic-ai/claude-code-linux-x64@2.1.201':
+    resolution: {integrity: sha512-pJaih99BHjY2WvBoPYvDMFhs90DwTXUaC8LIqQe/W+2g4jJr7VYMTVv0C60vIoxg17nxaMUTtlBhY87U3qP5kA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@anthropic-ai/claude-code-win32-arm64@2.1.201':
+    resolution: {integrity: sha512-22EuA2fLx/XbGSLDcSlW6qnMcnG1Rg2NofkJ8mk2HLLI/9KQfQ+DeFYvWxcue3vLNg0fnRAVYqHaTjzDywYDbw==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@anthropic-ai/claude-code-win32-x64@2.1.201':
+    resolution: {integrity: sha512-dxy5Mnj5sV9N97uI4pl9t7Ma2aOPS326BJZONwJy7nBfMeqjfkB6yaGrHdRJEPLIBkdewAcZEb8I/HhykBdXQw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@anthropic-ai/claude-code@2.1.201':
+    resolution: {integrity: sha512-BIWC6KCKtLNb8pbVIuWiJ+qcthCFhrmIm6u3wOcIHjYc5oruozQ7l5pWWGVyJcUrKygysdWS4pkljdXL2rDdsg==}
+    engines: {node: '>=22.0.0'}
+    hasBin: true
 
   '@anthropic-ai/sdk@0.78.0':
     resolution: {integrity: sha512-PzQhR715td/m1UaaN5hHXjYB8Gl2lF9UVhrrGrZeysiF6Rb74Wc9GCB8hzLdzmQtBd1qe89F9OptgB9Za1Ib5w==}
@@ -4730,6 +4726,11 @@ packages:
     resolution: {integrity: sha512-NCrCHhWmnQklfH4MtJMRjZ2a8c80qXeMlQMv2uVp9ISJMTt562SbGd6n2oq0PaPgKm7Z6pL9E2UlLIhC+SHL3w==}
     engines: {node: '>=4.0.0'}
 
+  pnpm@11.10.0:
+    resolution: {integrity: sha512-C3+LmAYAMZBMAX46QesYehbUDuuCm5XE+MsDaBdh/Eq1PdIZEVubRH9NzhoFohR2RGHn03AzkqnzL5URzoyGyA==}
+    engines: {node: '>=22.13'}
+    hasBin: true
+
   postcss-value-parser@4.2.0:
     resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
 
@@ -5830,6 +5831,41 @@ packages:
 snapshots:
 
   '@0no-co/graphql.web@1.3.2': {}
+
+  '@anthropic-ai/claude-code-darwin-arm64@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-darwin-x64@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-linux-arm64-musl@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-linux-arm64@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-linux-x64-musl@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-linux-x64@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-win32-arm64@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code-win32-x64@2.1.201':
+    optional: true
+
+  '@anthropic-ai/claude-code@2.1.201':
+    optionalDependencies:
+      '@anthropic-ai/claude-code-darwin-arm64': 2.1.201
+      '@anthropic-ai/claude-code-darwin-x64': 2.1.201
+      '@anthropic-ai/claude-code-linux-arm64': 2.1.201
+      '@anthropic-ai/claude-code-linux-arm64-musl': 2.1.201
+      '@anthropic-ai/claude-code-linux-x64': 2.1.201
+      '@anthropic-ai/claude-code-linux-x64-musl': 2.1.201
+      '@anthropic-ai/claude-code-win32-arm64': 2.1.201
+      '@anthropic-ai/claude-code-win32-x64': 2.1.201
 
   '@anthropic-ai/sdk@0.78.0(zod@3.25.76)':
     dependencies:
@@ -10962,6 +10998,8 @@ snapshots:
       xmlbuilder: 15.1.1
 
   pngjs@3.4.0: {}
+
+  pnpm@11.10.0: {}
 
   postcss-value-parser@4.2.0: {}
 
