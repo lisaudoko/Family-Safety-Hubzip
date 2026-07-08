@@ -3,7 +3,8 @@ import React, { useCallback, useRef, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFamily } from "@/context/FamilyContext";
-import { CHALLENGES, COURSES } from "@/data/seed";
+import { CHALLENGES } from "@/data/seed";
+import { useCurriculum } from "@/hooks/useCurriculum";
 import ChallengeCard from "@/components/ChallengeCard";
 import CourseCard from "@/components/CourseCard";
 import { EmptyState, SectionHeader } from "@/components/UI";
@@ -16,6 +17,7 @@ export default function LearnScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { progress } = useFamily();
+  const { courses: COURSES } = useCurriculum();
   const [activeTab, setActiveTab] = useState<"Courses" | "Challenges">("Courses");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const scrollRef = useRef<ScrollView>(null);

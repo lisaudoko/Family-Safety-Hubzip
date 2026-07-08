@@ -6,6 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 const PLANS = [
   { id: "monthly", label: "Monthly", price: "$4.99", period: "/month", saving: null },
@@ -28,6 +29,7 @@ export default function SubscriptionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, upgradeToPremium } = useAuth();
+  const haptics = useHaptics();
   const [selectedPlan, setSelectedPlan] = useState("annual");
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +41,7 @@ export default function SubscriptionScreen() {
       setLoading(true);
       await new Promise(r => setTimeout(r, 1200));
       await upgradeToPremium();
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Welcome to Premium!", "You now have full access to all Digital Village content.", [{ text: "Let's go!", onPress: () => router.back() }]);
     } catch {
       Alert.alert("Error", "Something went wrong. Please try again.");

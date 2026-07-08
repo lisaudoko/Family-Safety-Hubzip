@@ -1,23 +1,22 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { Challenge } from "@/data/seed";
-import { PremiumBadge } from "@/components/UI";
+import { Course, Lesson } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
 import { AppText as Text } from "@/components/AppText";
 
 interface Props {
-  challenge: Challenge;
-  status: "available" | "active" | "completed";
+  lesson: Lesson;
+  course: Course;
+  status: "available" | "completed";
   onPress: () => void;
 }
 
-export default function ChallengeCard({ challenge, status, onPress }: Props) {
+export default function LessonCard({ lesson, course, status, onPress }: Props) {
   const colors = useColors();
 
   const statusConfig = {
     available: { label: "Start", bg: colors.primary, color: "#fff" },
-    active: { label: "In Progress", bg: colors.accent, color: "#fff" },
     completed: { label: "Completed", bg: colors.success, color: "#fff" },
   }[status];
 
@@ -27,23 +26,22 @@ export default function ChallengeCard({ challenge, status, onPress }: Props) {
       onPress={onPress}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={`${challenge.title}, ${statusConfig.label}`}
+      accessibilityLabel={`${lesson.title}, ${statusConfig.label}`}
     >
-      <View style={[styles.iconWrap, { backgroundColor: challenge.color + "22" }]}>
-        <Feather name={challenge.iconName as never} size={22} color={challenge.color} />
+      <View style={[styles.iconWrap, { backgroundColor: course.color + "22" }]}>
+        <Feather name={course.iconName as never} size={22} color={course.color} />
       </View>
       <View style={styles.content}>
         <View style={styles.row}>
-          <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>{challenge.title}</Text>
-          {challenge.isPremium && status === "available" && <PremiumBadge />}
+          <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>{lesson.title}</Text>
         </View>
-        <Text style={[styles.desc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>{challenge.description}</Text>
+        <Text style={[styles.desc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>{lesson.content}</Text>
         <View style={styles.footer}>
           <View style={styles.metaRow}>
             <Feather name="clock" size={12} color={colors.mutedForeground} />
-            <Text style={[styles.meta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{challenge.duration}</Text>
-            <View style={[styles.catPill, { backgroundColor: challenge.color + "22" }]}>
-              <Text style={[styles.catText, { color: challenge.color, fontFamily: "Inter_500Medium" }]}>{challenge.category}</Text>
+            <Text style={[styles.meta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{lesson.duration}</Text>
+            <View style={[styles.catPill, { backgroundColor: course.color + "22" }]}>
+              <Text style={[styles.catText, { color: course.color, fontFamily: "Inter_500Medium" }]}>{course.title}</Text>
             </View>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>

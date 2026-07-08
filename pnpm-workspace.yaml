@@ -7,6 +7,7 @@ packages:
 allowBuilds:
   '@anthropic-ai/claude-code': true
   esbuild: false
+  unrs-resolver: true
 
 autoInstallPeers: false
 
@@ -129,3 +130,4 @@ overrides:
   rollup>@rollup/rollup-win32-ia32-msvc: '-'
   rollup>@rollup/rollup-win32-x64-gnu: '-'
   rollup>@rollup/rollup-win32-x64-msvc: '-'
+  zod-validation-error: ^4.0.0

@@ -15,7 +15,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AccessibilityProvider, useAccessibility } from "@/context/AccessibilityContext";
 import { FamilyProvider } from "@/context/FamilyContext";
+import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
 
 SplashScreen.preventAutoHideAsync();
@@ -57,23 +59,29 @@ function AuthRedirect() {
 }
 
 function RootLayoutNav() {
+  const { settings } = useAccessibility();
+  const slide = settings.reduceMotion ? "none" : "slide_from_right";
+  const fade = settings.reduceMotion ? "none" : "fade";
+
   return (
     <>
       <AuthRedirect />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="welcome" options={{ headerShown: false, animation: "fade" }} />
-        <Stack.Screen name="login" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="register" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="welcome" options={{ headerShown: false, animation: fade }} />
+        <Stack.Screen name="login" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="register" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="course/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="lesson/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="quiz/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="child/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="agreement" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="course/[id]" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="lesson/[id]" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="quiz/[id]" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="child/[id]" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="agreement" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="subscription" options={{ headerShown: false, presentation: "modal" }} />
-        <Stack.Screen name="challenge/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="challenge/[id]" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="coach/history" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="settings/accessibility" options={{ headerShown: false, animation: slide }} />
       </Stack>
     </>
   );
@@ -102,9 +110,13 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
-                <FamilyProvider>
-                  <RootLayoutNav />
-                </FamilyProvider>
+                <AccessibilityProvider>
+                  <FamilyProvider>
+                    <CoachProvider>
+                      <RootLayoutNav />
+                    </CoachProvider>
+                  </FamilyProvider>
+                </AccessibilityProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

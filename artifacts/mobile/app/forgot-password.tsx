@@ -6,10 +6,12 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { apiForgotPassword, apiResetPassword } from "@/lib/apiClient";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const haptics = useHaptics();
   const [step, setStep] = useState<"email" | "reset">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -51,7 +53,7 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
       await apiResetPassword(email.trim().toLowerCase(), code.trim(), newPassword);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Password Updated", "You can now sign in with your new password.", [
         { text: "OK", onPress: () => router.replace("/login") },
       ]);

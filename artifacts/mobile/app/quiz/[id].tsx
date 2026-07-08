@@ -5,16 +5,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
-import { COURSES } from "@/data/seed";
+import { useCurriculum } from "@/hooks/useCurriculum";
 import { ProgressBar } from "@/components/UI";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 export default function QuizScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id: lessonId, courseId } = useLocalSearchParams<{ id: string; courseId: string }>();
   const { completeQuiz, awardBadge, progress } = useFamily();
+  const haptics = useHaptics();
+  const { courses: COURSES } = useCurriculum();
 
   const course = COURSES.find(c => c.id === courseId);
   const quiz = course?.quizzes.find(q => q.lessonId === lessonId);
@@ -40,9 +43,9 @@ export default function QuizScreen() {
     setAnswered(true);
     if (idx === q.correctIndex) {
       setCorrect(c => c + 1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.notify(Haptics.NotificationFeedbackType.Success);
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptics.notify(Haptics.NotificationFeedbackType.Error);
     }
   };
 

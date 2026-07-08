@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.expo
+**/.tsbuildinfo
+**/*.tsbuildinfo
+pnpm-lock.yaml
+artifacts/mockup-sandbox/components.json

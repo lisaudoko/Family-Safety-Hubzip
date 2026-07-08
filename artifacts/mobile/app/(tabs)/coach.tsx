@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
   FlatList,
@@ -12,11 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useSendCoachMessage } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
-
-type ChatRole = "user" | "assistant";
-type ChatMessage = { role: ChatRole; content: string };
+import { useCoach, type ChatMessage } from "@/context/CoachContext";
 
 const WELCOME =
   "Hi! I'm your Digital Safety Coach. Ask me anything about screen time, social media, cyberbullying, online privacy, or raising digitally-aware kids. I'm here to help.";
@@ -83,12 +81,8 @@ export default function CoachScreen() {
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const mutation = useSendCoachMessage();
-  const isPending = mutation.isPending;
+  const { activeMessages: messages, isSending: isPending, sendError: error, sendMessage, retry, startNewConversation } = useCoach();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const tabBarSpace = Platform.OS === "web" ? 84 : 49 + insets.bottom;
@@ -97,37 +91,16 @@ export default function CoachScreen() {
     requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, []);
 
-  const requestReply = useCallback(
-    async (conversation: ChatMessage[]) => {
-      setError(null);
-      try {
-        const res = await mutation.mutateAsync({ data: { messages: conversation } });
-        setMessages((prev) => [...prev, { role: "assistant", content: res.reply }]);
-        scrollToEnd();
-      } catch {
-        setError("The coach couldn't respond. Please try again.");
-      }
-    },
-    [mutation, scrollToEnd],
-  );
-
   const send = useCallback(
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || isPending) return;
-      const next: ChatMessage[] = [...messages, { role: "user", content: trimmed }];
-      setMessages(next);
       setInput("");
       scrollToEnd();
-      void requestReply(next);
+      void sendMessage(trimmed).then(scrollToEnd);
     },
-    [isPending, messages, requestReply, scrollToEnd],
+    [isPending, scrollToEnd, sendMessage],
   );
-
-  const retry = useCallback(() => {
-    if (isPending || messages.length === 0) return;
-    void requestReply(messages);
-  }, [isPending, messages, requestReply]);
 
   const showSuggestions = messages.length === 0;
 
@@ -138,10 +111,28 @@ export default function CoachScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? topPad : 0}
     >
       <View style={styles.header}>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Coach</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          Your digital safety advisor
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Coach</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Your digital safety advisor
+          </Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.headerBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push("/coach/history")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="clock" size={18} color={colors.foreground} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => { setInput(""); startNewConversation(); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="edit" size={18} color={colors.foreground} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -226,7 +217,9 @@ export default function CoachScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  header: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 10 },
+  headerActions: { flexDirection: "row", gap: 8 },
+  headerBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   pageTitle: { fontSize: 28 },
   subtitle: { fontSize: 13, marginTop: 2 },
   listContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 12 },

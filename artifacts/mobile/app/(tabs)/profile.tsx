@@ -1,20 +1,24 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
-import { BADGES } from "@/data/seed";
+import { useCurriculum } from "@/hooks/useCurriculum";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
+import { AppText as Text } from "@/components/AppText";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout, updateProfile } = useAuth();
+  const haptics = useHaptics();
   const { progress } = useFamily();
+  const { badges: BADGES } = useCurriculum();
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? "");
   const scrollRef = useRef<ScrollView>(null);
@@ -172,6 +176,7 @@ export default function ProfileScreen() {
         <View style={[styles.settingsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {[
             { icon: "user" as const, label: "Edit Profile", onPress: () => { setEditName(user?.name ?? ""); setEditModal(true); } },
+            { icon: "eye" as const, label: "Accessibility", onPress: () => router.push("/settings/accessibility") },
             { icon: "bell" as const, label: "Notifications", onPress: handleNotifications },
             { icon: "shield" as const, label: "Privacy Policy", onPress: handlePrivacyPolicy },
             { icon: "help-circle" as const, label: "Help & Support", onPress: handleHelp },
@@ -181,6 +186,8 @@ export default function ProfileScreen() {
               style={[styles.settingsRow, idx < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}
               onPress={item.onPress}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
             >
               <Feather name={item.icon} size={18} color={colors.foreground} />
               <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{item.label}</Text>
@@ -188,6 +195,25 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
+      </View>
+
+      <View>
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Privacy & Safety</Text>
+        {[
+          { icon: "shield" as const, title: "Our Approach", desc: "Digital Village does not monitor, track, or spy on children's devices. We build safety through education and conversation.", color: colors.success },
+          { icon: "eye-off" as const, title: "No Surveillance", desc: "No iMessage reading, no keystroke logging, no unauthorized photo access, no background recording.", color: colors.info },
+          { icon: "lock" as const, title: "Data Privacy", desc: "All family data stays on your device. We don't sell or share your information.", color: colors.accent },
+        ].map(item => (
+          <View key={item.title} style={[styles.privacyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.privacyIcon, { backgroundColor: item.color + "22" }]}>
+              <Feather name={item.icon} size={18} color={item.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.privacyTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{item.title}</Text>
+              <Text style={[styles.privacyDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{item.desc}</Text>
+            </View>
+          </View>
+        ))}
       </View>
 
       <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.destructive + "44" }]} onPress={handleLogout} activeOpacity={0.8}>
@@ -232,7 +258,7 @@ export default function ProfileScreen() {
               } catch {
                 // ignore
               }
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              await haptics.notify(Haptics.NotificationFeedbackType.Success);
               setEditModal(false);
               Alert.alert("Profile Updated", "Your name has been saved.");
             }}
@@ -277,6 +303,10 @@ const styles = StyleSheet.create({
   settingsList: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
   settingsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, gap: 12 },
   settingsLabel: { flex: 1, fontSize: 15 },
+  privacyCard: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8, alignItems: "flex-start" },
+  privacyIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  privacyTitle: { fontSize: 14, marginBottom: 2 },
+  privacyDesc: { fontSize: 13, lineHeight: 18 },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
   logoutText: { fontSize: 15 },
   version: { textAlign: "center", fontSize: 12, paddingBottom: 4 },

@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AgeBand, COURSES } from "@/data/seed";
+import { AgeBand, type Course } from "@/data/seed";
 import { useAuth } from "@/context/AuthContext";
+import { useCurriculum } from "@/hooks/useCurriculum";
 import {
   apiAddChild,
   apiDeleteChild,
@@ -88,7 +89,6 @@ interface FamilyContextType {
     categoryScores: Record<string, { score: number; max: number }>,
   ) => Promise<void>;
   awardBadge: (badgeId: string) => Promise<void>;
-  advanceWeeklyTip: () => Promise<void>;
 }
 
 const FAMILY_KEY = "@dv_family";
@@ -124,13 +124,13 @@ function mergeBadges(earned: string[], toAdd: string[]): string[] {
   return Array.from(set);
 }
 
-function deriveProgressBadges(p: UserProgress): string[] {
+function deriveProgressBadges(p: UserProgress, courses: Course[]): string[] {
   const add: string[] = [];
   const lessonCount = p.completedLessons.length;
   if (lessonCount >= 1) add.push("b1");
   if (lessonCount >= 5) add.push("b2");
   if (lessonCount >= 8) add.push("b3");
-  if (COURSES.every(c => c.lessons.some(l => p.completedLessons.includes(l.id)))) add.push("b6");
+  if (courses.length > 0 && courses.every(c => c.lessons.some(l => p.completedLessons.includes(l.id)))) add.push("b6");
   const challengeCount = p.completedChallenges.length;
   if (challengeCount >= 1) add.push("b7");
   if (challengeCount >= 5) add.push("b8");
@@ -148,6 +148,7 @@ const FamilyContext = createContext<FamilyContextType | null>(null);
 
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const { courses } = useCurriculum();
   const [family, setFamily] = useState<FamilyProfile | null>(null);
   const [agreement, setAgreement] = useState<FamilyAgreement | null>(null);
   const [progress, setProgress] = useState<UserProgress>(defaultProgress);
@@ -426,9 +427,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       ...updated.courseProgress,
       [courseId]: Math.round((courseLessons.length / totalLessons) * 100),
     };
-    updated.earnedBadges = deriveProgressBadges(updated);
+    updated.earnedBadges = deriveProgressBadges(updated, courses);
     await saveProgress(updated);
-  }, [progress, user?.id]);
+  }, [progress, user?.id, courses]);
 
   const completeQuiz = useCallback(async (quizId: string) => {
     if (progress.completedQuizzes.includes(quizId)) return;
@@ -456,9 +457,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         : [...progress.completedChallenges, challengeId],
       activeChallenges: progress.activeChallenges.filter(id => id !== challengeId),
     };
-    updated.earnedBadges = deriveProgressBadges(updated);
+    updated.earnedBadges = deriveProgressBadges(updated, courses);
     await saveProgress(updated);
-  }, [progress, user?.id]);
+  }, [progress, user?.id, courses]);
 
   const completeChallengeStep = useCallback(async (
     challengeId: string,
@@ -477,12 +478,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     if (totalSteps > 0 && next.length >= totalSteps && !updated.completedChallenges.includes(challengeId)) {
       updated.completedChallenges = [...updated.completedChallenges, challengeId];
       updated.activeChallenges = updated.activeChallenges.filter(id => id !== challengeId);
-      updated.earnedBadges = deriveProgressBadges(updated);
+      updated.earnedBadges = deriveProgressBadges(updated, courses);
       justCompleted = true;
     }
     await saveProgress(updated);
     return justCompleted;
-  }, [progress, user?.id]);
+  }, [progress, user?.id, courses]);
 
   const setAssessmentResult = useCallback(async (
     assessmentId: string,
@@ -511,11 +512,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     await saveProgress(updated);
   }, [progress, user?.id]);
 
-  const advanceWeeklyTip = useCallback(async () => {
-    const updated = { ...progress, weeklyTipIndex: (progress.weeklyTipIndex + 1) % 8 };
-    await saveProgress(updated);
-  }, [progress, user?.id]);
-
   return (
     <FamilyContext.Provider
       value={{
@@ -536,7 +532,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         completeChallengeStep,
         setAssessmentResult,
         awardBadge,
-        advanceWeeklyTip,
       }}
     >
       {children}

@@ -1,15 +1,15 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { WeeklyTip } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
+import { AppText as Text } from "@/components/AppText";
 
 interface Props {
   tip: WeeklyTip;
-  onNext?: () => void;
 }
 
-export default function TipCard({ tip, onNext }: Props) {
+export default function TipCard({ tip }: Props) {
   const colors = useColors();
   return (
     <View style={[styles.card, { backgroundColor: colors.primary }]}>
@@ -18,11 +18,6 @@ export default function TipCard({ tip, onNext }: Props) {
           <Feather name="zap" size={12} color="rgba(255,255,255,0.8)" />
           <Text style={[styles.label, { fontFamily: "Inter_600SemiBold" }]}>WEEKLY TIP</Text>
         </View>
-        {onNext && (
-          <TouchableOpacity onPress={onNext} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Feather name="refresh-cw" size={16} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
-        )}
       </View>
       <View style={[styles.iconWrap, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
         <Feather name={tip.iconName as never} size={20} color="#FFFFFF" />

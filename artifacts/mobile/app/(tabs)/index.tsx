@@ -5,18 +5,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
-import { CHALLENGES, COURSES, WEEKLY_TIPS } from "@/data/seed";
+import { CHALLENGES } from "@/data/seed";
 import ChallengeCard from "@/components/ChallengeCard";
 import CourseCard from "@/components/CourseCard";
+import LessonCard from "@/components/LessonCard";
 import TipCard from "@/components/TipCard";
 import { SectionHeader } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
+import { useCurriculum } from "@/hooks/useCurriculum";
+import { useWeeklyTips } from "@/hooks/useWeeklyTips";
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { family, progress, advanceWeeklyTip } = useFamily();
+  const { family, progress } = useFamily();
+  const { courses: COURSES } = useCurriculum();
+  const { tips: WEEKLY_TIPS } = useWeeklyTips();
   const [refreshing, setRefreshing] = React.useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -26,10 +33,16 @@ export default function DashboardScreen() {
     }, []),
   );
 
-  const tip = WEEKLY_TIPS[progress.weeklyTipIndex % WEEKLY_TIPS.length] ?? WEEKLY_TIPS[0]!;
+  const weeksSinceCreation = user?.createdAt
+    ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / WEEK_MS)
+    : 0;
+  const tip = WEEKLY_TIPS[weeksSinceCreation % WEEKLY_TIPS.length] ?? WEEKLY_TIPS[0]!;
 
   const activeChallenges = CHALLENGES.filter(c => progress.activeChallenges.includes(c.id));
   const recentCourses = COURSES.filter(c => (progress.courseProgress[c.id] ?? 0) > 0 && (progress.courseProgress[c.id] ?? 0) < 100).slice(0, 3);
+  const startingLessons = COURSES.filter(c => !c.isPremium && c.lessons.length > 0)
+    .slice(0, 3)
+    .map(course => ({ course, lesson: course.lessons[0]! }));
   const completedCount = Object.values(progress.courseProgress).filter(p => p === 100).length;
   const totalLessons = progress.completedLessons.length;
   const earnedBadges = progress.earnedBadges.length;
@@ -75,7 +88,7 @@ export default function DashboardScreen() {
         ))}
       </View>
 
-      <TipCard tip={tip} onNext={advanceWeeklyTip} />
+      <TipCard tip={tip} />
 
       {activeChallenges.length > 0 && (
         <View>
@@ -109,13 +122,13 @@ export default function DashboardScreen() {
       {recentCourses.length === 0 && activeChallenges.length === 0 && (
         <View>
           <SectionHeader title="Start Your Journey" action="Browse all" onAction={() => router.push("/(tabs)/learn")} />
-          {COURSES.filter(c => !c.isPremium).slice(0, 3).map(course => (
-            <CourseCard
-              key={course.id}
+          {startingLessons.map(({ course, lesson }) => (
+            <LessonCard
+              key={lesson.id}
+              lesson={lesson}
               course={course}
-              progress={0}
-              compact
-              onPress={() => router.push({ pathname: "/course/[id]", params: { id: course.id } })}
+              status={progress.completedLessons.includes(lesson.id) ? "completed" : "available"}
+              onPress={() => router.push({ pathname: "/lesson/[id]", params: { id: lesson.id, courseId: course.id } })}
             />
           ))}
         </View>

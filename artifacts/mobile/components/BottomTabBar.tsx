@@ -1,9 +1,10 @@
 import { Href, router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import { AppText as Text } from "@/components/AppText";
 
 type TabKey = "index" | "learn" | "assess" | "family" | "profile";
 

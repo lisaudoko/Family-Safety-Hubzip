@@ -1,16 +1,19 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const haptics = useHaptics();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -24,7 +27,7 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       await login(email.trim().toLowerCase(), password);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
     } catch (err: any) {
       console.error("[login] unexpected error:", err?.message || err);
@@ -44,35 +47,34 @@ export default function LoginScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
-      ]}
+      contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
-      <TouchableOpacity
-        onPress={() => router.back()}
-        style={styles.back}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      <LinearGradient
+        colors={[colors.primary, colors.teal]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.hero, { paddingTop: insets.top + 16 }]}
       >
-        <Feather name="arrow-left" size={22} color={colors.foreground} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.back}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="arrow-left" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
 
-      <View style={styles.middle}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            Welcome back
-          </Text>
-          <Text
-            style={[
-              styles.subtitle,
-              { color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
-            ]}
-          >
-            Sign in to continue your family's digital safety journey
-          </Text>
+        <View style={styles.badge}>
+          <Feather name="sun" size={30} color="#FFFFFF" />
         </View>
 
+        <Text style={[styles.title, { fontFamily: "Inter_700Bold" }]}>Welcome back</Text>
+        <Text style={[styles.subtitle, { fontFamily: "Inter_400Regular" }]}>
+          Sign in to continue your family's digital safety journey
+        </Text>
+      </LinearGradient>
+
+      <View style={styles.middle}>
         <View style={styles.form}>
           <View style={styles.field}>
             <Text
@@ -177,18 +179,34 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingBottom: 24,
   },
-  back: { alignSelf: "flex-start" },
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    gap: 10,
+  },
+  back: { alignSelf: "flex-start", marginBottom: 8 },
+  badge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  title: { fontSize: 30, lineHeight: 36, color: "#FFFFFF" },
+  subtitle: { fontSize: 15, lineHeight: 23, color: "rgba(255,255,255,0.9)" },
   middle: {
     flex: 1,
     justifyContent: "center",
     gap: 32,
-    paddingVertical: 32,
+    paddingHorizontal: 24,
+    paddingTop: 32,
   },
-  header: { gap: 10 },
-  title: { fontSize: 30, lineHeight: 36 },
-  subtitle: { fontSize: 15, lineHeight: 23 },
   form: { gap: 16 },
   field: { gap: 8 },
   label: { fontSize: 14 },
@@ -198,6 +216,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 1 },
+    }),
   },
   inputWrap: {
     borderRadius: 14,
@@ -206,6 +228,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 1 },
+    }),
   },
   inputInner: { flex: 1, fontSize: 15 },
   forgotRow: { alignSelf: "flex-end" },
@@ -215,6 +241,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 8,
+    ...Platform.select({
+      ios: { shadowColor: "#F97316", shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+      android: { elevation: 4 },
+    }),
   },
   btnText: { color: "#FFFFFF", fontSize: 16 },
   switchRow: { alignItems: "center", paddingTop: 8 },

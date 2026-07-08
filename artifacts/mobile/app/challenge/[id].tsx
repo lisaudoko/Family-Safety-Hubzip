@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { CHALLENGES } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 function StepRing({ done, total, color, size = 60 }: { done: number; total: number; color: string; size?: number }) {
   const colors = useColors();
@@ -26,6 +27,7 @@ export default function ChallengeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { progress, startChallenge, completeChallengeStep } = useFamily();
+  const haptics = useHaptics();
 
   const challenge = CHALLENGES.find(c => c.id === id);
   if (!challenge) { router.back(); return null; }
@@ -44,7 +46,7 @@ export default function ChallengeDetailScreen() {
     if (isLocked) { router.push("/subscription"); return; }
     try {
       await startChallenge(challenge.id);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
       console.error("[challenge] start error:", e?.message || e);
       Alert.alert("Error", "Failed to start challenge. Please try again.");
@@ -56,9 +58,9 @@ export default function ChallengeDetailScreen() {
     try {
       const justCompleted = await completeChallengeStep(challenge.id, idx, totalSteps);
       if (justCompleted) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await haptics.notify(Haptics.NotificationFeedbackType.Success);
       } else {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        await haptics.impact(Haptics.ImpactFeedbackStyle.Light);
       }
     } catch (e: any) {
       console.error("[challenge] step error:", e?.message || e);

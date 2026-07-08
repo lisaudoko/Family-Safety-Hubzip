@@ -8,6 +8,7 @@ import { useFamily } from "@/context/FamilyContext";
 import { AGREEMENT_RULES } from "@/data/seed";
 import { AgreementRule } from "@/context/FamilyContext";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 const CATEGORY_COLORS: Record<string, string> = { Time: "#F5A623", Safety: "#4A90A4", Privacy: "#7B5EA7", Respect: "#4CAF7D", Devices: "#E07B39" };
 
@@ -15,6 +16,7 @@ export default function AgreementScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { family, agreement, saveAgreement, signAgreement } = useFamily();
+  const haptics = useHaptics();
 
   const initRules: AgreementRule[] = AGREEMENT_RULES.map(r => ({
     id: r.id,
@@ -59,7 +61,7 @@ export default function AgreementScreen() {
     try {
       await signAgreement();
       setSigned(true);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
       console.error("[agreement] sign failed:", e?.message || e);
       Alert.alert("Error", "Failed to sign agreement. Please try again.");

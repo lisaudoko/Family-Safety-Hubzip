@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useFamily } from "@/context/FamilyContext";
 import { useAuth } from "@/context/AuthContext";
-import { COURSES } from "@/data/seed";
+import { useCurriculum } from "@/hooks/useCurriculum";
 import { CategoryPill, ProgressBar } from "@/components/UI";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
+import { isLessonAvailable } from "@/lib/lessonAvailability";
 
 export default function CourseDetailScreen() {
   const colors = useColors();
@@ -16,6 +17,7 @@ export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { progress } = useFamily();
+  const { courses: COURSES } = useCurriculum();
 
   const course = COURSES.find(c => c.id === id);
   if (!course) { router.back(); return null; }
@@ -71,7 +73,7 @@ export default function CourseDetailScreen() {
         <Text style={[styles.lessonsTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Lessons</Text>
         {course.lessons.map((lesson, idx) => {
           const isDone = progress.completedLessons.includes(lesson.id);
-          const isAvailable = !isLocked || idx === 0;
+          const isAvailable = isDone || isLessonAvailable(course, lesson, progress, isLocked);
           const hasQuiz = lesson.hasQuiz;
           return (
             <TouchableOpacity

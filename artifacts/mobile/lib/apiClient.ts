@@ -263,3 +263,192 @@ export async function apiSaveProgress(p: ApiProgress): Promise<void> {
     body: JSON.stringify(p),
   });
 }
+
+// ── Curriculum ──────────────────────────────────────────────────────────────
+
+export interface ApiCourseSummary {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  duration: string;
+  level: "beginner" | "intermediate" | "advanced";
+  iconName: string;
+  color: string;
+  isPremium: boolean;
+  audience: "parent" | "child" | "both";
+  lessonCount: number;
+  hasQuizCount: number;
+}
+
+export interface ApiCourseLessonSummary {
+  id: string;
+  title: string;
+  estimatedMinutes: number;
+  hasQuiz: boolean;
+  audience: "parent" | "child" | "both";
+  ageRange: string | null;
+  difficulty: "beginner" | "intermediate" | "advanced";
+}
+
+export interface ApiCourseDetail {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  duration: string;
+  level: "beginner" | "intermediate" | "advanced";
+  iconName: string;
+  color: string;
+  isPremium: boolean;
+  audience: "parent" | "child" | "both";
+  lessons: ApiCourseLessonSummary[];
+}
+
+export interface ApiLessonSection {
+  type: "text" | "tip" | "scenario";
+  [key: string]: unknown;
+}
+
+export interface ApiLessonScenario {
+  title: string;
+  situation: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface ApiLesson {
+  id: string;
+  courseId: string;
+  title: string;
+  module: string | null;
+  audience: "parent" | "child" | "both";
+  ageRange: string | null;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  learningObjectives: string[];
+  content: string;
+  sections: ApiLessonSection[] | null;
+  interactiveActivity: { type: string; prompt: string; instructions: string } | null;
+  scenarios: ApiLessonScenario[];
+  parentDiscussionPrompts: string[];
+  actionSteps: string[];
+  completionCriteria: string | null;
+  badgeId: string | null;
+  estimatedMinutes: number;
+  keyTakeaways: string[];
+  hasQuiz: boolean;
+}
+
+export interface ApiQuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface ApiQuiz {
+  id: string;
+  lessonId: string;
+  questions: ApiQuizQuestion[];
+}
+
+export interface ApiBadge {
+  id: string;
+  title: string;
+  description: string;
+  iconName: string;
+  color: string;
+  condition: string;
+}
+
+export async function apiListCourses(params?: {
+  audience?: string;
+  category?: string;
+}): Promise<{ courses: ApiCourseSummary[] }> {
+  const query = new URLSearchParams();
+  if (params?.audience) query.set("audience", params.audience);
+  if (params?.category) query.set("category", params.category);
+  const qs = query.toString();
+  return apiFetch(`/courses${qs ? `?${qs}` : ""}`);
+}
+
+export async function apiGetCourse(
+  courseId: string,
+): Promise<{ course: ApiCourseDetail }> {
+  return apiFetch(`/courses/${courseId}`);
+}
+
+export async function apiGetLesson(
+  lessonId: string,
+): Promise<{ lesson: ApiLesson }> {
+  return apiFetch(`/lessons/${lessonId}`);
+}
+
+export async function apiGetLessonQuiz(
+  lessonId: string,
+): Promise<{ quiz: ApiQuiz }> {
+  return apiFetch(`/lessons/${lessonId}/quiz`);
+}
+
+export async function apiListBadges(): Promise<{ badges: ApiBadge[] }> {
+  return apiFetch("/badges");
+}
+
+export interface ApiFullLesson {
+  id: string;
+  courseId: string;
+  title: string;
+  module: string | null;
+  audience: "parent" | "child" | "both";
+  ageRange: string | null;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  learningObjectives: string[];
+  content: string;
+  duration: string;
+  sections: ApiLessonSection[] | null;
+  interactiveActivity: { type: string; prompt: string; instructions: string } | null;
+  scenarios: ApiLessonScenario[];
+  parentDiscussionPrompts: string[];
+  actionSteps: string[];
+  completionCriteria: string | null;
+  badgeId: string | null;
+  estimatedMinutes: number;
+  keyTakeaways: string[];
+  hasQuiz: boolean;
+}
+
+export interface ApiFullCourse {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  duration: string;
+  level: "beginner" | "intermediate" | "advanced";
+  iconName: string;
+  color: string;
+  isPremium: boolean;
+  audience: "parent" | "child" | "both";
+  lessons: ApiFullLesson[];
+  quizzes: ApiQuiz[];
+}
+
+export async function apiGetCurriculum(): Promise<{
+  courses: ApiFullCourse[];
+  badges: ApiBadge[];
+}> {
+  return apiFetch("/curriculum");
+}
+
+export interface ApiWeeklyTip {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  iconName: string;
+}
+
+export async function apiGetTips(): Promise<{ tips: ApiWeeklyTip[] }> {
+  return apiFetch("/tips");
+}

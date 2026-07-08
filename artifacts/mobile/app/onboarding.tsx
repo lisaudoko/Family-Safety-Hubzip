@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { useColors } from "@/hooks/useColors";
 import { AGE_BANDS, AgeBand } from "@/data/seed";
+import { useHaptics } from "@/lib/haptics";
 
 type Step = "family" | "children" | "done";
 
@@ -16,6 +17,7 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { user, completeOnboarding } = useAuth();
   const { initFamily, addChild } = useFamily();
+  const haptics = useHaptics();
 
   const [step, setStep] = useState<Step>("family");
   const [familyName, setFamilyName] = useState("");
@@ -59,7 +61,7 @@ export default function OnboardingScreen() {
         await addChild(child.name.trim(), child.ageBand, familyId);
       }
       await completeOnboarding();
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
       setStep("done");
       setTimeout(() => router.replace("/(tabs)"), 1400);
     } catch (err: any) {

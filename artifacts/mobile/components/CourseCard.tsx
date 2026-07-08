@@ -1,9 +1,10 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Course } from "@/data/seed";
 import { PremiumBadge, ProgressBar } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
+import { AppText as Text } from "@/components/AppText";
 
 interface Props {
   course: Course;
@@ -18,7 +19,13 @@ export default function CourseCard({ course, progress, onPress, compact }: Props
 
   if (compact) {
     return (
-      <TouchableOpacity style={[styles.compact, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onPress} activeOpacity={0.75}>
+      <TouchableOpacity
+        style={[styles.compact, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={onPress}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel={`${course.title}, ${progress}% complete`}
+      >
         <View style={[styles.compactIcon, { backgroundColor: course.color + "22" }]}>
           <Feather name={course.iconName as never} size={20} color={course.color} />
         </View>
@@ -34,7 +41,13 @@ export default function CourseCard({ course, progress, onPress, compact }: Props
   }
 
   return (
-    <TouchableOpacity style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={onPress} activeOpacity={0.75}>
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+      onPress={onPress}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={`${course.title}, ${isComplete ? "complete" : `${progress}% complete`}`}
+    >
       <View style={styles.header}>
         <View style={[styles.iconBg, { backgroundColor: course.color + "22" }]}>
           <Feather name={course.iconName as never} size={24} color={course.color} />

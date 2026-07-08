@@ -6,11 +6,13 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 export default function RegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
+  const haptics = useHaptics();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +26,7 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
       await register(name.trim(), email.trim().toLowerCase(), password);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
       router.replace("/onboarding");
     } catch (err: any) {
       console.error("[register] unexpected error:", err?.message || err);

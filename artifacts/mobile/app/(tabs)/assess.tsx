@@ -8,6 +8,7 @@ import { useFamily } from "@/context/FamilyContext";
 import { ASSESSMENTS } from "@/data/seed";
 import { ProgressBar, ScoreRing } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 const CATEGORY_ICONS: Record<string, "shield" | "users" | "eye" | "trending-up" | "globe" | "alert-triangle"> = {
   Privacy: "shield",
@@ -33,6 +34,7 @@ export default function AssessScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { progress, setAssessmentResult } = useFamily();
+  const haptics = useHaptics();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
@@ -73,7 +75,7 @@ export default function AssessScreen() {
 
   const handleSelect = (optionIndex: number) => {
     setSelected(optionIndex);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.impact(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const computeCategoryScores = (finalAnswers: Answer[]) => {
@@ -94,7 +96,7 @@ export default function AssessScreen() {
     const score = finalAnswers.reduce((sum, a) => sum + a.score, 0);
     const categoryScores = computeCategoryScores(finalAnswers);
     await setAssessmentResult(assessment.id, score, categoryScores);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await haptics.notify(Haptics.NotificationFeedbackType.Success);
     setStarted(false);
   };
 

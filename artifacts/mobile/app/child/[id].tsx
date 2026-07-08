@@ -7,6 +7,7 @@ import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
 import { AGE_BANDS, AgeBand } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 const AGE_COLORS: Record<string, string> = { "6-9": "#4CAF7D", "10-13": "#4A90A4", "14-17": "#7B5EA7" };
 
@@ -15,6 +16,7 @@ export default function ChildProfileScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { family, removeChild, updateChild } = useFamily();
+  const haptics = useHaptics();
 
   const child = family?.children.find(c => c.id === id);
   const [editing, setEditing] = useState(false);
@@ -30,7 +32,7 @@ export default function ChildProfileScreen() {
     if (!name.trim()) { Alert.alert("Name Required", "Please enter a name."); return; }
     try {
       await updateChild(child.id, { name: name.trim(), ageBand });
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
       setEditing(false);
     } catch (e: any) {
       console.error("[child] save error:", e?.message || e);

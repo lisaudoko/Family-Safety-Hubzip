@@ -10,6 +10,7 @@ import { AGE_BANDS, AgeBand } from "@/data/seed";
 import ChildCard from "@/components/ChildCard";
 import { SectionHeader } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
+import { useHaptics } from "@/lib/haptics";
 
 export default function FamilyScreen() {
   const colors = useColors();
@@ -20,6 +21,7 @@ export default function FamilyScreen() {
   const [childName, setChildName] = useState("");
   const [childAge, setChildAge] = useState<AgeBand>("10-13");
   const { addChild } = useFamily();
+  const haptics = useHaptics();
   const scrollRef = useRef<ScrollView>(null);
 
   useFocusEffect(
@@ -39,7 +41,7 @@ export default function FamilyScreen() {
       setChildName("");
       setChildAge("10-13");
       setAddingChild(false);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
       console.error("[family] addChild error:", e?.message || e);
       Alert.alert("Error", "Failed to add child. Please try again.");
@@ -138,24 +140,6 @@ export default function FamilyScreen() {
         </TouchableOpacity>
       </View>
 
-      <View>
-        <SectionHeader title="Privacy & Safety" />
-        {[
-          { icon: "shield" as const, title: "Our Approach", desc: "Digital Village does not monitor, track, or spy on children's devices. We build safety through education and conversation.", color: colors.success },
-          { icon: "eye-off" as const, title: "No Surveillance", desc: "No iMessage reading, no keystroke logging, no unauthorized photo access, no background recording.", color: colors.info },
-          { icon: "lock" as const, title: "Data Privacy", desc: "All family data stays on your device. We don't sell or share your information.", color: colors.accent },
-        ].map(item => (
-          <View key={item.title} style={[styles.privacyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.privacyIcon, { backgroundColor: item.color + "22" }]}>
-              <Feather name={item.icon} size={18} color={item.color} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.privacyTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{item.title}</Text>
-              <Text style={[styles.privacyDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{item.desc}</Text>
-            </View>
-          </View>
-        ))}
-      </View>
     </ScrollView>
   );
 }
@@ -184,8 +168,4 @@ const styles = StyleSheet.create({
   statusPill: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 12 },
-  privacyCard: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8, alignItems: "flex-start" },
-  privacyIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  privacyTitle: { fontSize: 14, marginBottom: 2 },
-  privacyDesc: { fontSize: 13, lineHeight: 18 },
 });
