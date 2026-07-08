@@ -4,7 +4,7 @@ These rules apply to Claude Code, Replit Agent, and any other AI assistant worki
 
 ## Start Here
 
-1. Read `AI_CONTEXT/CURRENT_STATE.md` and `AI_CONTEXT/ARCHITECTURE_SUMMARY.md` before touching code.
+1. Read `AI_CONTEXT/CURRENT_STATE.md` and `AI_CONTEXT/ARCHITECTURE_SUMMARY.md` before touching code; use `AI_CONTEXT/PROJECT_MAP.md` to locate files instead of scanning the tree.
 2. For the area you're changing, read the matching summary: `DATABASE_SUMMARY.md`, `API_SUMMARY.md`, `BUSINESS_RULES.md`, or `KNOWN_PATTERNS.md`.
 3. Check `AI_CONTEXT/NEXT_TASK.md` for current priorities and pending decisions.
 4. Only read source files when summaries don't answer the question. Prefer targeted greps over full-file reads.

@@ -23,6 +23,20 @@ Read `AI_CONTEXT/CURRENT_STATE.md` first for a quick orientation, then the relev
 8. **Implement one subsystem at a time** and verify with typecheck between subsystems.
 9. **Run checks after each subsystem**: `pnpm run typecheck` (canonical gate), `pnpm run lint` (root ESLint config), and `pnpm --filter @workspace/api-server run test` (Vitest tests exist in `artifacts/api-server/test/`).
 
+## AI Development Context Management
+
+Before beginning any major development task, review:
+
+- `AI_CONTEXT/CURRENT_STATE.md` — current snapshot, risks
+- `AI_CONTEXT/CURRENT_PHASE.md` — phase goals and remaining objectives
+- `AI_CONTEXT/NEXT_TASK.md` — priority, approved next task, pending decisions
+- `AI_CONTEXT/PROJECT_MAP.md` — fast codebase navigation
+- Relevant files inside `docs/`
+
+Understand the existing architecture before making changes. Do not duplicate existing services, APIs, database tables, or business logic. Follow existing project patterns and conventions (`AI_CONTEXT/KNOWN_PATTERNS.md`).
+
+**A development task is not complete until the AI knowledge system is updated.** After completing any subsystem, follow `.claude/skills/update-project-context/SKILL.md`: update `AI_CONTEXT/CURRENT_STATE.md`, `COMPLETED_WORK.md`, `NEXT_TASK.md`, and `AI_CHANGELOG.md` (plus any affected `docs/` files). Update only files affected by the change.
+
 ## Technology
 
 | Area | Choice |
