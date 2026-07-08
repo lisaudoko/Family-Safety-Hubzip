@@ -100,3 +100,18 @@ Understand the existing architecture before making changes. Do not duplicate exi
 - Server: `try/catch` → `next(err)`; centralized error middleware logs and returns 500.
 - **Never `console.log` in server code.** Use `req.log` in handlers, singleton Pino `logger` elsewhere. Authorization headers are redacted.
 - Mobile: API failures fall back to local AsyncStorage state (offline-tolerant); do not silently swallow errors in new server code.
+## Skill Usage Rules
+
+When a task matches an available Claude Code skill, use that skill automatically.
+
+Available skills should be applied based on task type:
+
+- Architecture changes → architecture-review skill
+- Backend work → backend-development skill
+- Database changes → database-management skill
+- Security-sensitive work → security-review skill
+- Mobile/device work → mobile-development skill
+- API work → api-design skill
+- Completed features → update-project-context skill
+
+Do not wait for the user to explicitly request a skill.

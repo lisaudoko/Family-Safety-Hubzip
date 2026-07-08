@@ -4,15 +4,22 @@ _Last updated: 2026-07-08_
 
 ## Phase
 
-**Post-MVP hardening & documentation.** Core product (education, family, devices, coach, billing) is built. Focus is on stability, accuracy of docs, and preparing for release.
+**Phase 2 — Mobile-Side Device Sync Wiring + Parent Safety Platform Backend** (per product-owner roadmap, 2026-07-08 — full detail in `AI_CONTEXT/NEXT_TASK.md`).
+
+Goal: complete the foundation for the parent/child safety ecosystem while maintaining privacy, security, and cross-platform compatibility.
 
 ## Current Objectives
 
-- Keep the AI knowledge system (`AI_CONTEXT/`, `docs/`) accurate as the source of truth.
-- Resolve dev-environment stability (API Server workflow start failures).
-- Reconcile duplicate curriculum sources (DB vs `data/seed.ts`).
+- Priority 1: finish backend device sync infrastructure (ownership validation, educational activity events, audit records).
+- Priority 2: platform-neutral device capability model.
+- Priority 3: complete parent dashboard backend (education progress, policy status, per-endpoint isolation audit).
+- Keep the AI knowledge system (`AI_CONTEXT/`, `docs/`) accurate after every change.
 
-## Recently Completed
+## Completed Objectives
 
-- 2026-07-08: Full AI-friendly documentation system created (CLAUDE.md, AGENTS.md, AI_CONTEXT/, docs/) from codebase inspection.
-- Prior (undated): device tracking + analytics + parent dashboard, AI coach with usage limits, Stripe billing, child PIN login, email verification / password reset, accessibility settings.
+- Priority 8 (AI Documentation System): CLAUDE.md, AGENTS.md, AI_CONTEXT/, docs/, 8 Claude skills — done 2026-07-08.
+- Large parts of Priorities 1/3/4 pre-exist: device registration/heartbeats/events, analytics + dashboard endpoints, child accounts with family-code + PIN login.
+
+## Remaining Objectives (later priorities)
+
+- Policy engine (P5, not started), security review + gap fixes (P6), education expansion (P7), QA (P9), production readiness (P10).

@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-07-08 — Adopted product-owner development roadmap (Phase 2)
+
+- **What**: Replaced `AI_CONTEXT/NEXT_TASK.md` with the owner-provided 10-priority roadmap, annotated against actual codebase state (done items checked off; JWT/admin/CSRF items reconciled with the real session-token auth model). Updated `CURRENT_PHASE.md` to Phase 2 (Device Sync Wiring + Parent Safety Platform Backend).
+- **Why**: Product owner set explicit priorities on 2026-07-08.
+- **Files affected**: `AI_CONTEXT/NEXT_TASK.md`, `AI_CONTEXT/CURRENT_PHASE.md` — documentation only.
+
 ## 2026-07-08 — Added 7 Claude Code workflow skills
 
 - **What**: Created `.claude/skills/` workflows: `architecture-review`, `api-design`, `backend-development`, `database-changes`, `mobile-development`, `security-review`, `release-readiness` (joining `update-project-context`). Registered them in `CLAUDE.md` (skills table) and `AGENTS.md` (Start Here).
