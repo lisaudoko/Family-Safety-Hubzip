@@ -7,7 +7,8 @@ pnpm monorepo. Three top-level areas: `artifacts/` (apps), `lib/` (shared packag
 | What | Where |
 | --- | --- |
 | Screens (expo-router, file-based) | `app/` |
-| Main tabs (index, learn, assess, family, profile) | `app/(tabs)/` |
+| Main tabs (index, learn, coach, family, profile) | `app/(tabs)/` |
+| Assessments panel (inside Learn tab) | `components/AssessmentsPanel.tsx` |
 | Learning flow | `app/course/[id].tsx`, `app/lesson/[id].tsx`, `app/quiz/[id].tsx` |
 | Family features | `app/challenge/[id].tsx`, `app/child/[id].tsx`, `app/agreement.tsx` |
 | Subscription screen | `app/subscription.tsx` |
@@ -56,5 +57,5 @@ pnpm monorepo. Three top-level areas: `artifacts/` (apps), `lib/` (shared packag
 - `CLAUDE.md` — permanent Claude Code instructions (read first)
 - `AI_CONTEXT/` — concise AI summaries + living trackers (CURRENT_STATE, NEXT_TASK, AI_CHANGELOG, ...)
 - `docs/` — detailed human documentation
-- `.claude/skills/update-project-context/` — post-task documentation-update workflow
+- `.claude/skills/` — Claude Code workflows: update-project-context, architecture-review, api-design, backend-development, database-changes, mobile-development, security-review, release-readiness
 - `replit.md` — OUTDATED feature inventory; do not trust for current features

@@ -37,6 +37,19 @@ Understand the existing architecture before making changes. Do not duplicate exi
 
 **A development task is not complete until the AI knowledge system is updated.** After completing any subsystem, follow `.claude/skills/update-project-context/SKILL.md`: update `AI_CONTEXT/CURRENT_STATE.md`, `COMPLETED_WORK.md`, `NEXT_TASK.md`, and `AI_CHANGELOG.md` (plus any affected `docs/` files). Update only files affected by the change.
 
+### Claude Code Skills (`.claude/skills/`)
+
+| Skill | Use when |
+| --- | --- |
+| `update-project-context` | After completing any feature/subsystem — sync AI_CONTEXT + docs |
+| `architecture-review` | Before multi-subsystem features or new packages/tables/dependencies |
+| `api-design` | Before adding or changing any endpoint contract |
+| `backend-development` | Implementing anything in `artifacts/api-server/` |
+| `database-changes` | Any change to `lib/db` schema |
+| `mobile-development` | Any change under `artifacts/mobile/` |
+| `security-review` | Changes touching auth, family data, billing, devices; pre-release |
+| `release-readiness` | Before deploying or preparing an App Store build |
+
 ## Technology
 
 | Area | Choice |
