@@ -1,14 +1,18 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
+import * as Linking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import {
+  apiChildLogin,
   apiCompleteOnboarding,
+  apiCreateCheckoutSession,
+  apiCreatePortalSession,
   apiGetMe,
   apiLogin,
   apiLogout,
   apiRegister,
   apiUpdateMe,
-  apiUpgradePremium,
   clearToken,
   getToken,
   setToken,
@@ -22,7 +26,7 @@ import {
 export interface User {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   role: "parent" | "child";
   isPremium: boolean;
   createdAt: string;
@@ -39,16 +43,20 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  childLogin: (childId: string, pin: string) => Promise<void>;
   logout: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
-  upgradeToPremium: () => Promise<void>;
+  startCheckout: (plan: "monthly" | "annual") => Promise<void>;
+  manageSubscription: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   updateProfile: (partial: Partial<Pick<User, "name" | "email">>) => Promise<void>;
-  switchToChildMode: (childId: string) => Promise<void>;
-  switchToParentMode: () => Promise<void>;
+  canReturnToParent: boolean;
+  returnToParent: () => Promise<void>;
 }
 
 const LOCAL_USER_KEY = "@dv_local_user";
 const PARENT_KEY = "@dv_parent_auth";
+const PARENT_TOKEN_KEY = "@dv_parent_token";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -58,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: true,
     isAuthenticated: false,
   });
+  const [canReturnToParent, setCanReturnToParent] = useState(false);
 
   const initialized = useRef(false);
 
@@ -75,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { user } = await apiGetMe();
           setState({ user: apiUserToUser(user), isLoading: false, isAuthenticated: true });
+          setCanReturnToParent(user.role === "child" && !!(await AsyncStorage.getItem(PARENT_TOKEN_KEY)));
           return;
         } catch {
           // Token is expired/invalid — clear it and fall through to local check
@@ -118,14 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // best-effort
       }
     }
-    if (localUser.isPremium && !updated.isPremium) {
-      try {
-        const { user } = await apiUpgradePremium();
-        Object.assign(updated, apiUserToUser(user));
-      } catch {
-        // best-effort
-      }
-    }
     setState({ user: updated, isLoading: false, isAuthenticated: true });
   }, []);
 
@@ -141,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Maps the API response shape to our internal User shape
   function apiUserToUser(u: {
     id: string;
-    email: string;
+    email: string | null;
     name: string;
     role: string;
     isPremium: boolean;
@@ -198,7 +200,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiLogout();
     await clearToken();
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
+    await AsyncStorage.removeItem(PARENT_TOKEN_KEY);
+    await AsyncStorage.removeItem(PARENT_KEY);
     await clearPendingLocalPassword();
+    setCanReturnToParent(false);
     setState({ user: null, isLoading: false, isAuthenticated: false });
   }, []);
 
@@ -216,16 +221,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.user]);
 
-  const upgradeToPremium = useCallback(async () => {
-    if (!state.user) return;
+  const refreshUser = useCallback(async () => {
     try {
-      const { user } = await apiUpgradePremium();
+      const { user } = await apiGetMe();
       setState(s => ({ ...s, user: apiUserToUser(user) }));
     } catch {
-      const updated: User = { ...state.user, isPremium: true };
-      setState(s => ({ ...s, user: updated }));
+      // best-effort
     }
-  }, [state.user]);
+  }, []);
+
+  // Opens Stripe Checkout in a browser session. Tier flips to premium
+  // asynchronously via the billing webhook, not synchronously here — the
+  // caller should refresh the user (e.g. via refreshUser) after this resolves.
+  const startCheckout = useCallback(async (plan: "monthly" | "annual") => {
+    if (!state.user) return;
+    const { url } = await apiCreateCheckoutSession(plan);
+    const redirectUrl = Linking.createURL("subscription/success");
+    await WebBrowser.openAuthSessionAsync(url, redirectUrl);
+    await refreshUser();
+  }, [state.user, refreshUser]);
+
+  const manageSubscription = useCallback(async () => {
+    if (!state.user) return;
+    const { url } = await apiCreatePortalSession();
+    const redirectUrl = Linking.createURL("profile");
+    await WebBrowser.openAuthSessionAsync(url, redirectUrl);
+    await refreshUser();
+  }, [state.user, refreshUser]);
 
   const updateProfile = useCallback(async (partial: Partial<Pick<User, "name" | "email">>) => {
     if (!state.user) return;
@@ -238,21 +260,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.user]);
 
-  const switchToChildMode = useCallback(async (childId: string) => {
-    if (!state.user) return;
-    await AsyncStorage.setItem(PARENT_KEY, JSON.stringify(state.user));
-    setState(s => {
-      if (!s.user) return s;
-      return { ...s, user: { ...s.user, role: "child", id: childId } };
-    });
+  // Logs a child into their own scoped session. If a parent is currently
+  // signed in, stashes the parent's token/user so returnToParent can swap
+  // back without a fresh login.
+  const childLogin = useCallback(async (childId: string, pin: string) => {
+    if (state.user?.role === "parent") {
+      const parentToken = await getToken();
+      if (parentToken) {
+        await AsyncStorage.setItem(PARENT_TOKEN_KEY, parentToken);
+        await AsyncStorage.setItem(PARENT_KEY, JSON.stringify(state.user));
+      }
+    }
+    const { token, user } = await apiChildLogin(childId, pin);
+    await setToken(token);
+    await AsyncStorage.removeItem(LOCAL_USER_KEY);
+    setState({ user: apiUserToUser(user), isLoading: false, isAuthenticated: true });
+    setCanReturnToParent(!!(await AsyncStorage.getItem(PARENT_TOKEN_KEY)));
   }, [state.user]);
 
-  const switchToParentMode = useCallback(async () => {
-    const stored = await AsyncStorage.getItem(PARENT_KEY);
-    if (stored) {
-      const parent: User = JSON.parse(stored);
-      setState(s => ({ ...s, user: parent }));
-    }
+  const returnToParent = useCallback(async () => {
+    const parentToken = await AsyncStorage.getItem(PARENT_TOKEN_KEY);
+    const parentRaw = await AsyncStorage.getItem(PARENT_KEY);
+    if (!parentToken || !parentRaw) return;
+    await setToken(parentToken);
+    await AsyncStorage.removeItem(PARENT_TOKEN_KEY);
+    await AsyncStorage.removeItem(PARENT_KEY);
+    const parent: User = JSON.parse(parentRaw);
+    setState({ user: parent, isLoading: false, isAuthenticated: true });
+    setCanReturnToParent(false);
   }, []);
 
   // ── Offline fallbacks ─────────────────────────────────────────────────────
@@ -261,7 +296,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const raw = await AsyncStorage.getItem(LOCAL_USER_KEY);
     if (raw) {
       const u: User = JSON.parse(raw);
-      if (u.email === email) {
+      if (u.email?.toLowerCase() === email.toLowerCase()) {
         setState({ user: u, isLoading: false, isAuthenticated: true });
         return;
       }
@@ -299,12 +334,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...state,
         login,
         register,
+        childLogin,
         logout,
         completeOnboarding,
-        upgradeToPremium,
+        startCheckout,
+        manageSubscription,
+        refreshUser,
         updateProfile,
-        switchToChildMode,
-        switchToParentMode,
+        canReturnToParent,
+        returnToParent,
       }}
     >
       {children}

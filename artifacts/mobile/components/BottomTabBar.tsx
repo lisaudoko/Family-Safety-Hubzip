@@ -6,12 +6,12 @@ import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { AppText as Text } from "@/components/AppText";
 
-type TabKey = "index" | "learn" | "assess" | "family" | "profile";
+type TabKey = "index" | "learn" | "coach" | "family" | "profile";
 
 const TABS: { key: TabKey; label: string; icon: keyof typeof Feather.glyphMap; href: Href }[] = [
   { key: "index", label: "Home", icon: "home", href: "/(tabs)" },
   { key: "learn", label: "Learn", icon: "book-open", href: "/(tabs)/learn" },
-  { key: "assess", label: "Assess", icon: "clipboard", href: "/(tabs)/assess" },
+  { key: "coach", label: "Coach", icon: "message-circle", href: "/(tabs)/coach" },
   { key: "family", label: "Family", icon: "users", href: "/(tabs)/family" },
   { key: "profile", label: "Profile", icon: "user", href: "/(tabs)/profile" },
 ];

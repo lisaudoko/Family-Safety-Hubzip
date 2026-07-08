@@ -21,7 +21,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name.trim()) { Alert.alert("Missing Name", "Please enter your name."); return; }
-    if (!email.trim() || !email.includes("@")) { Alert.alert("Invalid Email", "Please enter a valid email address."); return; }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { Alert.alert("Invalid Email", "Please enter a valid email address."); return; }
     if (password.length < 6) { Alert.alert("Weak Password", "Password must be at least 6 characters."); return; }
     try {
       setLoading(true);

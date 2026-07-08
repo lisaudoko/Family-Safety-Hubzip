@@ -1,0 +1,454 @@
+You are the Lead Technical Documentation Architect for the Digital Village project.
+
+Your task is to create an AI-friendly project knowledge system that will reduce future token usage when working with Claude Code, Replit Agent, and other AI development assistants.
+
+You are NOT being asked to redesign the application.
+
+You are NOT being asked to modify production functionality.
+
+Your job is to inspect the existing codebase and create accurate documentation based only on what currently exists.
+
+IMPORTANT RULES:
+
+- Do not invent architecture.
+- Do not create fake APIs.
+- Do not assume features exist.
+- Do not modify working application code unless required for documentation accuracy.
+- Inspect the existing implementation first.
+- Document the actual system.
+
+The goal is that future AI agents can understand this project without rereading the entire codebase.
+
+==================================================
+CREATE THIS DOCUMENTATION STRUCTURE
+==================================================
+
+Create:
+
+/CLAUDE.md
+
+/AGENTS.md
+
+/AI_CONTEXT/
+
+    CURRENT_STATE.md
+    ARCHITECTURE_SUMMARY.md
+    DATABASE_SUMMARY.md
+    API_SUMMARY.md
+    BUSINESS_RULES.md
+    CURRENT_PHASE.md
+    NEXT_TASK.md
+    COMPLETED_WORK.md
+    KNOWN_PATTERNS.md
+    DECISIONS.md
+    COMMON_COMMANDS.md
+    DEVELOPMENT_WORKFLOW.md
+    AI_CHANGELOG.md
+
+
+/docs/
+
+    ARCHITECTURE.md
+    DATABASE.md
+    API.md
+    SECURITY.md
+    ACCOUNT_MODEL.md
+    DEVICE_ARCHITECTURE.md
+    EDUCATION_SYSTEM.md
+    POLICY_ENGINE.md
+    CODING_STANDARDS.md
+    ROADMAP.md
+    STATUS.md
+    DECISIONS.md
+
+
+==================================================
+CLAUDE.md
+==================================================
+
+Create permanent instructions for Claude Code.
+
+Include:
+
+Project overview.
+
+Development rules:
+
+- Analyze existing code before modifying.
+- Never duplicate existing functionality.
+- Reuse existing services.
+- Reuse existing database tables.
+- Follow current architecture.
+- Ask questions before making assumptions.
+- Create a plan before major implementation.
+- Implement one subsystem at a time.
+- Run linting after each subsystem.
+
+Include technology information:
+
+- Frameworks
+- Languages
+- Database technology
+- Package manager
+- Build tools
+- Deployment configuration
+
+Include engineering standards:
+
+- TypeScript conventions
+- Naming conventions
+- Folder organization
+- API conventions
+- Database conventions
+- Error handling
+- Logging patterns
+
+
+==================================================
+AGENTS.md
+==================================================
+
+Create shared instructions for all AI coding agents.
+
+Include:
+
+- Project rules.
+- How AI agents should analyze changes.
+- How to avoid duplicate work.
+- How to document changes.
+- How to update AI_CONTEXT files.
+- How to update project status after completing tasks.
+
+
+==================================================
+AI_CONTEXT DIRECTORY
+==================================================
+
+These files should be concise and optimized for AI consumption.
+
+They should contain only high-value information.
+
+--------------------------------------
+
+CURRENT_STATE.md
+
+Include:
+
+- Current application status.
+- Completed major systems.
+- Active development areas.
+- Current risks.
+
+--------------------------------------
+
+ARCHITECTURE_SUMMARY.md
+
+Include:
+
+- Short version of application architecture.
+- Frontend.
+- Backend.
+- Database.
+- Services.
+- Data flow.
+
+--------------------------------------
+
+DATABASE_SUMMARY.md
+
+Include:
+
+- Existing database tables.
+- Relationships.
+- Important models.
+- Database conventions.
+
+Do not invent tables.
+
+--------------------------------------
+
+API_SUMMARY.md
+
+Include:
+
+- Existing APIs.
+- Routes.
+- Purpose.
+- Authentication requirements.
+
+--------------------------------------
+
+BUSINESS_RULES.md
+
+Document:
+
+- Parent account rules.
+- Child account rules.
+- Family rules.
+- Permissions.
+- User workflows.
+
+--------------------------------------
+
+CURRENT_PHASE.md
+
+Document:
+
+- Current development phase.
+- Current objectives.
+- Recently completed work.
+
+--------------------------------------
+
+NEXT_TASK.md
+
+Create a living task tracker.
+
+Include:
+
+- Current priority.
+- Next approved tasks.
+- Pending decisions.
+
+--------------------------------------
+
+COMPLETED_WORK.md
+
+Track:
+
+- Completed features.
+- Date completed.
+- Files changed.
+- Important implementation notes.
+
+--------------------------------------
+
+KNOWN_PATTERNS.md
+
+Document:
+
+- Reusable coding patterns.
+- Service patterns.
+- API patterns.
+- Database patterns.
+
+--------------------------------------
+
+DECISIONS.md
+
+Document important architectural decisions.
+
+Include:
+
+- Decision.
+- Reason.
+- Impact.
+
+--------------------------------------
+
+COMMON_COMMANDS.md
+
+Document:
+
+- Install commands.
+- Development commands.
+- Build commands.
+- Testing commands.
+- Lint commands.
+
+--------------------------------------
+
+DEVELOPMENT_WORKFLOW.md
+
+Document:
+
+- Planning process.
+- Approval process.
+- Implementation workflow.
+- Review process.
+
+--------------------------------------
+
+AI_CHANGELOG.md
+
+Create a changelog specifically for AI development activity.
+
+Track:
+
+- What AI changed.
+- Why it changed.
+- Files affected.
+- Future considerations.
+
+
+==================================================
+DOCUMENTATION FILES
+==================================================
+
+Create detailed human-readable documentation.
+
+--------------------------------------
+
+ARCHITECTURE.md
+
+Document:
+
+- Overall architecture.
+- Frontend architecture.
+- Backend architecture.
+- Database architecture.
+- Service relationships.
+- Data flow.
+
+--------------------------------------
+
+DATABASE.md
+
+Document:
+
+- All existing tables.
+- Fields.
+- Relationships.
+- Constraints.
+- Migrations.
+
+--------------------------------------
+
+API.md
+
+Document:
+
+- All existing endpoints.
+- Methods.
+- Parameters.
+- Responses.
+- Permissions.
+
+--------------------------------------
+
+SECURITY.md
+
+Document current security implementation.
+
+Include:
+
+- JWT Authentication
+- Role Based Access Control
+- Parent permissions
+- Child permissions
+- Admin permissions
+- Audit Logging
+- Rate Limiting
+- Input Validation
+- SQL Injection Protection
+- CSRF Protection where applicable
+
+--------------------------------------
+
+ACCOUNT_MODEL.md
+
+Document:
+
+- Parent accounts.
+- Child accounts.
+- Family accounts.
+- Roles.
+- Permissions.
+- Authentication flow.
+
+--------------------------------------
+
+DEVICE_ARCHITECTURE.md
+
+Document:
+
+- Device registration.
+- Device synchronization.
+- Device capabilities.
+- Event tracking.
+- Analytics.
+- Parent dashboard connections.
+
+--------------------------------------
+
+EDUCATION_SYSTEM.md
+
+Document:
+
+- Modules.
+- Lessons.
+- Quizzes.
+- Progress tracking.
+- Badges.
+- Learning paths.
+
+--------------------------------------
+
+POLICY_ENGINE.md
+
+Document:
+
+- Policies.
+- Rules.
+- Family controls.
+- Device controls.
+
+--------------------------------------
+
+CODING_STANDARDS.md
+
+Document:
+
+- TypeScript standards.
+- File organization.
+- Component patterns.
+- Backend patterns.
+- Database patterns.
+
+--------------------------------------
+
+ROADMAP.md
+
+Document:
+
+- Completed phases.
+- Current phase.
+- Future development.
+
+--------------------------------------
+
+STATUS.md
+
+Create a project status dashboard.
+
+Include:
+
+- Completed work.
+- Current work.
+- Remaining work.
+- Risks.
+
+--------------------------------------
+
+DECISIONS.md
+
+Document stable architectural decisions.
+
+==================================================
+FINAL REVIEW
+==================================================
+
+After creating all files:
+
+1. Verify documentation matches the codebase.
+2. Remove duplicate information.
+3. Ensure AI_CONTEXT files are concise.
+4. Ensure documentation is easy for AI agents to consume.
+5. Do not modify production code.
+
+Provide a final report:
+
+- Files created.
+- Files updated.
+- Major discoveries.
+- Recommended future documentation practices.

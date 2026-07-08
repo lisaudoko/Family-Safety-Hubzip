@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { AGE_BANDS, AgeBand } from "@/data/seed";
 import ChildCard from "@/components/ChildCard";
+import { MonitoringPanel } from "@/components/MonitoringPanel";
 import { SectionHeader } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
@@ -16,6 +17,7 @@ export default function FamilyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const isParent = user?.role === "parent";
   const { family, agreement } = useFamily();
   const [addingChild, setAddingChild] = useState(false);
   const [childName, setChildName] = useState("");
@@ -37,11 +39,18 @@ export default function FamilyScreen() {
     if (!childName.trim()) { Alert.alert("Name Required", "Please enter a name for this child."); return; }
     if (!user) return;
     try {
-      await addChild(childName.trim(), childAge, user.familyId);
+      const name = childName.trim();
+      const pin = await addChild(name, childAge, user.familyId);
       setChildName("");
       setChildAge("10-13");
       setAddingChild(false);
       await haptics.notify(Haptics.NotificationFeedbackType.Success);
+      if (pin) {
+        Alert.alert(
+          "Login PIN Created",
+          `${name} can log in on their own device with the family code${family?.familyCode ? ` (${family.familyCode})` : ""} and this PIN: ${pin}\n\nYou can change it anytime from ${name}'s profile.`,
+        );
+      }
     } catch (e: any) {
       console.error("[family] addChild error:", e?.message || e);
       Alert.alert("Error", "Failed to add child. Please try again.");
@@ -62,9 +71,24 @@ export default function FamilyScreen() {
         {family?.name ?? "My Family"}
       </Text>
 
+      {isParent && family?.familyCode && (
+        <View style={[styles.codeCard, { backgroundColor: colors.secondary, borderColor: colors.primary + "33" }]}>
+          <View style={[styles.codeIcon, { backgroundColor: colors.card }]}>
+            <Feather name="key" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.codeLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Family Code</Text>
+            <Text style={[styles.codeValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{family.familyCode}</Text>
+          </View>
+          <Text style={[styles.codeHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            Share with your kids so they can log in
+          </Text>
+        </View>
+      )}
+
       <View>
-        <SectionHeader title="Children" action="Add child" onAction={() => setAddingChild(true)} />
-        {family?.children.length === 0 && !addingChild && (
+        <SectionHeader title="Children" action={isParent ? "Add child" : undefined} onAction={() => setAddingChild(true)} />
+        {isParent && family?.children.length === 0 && !addingChild && (
           <TouchableOpacity
             style={[styles.emptyChildBtn, { borderColor: colors.primary + "44", backgroundColor: colors.secondary }]}
             onPress={() => setAddingChild(true)}
@@ -77,11 +101,11 @@ export default function FamilyScreen() {
           <ChildCard
             key={child.id}
             child={child}
-            onPress={() => router.push({ pathname: "/child/[id]", params: { id: child.id } })}
+            onPress={() => isParent && router.push({ pathname: "/child/[id]", params: { id: child.id } })}
           />
         ))}
 
-        {addingChild && (
+        {isParent && addingChild && (
           <View style={[styles.addChildCard, { backgroundColor: colors.card, borderColor: colors.primary }]}>
             <TextInput
               style={[styles.childInput, { color: colors.foreground, borderColor: colors.border, fontFamily: "Inter_400Regular" }]}
@@ -140,6 +164,13 @@ export default function FamilyScreen() {
         </TouchableOpacity>
       </View>
 
+      {isParent && (
+        <View>
+          <SectionHeader title="Monitoring" />
+          <MonitoringPanel />
+        </View>
+      )}
+
     </ScrollView>
   );
 }
@@ -147,6 +178,11 @@ export default function FamilyScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, gap: 24 },
   pageTitle: { fontSize: 28 },
+  codeCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginTop: -12 },
+  codeIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  codeLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
+  codeValue: { fontSize: 18, letterSpacing: 2 },
+  codeHint: { fontSize: 11, maxWidth: 90, textAlign: "right" },
   emptyChildBtn: { borderRadius: 14, borderWidth: 1.5, borderStyle: "dashed", paddingVertical: 20, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10 },
   emptyChildText: { fontSize: 15 },
   addChildCard: { borderRadius: 16, borderWidth: 1.5, padding: 16, gap: 12 },

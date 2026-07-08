@@ -1,8 +1,17 @@
 import { Router, type IRouter } from "express";
+import { randomUUID } from "crypto";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { SendCoachMessageBody, SendCoachMessageResponse } from "@workspace/api-zod";
+import { db } from "@workspace/db";
+import { coachUsageTable } from "@workspace/db";
+import { and, eq, sql } from "drizzle-orm";
+import { requireAuth, type AuthRequest } from "../lib/auth-middleware.js";
+import { isFamilyPremium, currentPeriod } from "../lib/subscription.js";
 
 const router: IRouter = Router();
+router.use(requireAuth as any);
+
+const FREE_MONTHLY_COACH_MESSAGES = 10;
 
 const SYSTEM_PROMPT = `You are the Digital Safety Coach inside "Digital Village", a family digital safety app for parents. You advise parents raising digitally-aware kids aged 6–18.
 
@@ -40,11 +49,35 @@ function sanitizeReply(text: string): string {
     .trim();
 }
 
-router.post("/coach/chat", async (req, res): Promise<void> => {
+router.post("/coach/chat", async (req: AuthRequest, res): Promise<void> => {
   const parsed = SendCoachMessageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
+  }
+
+  const familyId = req.familyId;
+  if (!familyId) {
+    res.status(400).json({ error: "Join or create a family before using the coach" });
+    return;
+  }
+
+  const premium = await isFamilyPremium(familyId);
+  const period = currentPeriod();
+
+  if (!premium) {
+    const [usage] = await db
+      .select({ message_count: coachUsageTable.message_count })
+      .from(coachUsageTable)
+      .where(and(eq(coachUsageTable.family_id, familyId), eq(coachUsageTable.period, period)))
+      .limit(1);
+
+    if ((usage?.message_count ?? 0) >= FREE_MONTHLY_COACH_MESSAGES) {
+      res.status(403).json({
+        error: "You've reached this month's free coach limit. Upgrade to Premium for unlimited access.",
+      });
+      return;
+    }
   }
 
   try {
@@ -69,6 +102,16 @@ router.post("/coach/chat", async (req, res): Promise<void> => {
       req.log.error({ stopReason: message.stop_reason }, "Coach returned empty reply");
       res.status(500).json({ error: "The coach could not generate a reply. Please try again." });
       return;
+    }
+
+    if (!premium) {
+      await db
+        .insert(coachUsageTable)
+        .values({ id: randomUUID(), family_id: familyId, period, message_count: 1 })
+        .onConflictDoUpdate({
+          target: [coachUsageTable.family_id, coachUsageTable.period],
+          set: { message_count: sql`${coachUsageTable.message_count} + 1`, updated_at: new Date() },
+        });
     }
 
     res.json(SendCoachMessageResponse.parse({ reply }));

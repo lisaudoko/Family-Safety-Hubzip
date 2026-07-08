@@ -119,9 +119,10 @@ async function migrateLocalFamilyData(oldUserId: string, newUserId: string): Pro
 export async function syncLocalAccountToServer(localUser: {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
 }): Promise<ApiUser | null> {
   if (!localUser.id.startsWith("local_")) return null;
+  if (!localUser.email) return null;
 
   const password = await getPendingLocalPassword();
   if (!password) return null;

@@ -1,19 +1,22 @@
-import { Router } from "express";
-import bcrypt from "bcryptjs";
-import { randomInt, randomUUID } from "crypto";
-import { db } from "@workspace/db";
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import { randomInt, randomUUID } from 'crypto';
+import { db } from '@workspace/db';
 import {
+  childrenTable,
+  familiesTable,
   passwordResetCodesTable,
   profilesTable,
   sessionsTable,
-} from "@workspace/db";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
-import { requireAuth, type AuthRequest } from "../lib/auth-middleware.js";
-import { sendPasswordResetEmail } from "../lib/email.js";
+} from '@workspace/db';
+import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { requireAuth, type AuthRequest } from '../lib/auth-middleware.js';
+import { sendPasswordResetEmail } from '../lib/email.js';
 
 const router = Router();
 
 const SESSION_TTL_DAYS = 90;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function sessionExpiry(): Date {
   const d = new Date();
@@ -27,15 +30,15 @@ function safeUser(p: typeof profilesTable.$inferSelect) {
     email: p.email,
     name: p.full_name,
     role: p.role,
-    isPremium: p.subscription_tier === "premium",
-    familyId: p.family_id ?? "",
+    isPremium: p.subscription_tier === 'premium',
+    familyId: p.family_id ?? '',
     hasCompletedOnboarding: p.has_completed_onboarding,
     createdAt: p.created_at.toISOString(),
   };
 }
 
 // POST /api/auth/register
-router.post("/auth/register", async (req, res, next) => {
+router.post('/auth/register', async (req, res, next) => {
   try {
     const { name, email, password } = req.body as {
       name?: string;
@@ -44,7 +47,12 @@ router.post("/auth/register", async (req, res, next) => {
     };
 
     if (!name?.trim() || !email?.trim() || !password || password.length < 6) {
-      res.status(400).json({ error: "name, email, and password (min 6 chars) required" });
+      res.status(400).json({ error: 'name, email, and password (min 6 chars) required' });
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(email.trim())) {
+      res.status(400).json({ error: 'Please enter a valid email address' });
       return;
     }
 
@@ -57,7 +65,7 @@ router.post("/auth/register", async (req, res, next) => {
       .limit(1);
 
     if (existing.length > 0) {
-      res.status(409).json({ error: "An account with this email already exists" });
+      res.status(409).json({ error: 'An account with this email already exists' });
       return;
     }
 
@@ -71,8 +79,8 @@ router.post("/auth/register", async (req, res, next) => {
         email: normalizedEmail,
         full_name: name.trim(),
         password_hash: passwordHash,
-        role: "parent",
-        subscription_tier: "free",
+        role: 'parent',
+        subscription_tier: 'free',
         has_completed_onboarding: false,
       })
       .returning();
@@ -91,7 +99,7 @@ router.post("/auth/register", async (req, res, next) => {
 });
 
 // POST /api/auth/login
-router.post("/auth/login", async (req, res, next) => {
+router.post('/auth/login', async (req, res, next) => {
   try {
     const { email, password } = req.body as {
       email?: string;
@@ -99,7 +107,12 @@ router.post("/auth/login", async (req, res, next) => {
     };
 
     if (!email?.trim() || !password) {
-      res.status(400).json({ error: "email and password required" });
+      res.status(400).json({ error: 'email and password required' });
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(email.trim())) {
+      res.status(400).json({ error: 'Please enter a valid email address' });
       return;
     }
 
@@ -111,13 +124,93 @@ router.post("/auth/login", async (req, res, next) => {
       .limit(1);
 
     if (!profile) {
-      res.status(401).json({ error: "Invalid email or password" });
+      res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
     const valid = await bcrypt.compare(password, profile.password_hash);
     if (!valid) {
-      res.status(401).json({ error: "Invalid email or password" });
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    const token = randomUUID();
+    await db.insert(sessionsTable).values({
+      token,
+      user_id: profile.id,
+      expires_at: sessionExpiry(),
+    });
+
+    res.json({ token, user: safeUser(profile) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/family-by-code/:code
+// Public lookup used by the child-login screen: given the family's join
+// code, list the children a kid can pick from (no PINs or parent details).
+router.get('/auth/family-by-code/:code', async (req, res, next) => {
+  try {
+    const code = String(req.params.code).trim().toUpperCase();
+    if (!code) {
+      res.status(400).json({ error: 'code required' });
+      return;
+    }
+
+    const [family] = await db
+      .select({ id: familiesTable.id, name: familiesTable.name })
+      .from(familiesTable)
+      .where(eq(familiesTable.family_code, code))
+      .limit(1);
+
+    if (!family) {
+      res.status(404).json({ error: 'Family not found' });
+      return;
+    }
+
+    const kids = await db
+      .select({ id: childrenTable.id, name: childrenTable.name })
+      .from(childrenTable)
+      .innerJoin(profilesTable, eq(profilesTable.id, childrenTable.id))
+      .where(eq(childrenTable.family_id, family.id));
+
+    res.json({
+      family: { name: family.name },
+      children: kids,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/child-login
+router.post('/auth/child-login', async (req, res, next) => {
+  try {
+    const { childId, pin } = req.body as {
+      childId?: string;
+      pin?: string;
+    };
+
+    if (!childId?.trim() || !pin) {
+      res.status(400).json({ error: 'childId and pin required' });
+      return;
+    }
+
+    const [profile] = await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.id, childId.trim()))
+      .limit(1);
+
+    if (!profile || profile.role !== 'child') {
+      res.status(401).json({ error: 'Invalid child or PIN' });
+      return;
+    }
+
+    const valid = await bcrypt.compare(pin, profile.password_hash);
+    if (!valid) {
+      res.status(401).json({ error: 'Invalid child or PIN' });
       return;
     }
 
@@ -137,11 +230,11 @@ router.post("/auth/login", async (req, res, next) => {
 const RESET_CODE_TTL_MINUTES = 15;
 
 // POST /api/auth/forgot-password
-router.post("/auth/forgot-password", async (req, res, next) => {
+router.post('/auth/forgot-password', async (req, res, next) => {
   try {
     const { email } = req.body as { email?: string };
     if (!email?.trim()) {
-      res.status(400).json({ error: "email required" });
+      res.status(400).json({ error: 'email required' });
       return;
     }
 
@@ -155,7 +248,7 @@ router.post("/auth/forgot-password", async (req, res, next) => {
     // Always respond the same way whether or not the account exists, so the
     // response can't be used to discover which emails are registered.
     if (profile) {
-      const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+      const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
       const codeHash = await bcrypt.hash(code, 12);
       const expiresAt = new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60_000);
 
@@ -166,7 +259,7 @@ router.post("/auth/forgot-password", async (req, res, next) => {
         expires_at: expiresAt,
       });
 
-      await sendPasswordResetEmail(profile.email, code);
+      await sendPasswordResetEmail(profile.email!, code);
     }
 
     res.json({ ok: true });
@@ -176,7 +269,7 @@ router.post("/auth/forgot-password", async (req, res, next) => {
 });
 
 // POST /api/auth/reset-password
-router.post("/auth/reset-password", async (req, res, next) => {
+router.post('/auth/reset-password', async (req, res, next) => {
   try {
     const { email, code, newPassword } = req.body as {
       email?: string;
@@ -185,11 +278,11 @@ router.post("/auth/reset-password", async (req, res, next) => {
     };
 
     if (!email?.trim() || !code?.trim() || !newPassword || newPassword.length < 6) {
-      res.status(400).json({ error: "email, code, and newPassword (min 6 chars) required" });
+      res.status(400).json({ error: 'email, code, and newPassword (min 6 chars) required' });
       return;
     }
 
-    const invalidCodeError = () => res.status(400).json({ error: "Invalid or expired code" });
+    const invalidCodeError = () => res.status(400).json({ error: 'Invalid or expired code' });
 
     const normalizedEmail = email.trim().toLowerCase();
     const [profile] = await db
@@ -249,7 +342,7 @@ router.post("/auth/reset-password", async (req, res, next) => {
 });
 
 // POST /api/auth/logout
-router.post("/auth/logout", requireAuth as any, async (req: AuthRequest, res, next) => {
+router.post('/auth/logout', requireAuth as any, async (req: AuthRequest, res, next) => {
   try {
     const header = req.headers.authorization!;
     const token = header.slice(7);
@@ -261,7 +354,7 @@ router.post("/auth/logout", requireAuth as any, async (req: AuthRequest, res, ne
 });
 
 // GET /api/auth/me
-router.get("/auth/me", requireAuth as any, async (req: AuthRequest, res, next) => {
+router.get('/auth/me', requireAuth as any, async (req: AuthRequest, res, next) => {
   try {
     const [profile] = await db
       .select()
@@ -270,7 +363,7 @@ router.get("/auth/me", requireAuth as any, async (req: AuthRequest, res, next) =
       .limit(1);
 
     if (!profile) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: 'User not found' });
       return;
     }
 
@@ -281,7 +374,7 @@ router.get("/auth/me", requireAuth as any, async (req: AuthRequest, res, next) =
 });
 
 // PATCH /api/auth/me
-router.patch("/auth/me", requireAuth as any, async (req: AuthRequest, res, next) => {
+router.patch('/auth/me', requireAuth as any, async (req: AuthRequest, res, next) => {
   try {
     const { name, email } = req.body as { name?: string; email?: string };
     const updates: Partial<typeof profilesTable.$inferInsert> = {
@@ -303,26 +396,11 @@ router.patch("/auth/me", requireAuth as any, async (req: AuthRequest, res, next)
 });
 
 // PATCH /api/auth/onboarding
-router.patch("/auth/onboarding", requireAuth as any, async (req: AuthRequest, res, next) => {
+router.patch('/auth/onboarding', requireAuth as any, async (req: AuthRequest, res, next) => {
   try {
     const [profile] = await db
       .update(profilesTable)
       .set({ has_completed_onboarding: true, updated_at: new Date() })
-      .where(eq(profilesTable.id, req.userId!))
-      .returning();
-
-    res.json({ user: safeUser(profile) });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// PATCH /api/auth/upgrade
-router.patch("/auth/upgrade", requireAuth as any, async (req: AuthRequest, res, next) => {
-  try {
-    const [profile] = await db
-      .update(profilesTable)
-      .set({ subscription_tier: "premium", updated_at: new Date() })
       .where(eq(profilesTable.id, req.userId!))
       .returning();
 
