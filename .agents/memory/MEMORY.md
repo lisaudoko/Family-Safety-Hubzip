@@ -4,3 +4,4 @@
 - [DB lib rebuild required](db-lib-rebuild.md) — after adding new table exports to lib/db/src/schema, run `pnpm run typecheck:libs` before api-server typecheck or you'll get "no exported member" errors.
 - [pnpm filter vs installLanguagePackages](pnpm-filter-install.md) — installLanguagePackages callback adds to workspace root (fails); always use `pnpm --filter @workspace/<pkg> add <dep>` for package-scoped installs.
 - [Express params string type](express-params-type.md) — req.params.X has type `string | string[]` in Express 5 strict mode; cast with String(req.params.X) before passing to drizzle eq().
+- [AI docs system](ai-docs-system.md) — CLAUDE.md/AGENTS.md/AI_CONTEXT/+docs/ are the feature-inventory source of truth; replit.md is stale (6 tables/no Stripe era); update AI_CONTEXT after changes.

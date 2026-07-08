@@ -1,0 +1,75 @@
+# CLAUDE.md — Permanent Instructions for Claude Code
+
+## Project Overview
+
+**Digital Village** is an iOS-first family digital safety platform. It helps parents raise digitally-safe kids through education (courses/lessons/quizzes), assessment, family challenges, a family technology agreement, device activity monitoring, and an AI parenting coach.
+
+- Main product: Expo (React Native) mobile app at `artifacts/mobile/`
+- Backend: Express 5 API server at `artifacts/api-server/` (all routes under `/api`)
+- Database: Replit PostgreSQL with Drizzle ORM, schema at `lib/db/`
+- Contract: OpenAPI spec at `lib/api-spec/openapi.yaml` with Orval codegen
+
+Read `AI_CONTEXT/CURRENT_STATE.md` first for a quick orientation, then the relevant `AI_CONTEXT/*.md` summaries. Only read source files when the summaries are insufficient.
+
+## Development Rules
+
+1. **Analyze existing code before modifying.** Inspect the relevant route/context/schema files before changing behavior.
+2. **Never duplicate existing functionality.** Check `lib/apiClient.ts`, existing routes, and existing DB tables first.
+3. **Reuse existing services** — auth middleware, apiClient wrappers, contexts, shared UI components (`components/UI.tsx`).
+4. **Reuse existing database tables** — 19 tables already exist (see `AI_CONTEXT/DATABASE_SUMMARY.md`). Do not create parallel tables.
+5. **Follow current architecture** — offline-first mobile (AsyncStorage cache + server sync), Bearer-token sessions, hand-written Express routes (OpenAPI spec only partially adopted).
+6. **Ask questions before making assumptions** about product behavior or scope.
+7. **Create a plan before major implementation.**
+8. **Implement one subsystem at a time** and verify with typecheck between subsystems.
+9. **Run checks after each subsystem**: `pnpm run typecheck` (canonical gate), `pnpm run lint` (root ESLint config), and `pnpm --filter @workspace/api-server run test` (Vitest tests exist in `artifacts/api-server/test/`).
+
+## Technology
+
+| Area | Choice |
+| --- | --- |
+| Package manager | pnpm workspaces (monorepo) |
+| Runtime | Node.js 24, TypeScript 5.9 (strict) |
+| Mobile | Expo SDK 54, expo-router 6, React Native 0.81.5 |
+| Mobile state | TanStack Query, React contexts, AsyncStorage |
+| Backend | Express 5, Pino logging (pino-http) |
+| Database | Replit PostgreSQL, Drizzle ORM, drizzle-zod |
+| Validation | Zod (`zod/v4`) |
+| API codegen | Orval from `lib/api-spec/openapi.yaml` |
+| Payments | Stripe (checkout sessions, customer portal, webhook) |
+| Build | esbuild (CJS bundle for api-server) |
+| Deployment | Replit workflows; services routed by path via shared proxy |
+
+## Engineering Standards
+
+### TypeScript
+- Strict mode across all packages; `lib/*` are composite packages that emit declarations, `artifacts/*` are leaf packages checked with `tsc --noEmit`.
+- After changing `lib/db` schema exports, run `pnpm run typecheck:libs` before typechecking api-server (stale declarations otherwise).
+- Express 5 types `req.params.X` as `string | string[]` — cast with `String(req.params.X)` before drizzle `eq()`.
+
+### Naming
+- DB tables/columns: `snake_case`. TypeScript exports: `camelCase` (e.g., `profilesTable`).
+- Workspace packages: `@workspace/<name>`.
+- API client wrappers in mobile: `api<Verb><Noun>` (e.g., `apiGetFamily`, `apiSaveProgress`).
+
+### Folder Organization
+- `artifacts/mobile/app/` — expo-router file-based screens; `(tabs)/` for main tabs.
+- `artifacts/mobile/context/` — React contexts; `lib/` — API + sync helpers; `data/seed.ts` — static content.
+- `artifacts/api-server/src/routes/` — one file per domain (auth, family, curriculum, devices, billing, analytics, dashboard, coach, notifications, health).
+- `lib/db/src/schema/index.ts` — single schema file with all tables + drizzle-zod schemas.
+
+### API Conventions
+- All routes mounted under `/api`. Bearer token auth via `requireAuth`; parent-only routes via `requireParent`.
+- The OpenAPI spec (`lib/api-spec/openapi.yaml`) currently covers only `/healthz` and `/coach/chat` — most routes are implemented directly without spec entries. Prefer adding new endpoints to the spec, but don't assume existing routes are spec-backed.
+- Validate inputs with Zod `safeParse` (from `@workspace/api-zod`) or explicit checks; return 4xx with a message, pass unexpected errors to `next(err)`.
+- Never call service ports directly in dev; go through the shared proxy at `localhost:80/api/...`.
+
+### Database Conventions
+- Text primary keys (UUIDs generated in application code).
+- `created_at` / `updated_at` timestamps with `defaultNow()`.
+- Complex data in `jsonb` with `.$type<T>()`.
+- Schema changes: edit `lib/db/src/schema/index.ts`, then `cd lib/db && DATABASE_URL=$DATABASE_URL npx drizzle-kit push` (dev). The server also runs idempotent startup migrations (`src/lib/startup-migrate.ts`).
+
+### Error Handling & Logging
+- Server: `try/catch` → `next(err)`; centralized error middleware logs and returns 500.
+- **Never `console.log` in server code.** Use `req.log` in handlers, singleton Pino `logger` elsewhere. Authorization headers are redacted.
+- Mobile: API failures fall back to local AsyncStorage state (offline-tolerant); do not silently swallow errors in new server code.
