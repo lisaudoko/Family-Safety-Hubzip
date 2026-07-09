@@ -20,11 +20,17 @@ import { FamilyProvider } from "@/context/FamilyContext";
 import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
 import { useDeviceSync, useForegroundScreenTime } from "@/lib/deviceSync";
+import { initializeRevenueCat } from "@/lib/revenuecat";
+import { SubscriptionProvider } from "@/lib/revenuecat";
 
 SplashScreen.preventAutoHideAsync();
 
 configureApiBase();
-
+try {
+  initializeRevenueCat();
+} catch (err: any) {
+  console.warn("RevenueCat init failed:", err?.message);
+}
 const queryClient = new QueryClient();
 
 function AuthRedirect() {
@@ -117,13 +123,15 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
-                <AccessibilityProvider>
-                  <FamilyProvider>
-                    <CoachProvider>
-                      <RootLayoutNav />
-                    </CoachProvider>
-                  </FamilyProvider>
-                </AccessibilityProvider>
+                <SubscriptionProvider>
+                  <AccessibilityProvider>
+                    <FamilyProvider>
+                      <CoachProvider>
+                        <RootLayoutNav />
+                      </CoachProvider>
+                    </FamilyProvider>
+                  </AccessibilityProvider>
+                </SubscriptionProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "expo-secure-store": "^56.0.4",
+    "react-native-purchases": "^10.4.1",
     "react-native-url-polyfill": "^3.0.0"
   }
 }
