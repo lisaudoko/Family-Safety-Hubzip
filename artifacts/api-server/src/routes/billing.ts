@@ -17,6 +17,7 @@ async function setFamilyTier(familyId: string, tier: 'free' | 'premium') {
 }
 
 async function getOrCreateStripeCustomer(familyId: string, email: string | null): Promise<string> {
+  if (!stripe) throw new Error('Stripe is not configured');
   const [existing] = await db
     .select({ stripe_customer_id: subscriptionsTable.stripe_customer_id })
     .from(subscriptionsTable)
@@ -44,6 +45,10 @@ async function getOrCreateStripeCustomer(familyId: string, email: string | null)
 // POST /api/billing/checkout-session
 router.post('/billing/checkout-session', requireAuth as any, requireParent, async (req: AuthRequest, res, next) => {
   try {
+    if (!stripe) {
+      res.status(503).json({ error: 'Billing is not configured' });
+      return;
+    }
     const { plan } = req.body as { plan?: BillingPlan };
     if (plan !== 'monthly' && plan !== 'annual') {
       res.status(400).json({ error: 'plan must be "monthly" or "annual"' });
@@ -87,6 +92,10 @@ router.post('/billing/checkout-session', requireAuth as any, requireParent, asyn
 // POST /api/billing/portal-session
 router.post('/billing/portal-session', requireAuth as any, requireParent, async (req: AuthRequest, res, next) => {
   try {
+    if (!stripe) {
+      res.status(503).json({ error: 'Billing is not configured' });
+      return;
+    }
     if (!req.familyId) {
       res.status(404).json({ error: 'No subscription found' });
       return;
@@ -116,6 +125,10 @@ router.post('/billing/portal-session', requireAuth as any, requireParent, async 
 
 // POST /api/billing/webhook — mounted with a raw body parser in app.ts, ahead of express.json().
 export async function billingWebhookHandler(req: AuthRequest, res: any, next: any) {
+  if (!stripe) {
+    res.status(503).json({ error: 'Billing is not configured' });
+    return;
+  }
   const signature = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!signature || !webhookSecret) {
