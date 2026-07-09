@@ -9,6 +9,18 @@ import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { useSubscription } from "@/lib/revenuecat";
 
+function formatPeriod(period: string): string {
+  const map: Record<string, string> = {
+    P1W: "week",
+    P1M: "month",
+    P2M: "2 months",
+    P3M: "3 months",
+    P6M: "6 months",
+    P1Y: "year",
+  };
+  return map[period] || period;
+}
+
 const FEATURES = [
   { icon: "book-open" as const, label: "All 8 courses (including premium)", free: false, premium: true },
   { icon: "shield" as const, label: "Cyberbullying & Scam Awareness", free: true, premium: true },
@@ -132,7 +144,7 @@ export default function SubscriptionScreen() {
                   {pkg.product.priceString}
                 </Text>
                 <Text style={[styles.planPeriod, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {pkg.product.subscriptionPeriod ? `/${pkg.product.subscriptionPeriod}` : ""}
+                  {pkg.product.subscriptionPeriod ? `/${formatPeriod(pkg.product.subscriptionPeriod)}` : ""}
                 </Text>
               </View>
             </TouchableOpacity>
