@@ -4,6 +4,9 @@ import Purchases from "react-native-purchases";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 
+console.log("RevenueCat TEST KEY:", process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY);
+console.log("RevenueCat IOS KEY:", process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY);
+
 const REVENUECAT_TEST_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
 const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
 const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
