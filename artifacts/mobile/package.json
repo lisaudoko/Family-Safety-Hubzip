@@ -1,3 +1,5 @@
+console.log("RevenueCat TEST KEY:", process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY);
+console.log("RevenueCat IOS KEY:", process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY);
 {
   "name": "@workspace/mobile",
   "version": "0.0.0",
