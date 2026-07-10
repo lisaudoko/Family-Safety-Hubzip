@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
@@ -11,6 +10,14 @@ import { useCurriculum } from "@/hooks/useCurriculum";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { AppText as Text } from "@/components/AppText";
+import { useDeviceRestrictions } from "@/hooks/useDeviceRestrictions";
+import {
+  apiCreateSupportCode,
+  apiGetDevices,
+  apiGetDeviceRestrictions,
+  apiUpdateDeviceRestrictions,
+  type ApiDevice
+} from "@/lib/apiClient";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -22,14 +29,58 @@ export default function ProfileScreen() {
   const { badges: BADGES } = useCurriculum();
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? "");
+  const [supportModal, setSupportModal] = useState(false);
+  const [supportCode, setSupportCode] = useState<string | null>(null);
+  const [supportExpiresAt, setSupportExpiresAt] = useState<string | null>(null);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportError, setSupportError] = useState<string | null>(null);
+  const [supportSecondsLeft, setSupportSecondsLeft] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
-
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, []),
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: false,
+      });
+    }, [])
+  );
+  const isParent = user?.role === "parent";
+  const [devices, setDevices] = useState<ApiDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  
+  const {
+    restrictions,
+    updateRestrictions,
+    loading: restrictionsLoading,
+  } = useDeviceRestrictions(selectedDeviceId ?? undefined);
+  React.useEffect(() => {
+    async function loadDevices() {
+      if (!isParent) return;
+
+      try {
+        const res = await apiGetDevices();
+        setDevices(res.devices);
+
+        if (res.devices.length > 0 && !selectedDeviceId) {
+          setSelectedDeviceId(res.devices[0].id);
+        }
+      } catch (err) {
+        console.log("Failed to load devices", err);
+      }
+    }
+
+    loadDevices();
+  }, [isParent, selectedDeviceId]);
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: false,
+      });
+    }, [])
   );
 
+  
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
@@ -82,6 +133,37 @@ export default function ProfileScreen() {
       ]
     );
   };
+
+  const handleGetSupport = () => {
+    setSupportModal(true);
+    setSupportCode(null);
+    setSupportError(null);
+  };
+
+  const requestSupportCode = async () => {
+    setSupportLoading(true);
+    setSupportError(null);
+    try {
+      const res = await apiCreateSupportCode();
+      setSupportCode(res.code);
+      setSupportExpiresAt(res.expiresAt);
+    } catch (err) {
+      setSupportError(err instanceof Error ? err.message : "Failed to generate a code. Try again.");
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!supportExpiresAt) return;
+    const tick = () => {
+      const secondsLeft = Math.max(0, Math.round((new Date(supportExpiresAt).getTime() - Date.now()) / 1000));
+      setSupportSecondsLeft(secondsLeft);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [supportExpiresAt]);
 
   const completedCourses = Object.values(progress.courseProgress).filter(p => p === 100).length;
   const completedLessons = progress.completedLessons.length;
@@ -200,7 +282,297 @@ export default function ProfileScreen() {
           </View>
         )}
       </View>
+      {isParent && devices.length > 0 && (
+        <View>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: colors.foreground,
+                fontFamily: "Inter_700Bold",
+              },
+            ]}
+          >
+            Select Device
+          </Text>
 
+          <View
+            style={[
+              styles.settingsList,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {devices.map((device) => (
+              <TouchableOpacity
+                key={device.id}
+                style={styles.settingsRow}
+                onPress={() => setSelectedDeviceId(device.id)}
+              >
+                <Feather
+                  name="smartphone"
+                  size={18}
+                  color={colors.foreground}
+                />
+
+                <Text
+                  style={[
+                    styles.settingsLabel,
+                    {
+                      color: colors.foreground,
+                      fontFamily: "Inter_400Regular",
+                    },
+                  ]}
+                >
+                  {device.name}
+                </Text>
+
+                <Feather
+                  name={
+                    selectedDeviceId === device.id
+                      ? "check-circle"
+                      : "circle"
+                  }
+                  size={18}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+      {isParent && selectedDeviceId && (
+        <View>
+          <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+            Device Restrictions
+          </Text>
+
+          <View
+            style={[
+              styles.settingsList,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border
+              }
+            ]}
+          >
+
+            {restrictionsLoading ? (
+              <Text
+                style={{
+                  color: colors.mutedForeground,
+                  padding: 16,
+                  fontFamily: "Inter_400Regular",
+                }}
+              >
+                Loading restrictions...
+              </Text>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.settingsRow}
+                  onPress={() =>
+                    updateRestrictions({
+                      screenTimeLimitMinutes:
+                        restrictions?.screenTimeLimitMinutes === 120
+                          ? null
+                          : 120,
+                    })
+                  }
+                >
+                  <Feather
+                    name="clock"
+                    size={18}
+                    color={colors.foreground}
+                  />
+
+                  <Text
+                    style={[
+                      styles.settingsLabel,
+                      {
+                        color: colors.foreground,
+                        fontFamily: "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    Screen Time Limit
+                  </Text>
+
+                  <Text style={{ color: colors.mutedForeground }}>
+                    {restrictions?.screenTimeLimitMinutes
+                      ? `${restrictions.screenTimeLimitMinutes} min`
+                      : "Off"}
+                  </Text>
+                </TouchableOpacity>
+
+
+                <TouchableOpacity
+                  style={styles.settingsRow}
+                  onPress={() =>
+                    updateRestrictions({
+                      blockSafari: !restrictions?.blockSafari,
+                    })
+                  }
+                >
+                  <Feather
+                    name="globe"
+                    size={18}
+                    color={colors.foreground}
+                  />
+
+                  <Text
+                    style={[
+                      styles.settingsLabel,
+                      {
+                        color: colors.foreground,
+                        fontFamily: "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    Block Safari
+                  </Text>
+
+                  <Text style={{ color: colors.mutedForeground }}>
+                    {restrictions?.blockSafari ? "On" : "Off"}
+                  </Text>
+                </TouchableOpacity>
+
+
+                <TouchableOpacity
+                  style={styles.settingsRow}
+                  onPress={() =>
+                    updateRestrictions({
+                      requireParentApproval:
+                        !restrictions?.requireParentApproval,
+                    })
+                  }
+                >
+                  <Feather
+                    name="check-circle"
+                    size={18}
+                    color={colors.foreground}
+                  />
+
+                  <Text
+                    style={[
+                      styles.settingsLabel,
+                      {
+                        color: colors.foreground,
+                        fontFamily: "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    Require Parent Approval
+                  </Text>
+
+                  <Text style={{ color: colors.mutedForeground }}>
+                    {restrictions?.requireParentApproval ? "On" : "Off"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.settingsRow}
+                  onPress={() =>
+                    updateRestrictions({
+                      blockNewAppInstalls: !restrictions?.blockNewAppInstalls,
+                    })
+                  }
+                >
+                  <Feather
+                    name="download"
+                    size={18}
+                    color={colors.foreground}
+                  />
+
+                  <Text
+                    style={[
+                      styles.settingsLabel,
+                      {
+                        color: colors.foreground,
+                        fontFamily: "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    Block New App Installs
+                  </Text>
+
+                  <Text style={{ color: colors.mutedForeground }}>
+                    {restrictions?.blockNewAppInstalls ? "On" : "Off"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.settingsRow}
+                  onPress={() =>
+                    updateRestrictions({
+                      blockExplicitContent: !restrictions?.blockExplicitContent,
+                    })
+                  }
+                >
+                  <Feather
+                    name="alert-triangle"
+                    size={18}
+                    color={colors.foreground}
+                  />
+
+                  <Text
+                    style={[
+                      styles.settingsLabel,
+                      {
+                        color: colors.foreground,
+                        fontFamily: "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    Block Explicit Content
+                  </Text>
+
+                  <Text style={{ color: colors.mutedForeground }}>
+                    {restrictions?.blockExplicitContent ? "On" : "Off"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.settingsRow}
+                  onPress={() =>
+                    updateRestrictions({
+                      bedtimeStart: restrictions?.bedtimeStart ? null : "21:00",
+                      bedtimeEnd: restrictions?.bedtimeStart ? null : "07:00",
+                    })
+                  }
+                >
+                  <Feather
+                    name="moon"
+                    size={18}
+                    color={colors.foreground}
+                  />
+
+                  <Text
+                    style={[
+                      styles.settingsLabel,
+                      {
+                        color: colors.foreground,
+                        fontFamily: "Inter_400Regular",
+                      },
+                    ]}
+                  >
+                    Bedtime
+                  </Text>
+
+                  <Text style={{ color: colors.mutedForeground }}>
+                    {restrictions?.bedtimeStart && restrictions?.bedtimeEnd
+                      ? `${restrictions.bedtimeStart}–${restrictions.bedtimeEnd}`
+                      : "Off"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+          </View>
+        </View>
+      )}
       <View>
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Settings</Text>
         <View style={[styles.settingsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -210,6 +582,7 @@ export default function ProfileScreen() {
             { icon: "bell" as const, label: "Notifications", onPress: handleNotifications },
             { icon: "shield" as const, label: "Privacy Policy", onPress: handlePrivacyPolicy },
             { icon: "help-circle" as const, label: "Help & Support", onPress: handleHelp },
+            ...(isParent ? [{ icon: "key" as const, label: "Get Support Access Code", onPress: handleGetSupport }] : []),
           ].map((item, idx, arr) => (
             <TouchableOpacity
               key={item.label}
@@ -309,6 +682,50 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
           >
             <Text style={[styles.modalSaveBtnText, { fontFamily: "Inter_700Bold" }]}>Save Changes</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal visible={supportModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSupportModal(false)}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setSupportModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Support Access Code</Text>
+            <View style={{ width: 22 }} />
+          </View>
+          <View style={styles.modalBody}>
+            <Text style={[styles.modalNote, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              If Digital Village support asked you to generate a code to help fix an issue with your account, tap below. The code lets our team into your family's data for a limited time only — every action they take is logged and visible to you.
+            </Text>
+
+            {supportCode ? (
+              <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, paddingVertical: 24, marginTop: 8 }]}>
+                <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Inter_700Bold", fontSize: 32, letterSpacing: 4 }]}>
+                  {supportCode}
+                </Text>
+                <Text style={[styles.statLabel, { color: supportSecondsLeft > 0 ? colors.mutedForeground : colors.destructive, fontFamily: "Inter_400Regular" }]}>
+                  {supportSecondsLeft > 0
+                    ? `Expires in ${Math.floor(supportSecondsLeft / 60)}:${String(supportSecondsLeft % 60).padStart(2, "0")}`
+                    : "Expired — generate a new code"}
+                </Text>
+              </View>
+            ) : null}
+
+            {supportError ? (
+              <Text style={[styles.modalNote, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>{supportError}</Text>
+            ) : null}
+          </View>
+          <TouchableOpacity
+            style={[styles.modalSaveBtn, { backgroundColor: colors.primary, opacity: supportLoading ? 0.7 : 1 }]}
+            disabled={supportLoading}
+            onPress={requestSupportCode}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.modalSaveBtnText, { fontFamily: "Inter_700Bold" }]}>
+              {supportLoading ? "Generating…" : supportCode ? "Generate New Code" : "Generate Code"}
+            </Text>
           </TouchableOpacity>
         </View>
       </Modal>

@@ -2,6 +2,24 @@
 
 _Add entries when features complete: feature, date, files, notes. Historical entries below are reconstructed from the codebase (dates unknown)._
 
+## 2026-07-10 — Direct auth-flow test coverage (Priority 9)
+- Files: `artifacts/api-server/test/auth-flows.test.ts` (new — 7 tests)
+- Notes: register/login/family-by-code/child-login/forgot-password/reset-password now have dedicated tests, not just indirect exercise via helpers. Full detail in `AI_CHANGELOG.md` 2026-07-10 entry.
+
+## 2026-07-10 — Device Restrictions (Priority 5 groundwork)
+- Files: `lib/db/src/schema/index.ts` (already staged pre-session), `artifacts/api-server/src/lib/startup-migrate.ts`, `src/services/deviceRestrictions.ts`, `src/routes/devices.ts`, `artifacts/mobile/lib/apiClient.ts`, `hooks/useDeviceRestrictions.ts`, `app/(tabs)/profile.tsx`, `test/device-restrictions.test.ts` (new — 3 tests).
+- APIs added: `GET|PATCH /api/devices/:deviceId/restrictions`. DB tables added: `device_restrictions`, `device_app_rules` (unwired), `blocked_app_events` (unwired).
+- Notes: completed and fixed an in-progress, uncommitted feature found already sitting in the working tree. Fixed a route/service signature mismatch that would have failed typecheck, an IDOR (service never checked family ownership), a mass-assignment gap (no input validation), a missing DB migration, and a dead orphaned mobile file (`app/settings/device-controls.tsx`, deleted). Brought the mobile UI up to parity with all 7 schema fields (previously only 3 were wired). This is parent-set storage only — nothing enforces these restrictions on-device. Full detail in `AI_CHANGELOG.md` 2026-07-10 entry.
+
+## 2026-07-10 — Device restrictions API client cleanup
+- Files: `artifacts/mobile/lib/apiClient.ts`
+- Notes: Removed duplicate `apiGetDeviceRestrictions` and `apiUpdateDeviceRestrictions` exports that caused Metro/Babel compilation failure. Consolidated device restrictions methods under the typed `DeviceRestrictions` interface.
+
+## 2026-07-10 — Admin support-access sessions + security audit logging (Priority 6 closed)
+- Files: `lib/db/src/schema/index.ts`, `artifacts/api-server/src/lib/startup-migrate.ts`, `src/lib/auth-middleware.ts`, `src/lib/audit.ts` (new), `src/routes/admin.ts` (new), `src/routes/index.ts`, `src/routes/devices.ts`, `src/routes/family.ts`, `src/routes/billing.ts`, `src/app.ts`, `test/helpers.ts`, `test/admin.test.ts` (new), `artifacts/mobile/lib/apiClient.ts`, `artifacts/mobile/app/(tabs)/profile.tsx`
+- APIs added: `POST /api/family/support-code`, `GET /api/audit-log`, `POST /api/admin/support-sessions`, `POST /api/admin/support-sessions/:id/end`. DB tables added: `support_codes`, `support_sessions`, `audit_log`; `sessions.support_session_id` added.
+- Notes: Closes out Priority 6's last three items (RBAC verification, admin-role decision, audit logging). Admin role is scoped strictly to consent-gated, time-boxed support sessions — no standing admin surface. Also fixed a real RBAC gap (`DELETE /devices/:deviceId` → `requireParent`) and a pre-existing bug in `GET /api/family` that ignored `req.familyId`. Full detail in `AI_CHANGELOG.md` 2026-07-10 entry.
+
 ## 2026-07-10 — Session expiry enforcement
 - Files: `artifacts/api-server/src/lib/auth-middleware.ts`, `test/auth.test.ts`
 - Notes: `requireAuth` now rejects expired sessions (401) instead of accepting tokens forever. Full detail in `AI_CHANGELOG.md` 2026-07-10 entry.

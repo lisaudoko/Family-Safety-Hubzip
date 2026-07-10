@@ -85,6 +85,48 @@ export async function runStartupMigrations(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS device_events_owner_id_occurred_at_idx ON device_events(owner_id, occurred_at)`,
       `CREATE INDEX IF NOT EXISTS device_events_family_id_event_type_idx ON device_events(family_id, event_type)`,
 
+      // ── device_restrictions ───────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS device_restrictions (
+         id TEXT PRIMARY KEY,
+         device_id TEXT NOT NULL UNIQUE REFERENCES devices(id) ON DELETE CASCADE,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         screen_time_limit_minutes INTEGER,
+         bedtime_start TEXT,
+         bedtime_end TEXT,
+         block_new_app_installs BOOLEAN NOT NULL DEFAULT FALSE,
+         block_safari BOOLEAN NOT NULL DEFAULT FALSE,
+         block_explicit_content BOOLEAN NOT NULL DEFAULT FALSE,
+         require_parent_approval BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS device_restrictions_family_idx ON device_restrictions(family_id)`,
+
+      // ── device_app_rules ──────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS device_app_rules (
+         id TEXT PRIMARY KEY,
+         restriction_id TEXT NOT NULL REFERENCES device_restrictions(id) ON DELETE CASCADE,
+         app_bundle_id TEXT NOT NULL,
+         app_name TEXT NOT NULL,
+         blocked BOOLEAN NOT NULL DEFAULT FALSE,
+         bedtime_locked BOOLEAN NOT NULL DEFAULT FALSE,
+         daily_limit_minutes INTEGER,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS device_app_rules_restriction_idx ON device_app_rules(restriction_id)`,
+
+      // ── blocked_app_events ─────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS blocked_app_events (
+         id TEXT PRIMARY KEY,
+         device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         app_name TEXT NOT NULL,
+         blocked_reason TEXT NOT NULL,
+         attempted_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS blocked_app_events_device_idx ON blocked_app_events(device_id)`,
+      `CREATE INDEX IF NOT EXISTS blocked_app_events_family_idx ON blocked_app_events(family_id)`,
+
       // ── support_codes ─────────────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS support_codes (
          id TEXT PRIMARY KEY,

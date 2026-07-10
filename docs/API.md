@@ -2,7 +2,7 @@
 
 Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI spec exists at `lib/api-spec/openapi.yaml` (Orval codegen: `pnpm --filter @workspace/api-spec run codegen`) but currently covers only `/healthz` and `/coach/chat`; the tables below are derived from the route source files, which are authoritative.
 
-**Auth legend**: _none_ = public; _auth_ = valid `Authorization: Bearer <token>`; _parent_ = auth + `role === 'parent'`.
+**Auth legend**: _none_ = public; _auth_ = valid `Authorization: Bearer <token>`; _parent_ = auth + `role === 'parent'` (a redeemed admin support-session token also satisfies this, scoped to its target family); _admin_ = auth + `actorRole === 'admin'` (checked separately from `role`, which a support session overrides).
 
 ## Health
 | Method | Path | Auth | Notes |
@@ -35,6 +35,12 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 | PUT | `/api/family/agreement` | parent | Upserts; 403 if the supplied `familyId` doesn't match the caller's own family. |
 | GET | `/api/progress` | auth | User's learning/challenge progress. |
 | PUT | `/api/progress` | auth | Update progress state. |
+| POST | `/api/family/support-code` | parent | Mints a single-use, ~30-minute-TTL code for admin support access; returns the plaintext code once. |
+
+## Audit Log
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| GET | `/api/audit-log` | parent | Family-scoped, paginated (`limit`/`offset`), date-filterable (`from`/`to`) security/account event history — includes admin support-session activity. |
 
 ## Curriculum (all auth)
 | Method | Path | Notes |
@@ -55,9 +61,10 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 | GET | `/api/devices/events` | parent | Filterable family device events. |
 | GET | `/api/devices/:deviceId` | auth | Device details. |
 | PATCH | `/api/devices/:deviceId` | auth | Update name/capabilities. |
-| DELETE | `/api/devices/:deviceId` | auth | Unregister. |
+| DELETE | `/api/devices/:deviceId` | parent | Unregister. Fixed 2026-07-10 (was auth-only — any authenticated family member, including a child, could de-register another family member's device). |
 | POST | `/api/devices/:deviceId/heartbeat` | auth | Update last-synced status. |
 | POST | `/api/devices/:deviceId/events` | auth | Report events (screen time, activity); payload checked by `validateEventPayload`. |
+| GET/PATCH | `/api/devices/:deviceId/restrictions` | parent | Screen time limit, bedtime window, block Safari/new-app-installs/explicit-content, require-parent-approval. Storage only — not enforced on-device yet, see `docs/POLICY_ENGINE.md`. Cross-family access returns 404. |
 
 ## AI Coach
 | Method | Path | Auth | Notes |
@@ -85,6 +92,12 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 | Method | Path | Auth | Notes |
 | --- | --- | --- | --- |
 | POST | `/api/notifications/weekly-digest/send` | parent | Weekly summary email; rate-limited 5/hour. |
+
+## Admin (support access only)
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| POST | `/api/admin/support-sessions` | admin | Body: `{ code }`. Redeems a parent-minted support code for a new, 60-minute Bearer token scoped to that family; the resulting token satisfies `parent`-gated routes for that family only. |
+| POST | `/api/admin/support-sessions/:id/end` | admin | Ends the caller's own support session early; the associated token stops working immediately. |
 
 ## Cross-cutting behavior
 

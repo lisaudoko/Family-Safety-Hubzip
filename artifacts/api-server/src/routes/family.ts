@@ -36,37 +36,22 @@ function generateFamilyCode(): string {
 // ── Family ────────────────────────────────────────────────────────────────────
 
 // GET /api/family
+// Resolves the family via req.familyId (set by requireAuth) rather than
+// re-deriving it from the caller's own profile row - this is what lets a
+// support session (whose profile has no family of its own) see the family
+// it was scoped to instead of always getting `family: null`.
 router.get('/family', async (req: AuthRequest, res, next) => {
   try {
-    // Get the logged-in user
-    const [user] = await db
-      .select()
-      .from(profilesTable)
-      .where(eq(profilesTable.id, req.userId!))
-      .limit(1);
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
+    if (!req.familyId) {
+      res.json({ family: null });
       return;
     }
 
-    let family;
-
-    // Parent: look up family by parent_id
-    if (user.role === 'parent') {
-      [family] = await db
-        .select()
-        .from(familiesTable)
-        .where(eq(familiesTable.parent_id, user.id))
-        .limit(1);
-    } else {
-      // Child: look up family by family_id stored on their profile
-      [family] = await db
-        .select()
-        .from(familiesTable)
-        .where(eq(familiesTable.id, user.family_id!))
-        .limit(1);
-    }
+    const [family] = await db
+      .select()
+      .from(familiesTable)
+      .where(eq(familiesTable.id, req.familyId))
+      .limit(1);
 
     if (!family) {
       res.json({ family: null });
@@ -101,10 +86,13 @@ router.get('/family', async (req: AuthRequest, res, next) => {
       createdAt: child.created_at.toISOString(),
     }));
 
-    // Siblings: same list as children, minus the caller when they are a child themselves.
+    // Siblings: same list as children, minus the caller when they are a child
+    // themselves. Uses actorRole (the caller's real role) rather than the
+    // possibly-overridden req.role, so an admin support session - whose
+    // req.role is forced to 'parent' - still sees the unfiltered list.
     const siblings =
-      user.role === 'child'
-        ? mappedChildren.filter((child) => child.id !== user.id)
+      req.actorRole === 'child'
+        ? mappedChildren.filter((child) => child.id !== req.userId)
         : mappedChildren;
 
     res.json({

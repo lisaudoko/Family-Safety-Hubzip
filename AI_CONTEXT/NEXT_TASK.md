@@ -19,7 +19,7 @@ Goal: complete the foundation for the parent/child safety ecosystem while mainta
 - [x] Device synchronization APIs — heartbeat/sync endpoints exist (`routes/devices.ts`); last-active + connection status tracked
 - [x] Event ingestion — screen time / app activity / device activity events exist (`device_events`)
 - [x] Educational activity events — _resolved 2026-07-10 (product owner decision: ingest via device-event pipeline). Found this was already substantially wired (`FamilyContext.tsx` already called `submitActivityEvent` on every lesson/quiz/challenge/assessment completion) but overloaded the generic `activity` event type. Split into a dedicated `education_activity` event type mapped to the previously-unused `lesson_participation` capability, so learning activity is now distinguishable from general app usage in `/api/analytics/education` and the dashboard's `education` breakdown. `user_progress` remains the detailed source of truth for progress state; `device_events` now also carries a lightweight completion signal for the unified activity timeline._
-- [ ] Event processing architecture — validation + storage exist; analytics generated on read (`routes/analytics.ts`); **no audit records yet** (overlaps Priority 6 "Audit logging")
+- [ ] Event processing architecture — validation + storage exist; analytics generated on read (`routes/analytics.ts`); security/account audit records now exist (`audit_log` table, see Priority 6) — device-event-specific auditing beyond that is still just `device_events` telemetry, not a formal audit trail
 
 ## Priority 2 — Device Capability System (Done)
 
@@ -63,26 +63,28 @@ Goal: complete the foundation for the parent/child safety ecosystem while mainta
 - [ ] Child onboarding flow — review/polish end-to-end (not part of this pass)
 - [x] Parent-child relationship validation — IDOR fixes landed (`POST/PATCH/DELETE /family/children*`, `PUT /family/agreement` now verify `req.familyId`); moved off Priority 6 backlog.
 
-## Priority 5 — Policy Engine (Architecture Approved — NOT started)
+## Priority 5 — Policy Engine (Architecture Approved — In Progress)
 
-_No policy engine exists today; the family agreement is a social contract and devices are monitoring-only (see `docs/POLICY_ENGINE.md`)._
+_The family agreement remains a social contract with no enforcement (see `docs/POLICY_ENGINE.md`)._
 
-- [ ] Family policies, child policies, device policies (schema + storage)
-- [ ] Rule evaluation system
-- [ ] Permission enforcement — server-side, parent-controlled
+- [x] Device policies (schema + storage) — _completed 2026-07-10: `device_restrictions` table + `GET|PATCH /api/devices/:deviceId/restrictions` (parent-only, family-ownership-checked). Found half-built and broken in the working tree (signature mismatch, IDOR, no validation, no migration); fixed and completed. Storage of parent intent only — see next item._
+- [ ] Family policies, child policies (schema + storage) — not started
+- [ ] Rule evaluation system — not started
+- [ ] Permission enforcement — server-side, parent-controlled — not started; also blocked on an on-device enforcement agent (OS-specific, outside this backend's scope) actually reading/applying `device_restrictions`/`device_app_rules`
+- [ ] `device_app_rules` (per-app block/bedtime-lock/daily-limit) and `blocked_app_events` (blocked-launch log) tables exist in schema/migrations but are completely unwired — no route or service touches them yet
 
-## Priority 6 — Security Implementation Review (Required Before Production)
+## Priority 6 — Security Implementation Review (Required Before Production) — DONE (2026-07-10)
 
-_Note: auth is opaque UUID session tokens, not JWT; there is no admin role today. See `docs/SECURITY.md`._
+_Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, reserved for consent-gated support access (see below)._
 
 - [x] Session auth hardening — enforce `expires_at` in `requireAuth` — _fixed 2026-07-10: `requireAuth` now rejects (401) and best-effort deletes sessions past their `expires_at`; regression tests in `test/auth.test.ts`._
-- [ ] RBAC verification — parent/child permissions per endpoint; decide if an admin role is needed
+- [x] RBAC verification — _completed 2026-07-10: fresh audit found one real gap, `DELETE /api/devices/:deviceId` was `requireAuth`-only (a child session could de-register any family device); fixed to `requireParent`. Admin-role decision: added a manually-seeded `admin` role used only for time-boxed, parent-consented support sessions, not a standing admin surface. A parent mints a single-use code (`POST /api/family/support-code`); an admin redeems it (`POST /api/admin/support-sessions`) to get a temporary session scoped to that one family, with the same read/write access a parent has. `requireAuth` resolves a support session's token to `req.role = 'parent'` + the target family's `req.familyId`, while `req.actorRole`/`req.userId` always reflect the real admin identity for audit attribution. See `docs/ACCOUNT_MODEL.md` and `docs/SECURITY.md`._
 - [x] Fix known gaps: `PUT /family/agreement` IDOR, child CRUD ownership checks — fixed 2026-07-10 alongside Child Family Experience
-- [ ] Audit logging — does not exist; design + implement
+- [x] Audit logging — _implemented 2026-07-10: new `audit_log` table + `logAuditEvent()` helper (`src/lib/audit.ts`), called explicitly at auth (register/login/login-failed/child-login/child-login-failed/logout/password-reset), family (family-created/child-added/child-updated/child-removed/agreement-updated), and billing (checkout-session/portal-session) call sites, plus support-session lifecycle events. A `logSupportSessionWrite` middleware (mounted globally in `app.ts`) auto-logs every mutating request made during an active support session. Family-scoped, paginated read via `GET /api/audit-log` (`requireParent`)._
 - [x] Rate limiting (global limiter in `app.ts`)
 - [x] Input validation (Zod) and SQL injection protection (drizzle parameterization) — keep verifying on new endpoints
-- [ ] CSRF — N/A for Bearer-token API today; re-evaluate if cookies are introduced
-- [ ] Repeat security review after each major subsystem (`security-review` skill)
+- [x] CSRF — N/A for Bearer-token API today; re-evaluate if cookies are introduced
+- [x] Repeat security review after each major subsystem (`security-review` skill) — applied during this pass; re-invoke for future subsystems
 
 ## Priority 7 — Education System Expansion
 
@@ -99,7 +101,7 @@ _Note: auth is opaque UUID session tokens, not JWT; there is no admin role today
 ## Priority 9 — Testing and Quality Assurance (Before Production)
 
 - Environment: [ ] Node / pnpm / DB connection / build process verification
-- Application: [ ] parent registration/login, family + child creation, child login, permissions, dashboard, device sync, analytics — _Vitest coverage exists (devices, analytics, dashboard, notifications, cross-family, family, auth session-expiry); still no coverage for register/login/forgot-password/child-login flows themselves_
+- Application: [x] parent registration/login, family + child creation, child login, permissions, dashboard, device sync, analytics — _Vitest coverage exists (devices, analytics, dashboard, notifications, cross-family, family, auth session-expiry, device-restrictions); register/login/forgot-password/reset-password/child-login flows now covered directly (`test/auth-flows.test.ts`, 7 tests, added 2026-07-10)._
 - Security: [x] family data isolation tests exist (`cross-family.test.ts`, extended 2026-07-10 with device PATCH/DELETE, analytics, and child-role-403 cases) — [x] session expiry enforcement tests (`auth.test.ts`, added 2026-07-10) — [ ] extend further to remaining unaudited endpoints (coach, billing, curriculum, notifications — audited 2026-07-10 but not yet covered by dedicated cross-family tests)
 
 ## Priority 10 — Production Readiness (Before Launch)
@@ -114,7 +116,7 @@ _Note: auth is opaque UUID session tokens, not JWT; there is no admin role today
 ## Pending Decisions
 
 - Curriculum single-source: serve exclusively from DB and retire `data/seed.ts`, or keep as offline fallback?
-- Admin role: roadmap security review lists admin permissions, but no admin role exists — build one or drop the requirement?
+- ~~Admin role~~ — resolved 2026-07-10: `admin` role added, scoped to consent-gated, time-boxed support sessions only (see Priority 6). No standing admin UI/surface exists or is planned; redemption is API-only.
 - Update or retire outdated sections of `replit.md`.
 
 ## Backlog / Known Follow-ups

@@ -22,6 +22,7 @@ Read `AI_CONTEXT/CURRENT_STATE.md` first for a quick orientation, then the relev
 7. **Create a plan before major implementation.**
 8. **Implement one subsystem at a time** and verify with typecheck between subsystems.
 9. **Run checks after each subsystem**: `pnpm run typecheck` (canonical gate), `pnpm run lint` (root ESLint config), and `pnpm --filter @workspace/api-server run test` (Vitest tests exist in `artifacts/api-server/test/`).
+10. **Add priorities to the 'AI_CONTEXT/NEXT_TASK.md' when nessesary** or when you see a change that should be made with user approval
 
 ## AI Development Context Management
 

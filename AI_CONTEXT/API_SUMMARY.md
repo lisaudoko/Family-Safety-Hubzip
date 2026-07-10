@@ -1,6 +1,6 @@
 # API Summary
 
-Express 5, base path `/api`. Auth: `Bearer <uuid-token>` (sessions table; note: expiry not enforced by middleware). "Parent" = requires `role === 'parent'`. OpenAPI spec (`lib/api-spec/openapi.yaml`) covers only `/healthz` + `/coach/chat` — route files are authoritative. Full detail: `docs/API.md`.
+Express 5, base path `/api`. Auth: `Bearer <uuid-token>` (sessions table; `expires_at` enforced by `requireAuth`). "Parent" = requires `role === 'parent'`; a redeemed admin support session also resolves to `role === 'parent'` for the target family (see Admin below) while `actorRole`/`userId` still reflect the real admin for audit attribution. "Admin" = requires `actorRole === 'admin'` (`requireAdmin`), checked separately from `role` so it still works during a support session. OpenAPI spec (`lib/api-spec/openapi.yaml`) covers only `/healthz` + `/coach/chat` — route files are authoritative. Full detail: `docs/API.md`.
 
 ## Endpoints
 
@@ -24,6 +24,8 @@ Express 5, base path `/api`. Auth: `Bearer <uuid-token>` (sessions table; note: 
 - `PATCH|DELETE /api/family/children/:childId` — parent
 - `GET|PUT /api/family/agreement` — auth
 - `GET|PUT /api/progress` — auth — learning/challenge progress
+- `POST /api/family/support-code` — parent — mint a single-use, ~30min-TTL code for admin support access (one-time plaintext reveal)
+- `GET /api/audit-log` — parent — family-scoped, paginated security/account event history
 
 ### Curriculum (`routes/curriculum.ts`) — all auth
 - `GET /api/curriculum` — full aggregate (courses/lessons/quizzes/badges)
@@ -35,9 +37,11 @@ Express 5, base path `/api`. Auth: `Bearer <uuid-token>` (sessions table; note: 
 ### Devices (`routes/devices.ts`)
 - `POST|GET /api/devices` — auth — register/list (parent sees family, child sees own)
 - `GET /api/devices/events` — parent — filterable family events
-- `GET|PATCH|DELETE /api/devices/:deviceId` — auth
+- `GET|PATCH /api/devices/:deviceId` — auth
+- `DELETE /api/devices/:deviceId` — parent (fixed 2026-07-10, was auth-only — a child could de-register any family device)
 - `POST /api/devices/:deviceId/heartbeat` — auth
 - `POST /api/devices/:deviceId/events` — auth — report activity/screen time
+- `GET|PATCH /api/devices/:deviceId/restrictions` — parent — screen time limit, bedtime window, block Safari/new-app-installs/explicit-content, require-parent-approval (2026-07-10; first Priority 5 policy-engine building block — parent-set, not yet enforced on-device). Cross-family access returns 404, same convention as other device routes.
 
 ### Coach (`routes/coach.ts`)
 - `POST /api/coach/chat` — auth — AI coach; 10-message free-tier limit per period
@@ -53,6 +57,10 @@ Express 5, base path `/api`. Auth: `Bearer <uuid-token>` (sessions table; note: 
 
 ### Notifications
 - `POST /api/notifications/weekly-digest/send` — parent — rate-limited 5/hr
+
+### Admin (`routes/admin.ts`) — consent-gated support access only, no standing admin surface
+- `POST /api/admin/support-sessions` — admin — redeem a parent-minted code (`{ code }`) for a time-boxed (60min TTL) session scoped to that family; returns a new Bearer token
+- `POST /api/admin/support-sessions/:id/end` — admin (must be that session's admin) — end the session early
 
 ## Cross-cutting
 

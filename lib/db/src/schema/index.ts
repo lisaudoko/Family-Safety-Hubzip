@@ -261,6 +261,38 @@ export const selectDeviceSchema = createSelectSchema(devicesTable);
 export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type Device = typeof devicesTable.$inferSelect;
 
+// ── blocked_app_events ────────────────────────────────────────────────────────
+
+export const blockedAppEventsTable = pgTable(
+  "blocked_app_events",
+  {
+    id: text("id").primaryKey(),
+
+    device_id: text("device_id")
+      .notNull()
+      .references(() => devicesTable.id, { onDelete: "cascade" }),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    app_name: text("app_name").notNull(),
+
+    blocked_reason: text("blocked_reason").notNull(),
+
+    attempted_at: timestamp("attempted_at")
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("blocked_app_events_device_idx").on(t.device_id),
+    index("blocked_app_events_family_idx").on(t.family_id),
+  ]
+);
+
+export type BlockedAppEvent =
+  typeof blockedAppEventsTable.$inferSelect;
+
 // ── device_events ──────────────────────────────────────────────────────────────
 export const deviceEventsTable = pgTable(
   'device_events',
@@ -292,6 +324,95 @@ export const insertDeviceEventSchema = createInsertSchema(deviceEventsTable).omi
 });
 export type InsertDeviceEvent = z.infer<typeof insertDeviceEventSchema>;
 export type DeviceEvent = typeof deviceEventsTable.$inferSelect;
+
+// ── device_restrictions ───────────────────────────────────────────────────────
+export const deviceRestrictionsTable = pgTable(
+  "device_restrictions",
+  {
+    id: text("id").primaryKey(),
+
+    device_id: text("device_id")
+      .notNull()
+      .references(() => devicesTable.id, { onDelete: "cascade" }),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    screen_time_limit_minutes: integer("screen_time_limit_minutes"),
+
+    bedtime_start: text("bedtime_start"),
+
+    bedtime_end: text("bedtime_end"),
+
+    block_new_app_installs: boolean("block_new_app_installs")
+      .notNull()
+      .default(false),
+
+    block_safari: boolean("block_safari")
+      .notNull()
+      .default(false),
+
+    block_explicit_content: boolean("block_explicit_content")
+      .notNull()
+      .default(false),
+
+    require_parent_approval: boolean("require_parent_approval")
+      .notNull()
+      .default(false),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("device_restrictions_device_unique").on(t.device_id),
+    index("device_restrictions_family_idx").on(t.family_id),
+  ],
+);
+
+export type DeviceRestriction =
+  typeof deviceRestrictionsTable.$inferSelect;
+
+// ── device_app_rules ──────────────────────────────────────────────────────────
+export const deviceAppRulesTable = pgTable(
+  "device_app_rules",
+  {
+    id: text("id").primaryKey(),
+
+    restriction_id: text("restriction_id")
+      .notNull()
+      .references(() => deviceRestrictionsTable.id, {
+        onDelete: "cascade",
+      }),
+
+    app_bundle_id: text("app_bundle_id").notNull(),
+
+    app_name: text("app_name").notNull(),
+
+    blocked: boolean("blocked")
+      .notNull()
+      .default(false),
+
+    bedtime_locked: boolean("bedtime_locked")
+      .notNull()
+      .default(false),
+
+    daily_limit_minutes: integer("daily_limit_minutes"),
+
+    created_at: timestamp("created_at")
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("device_app_rules_restriction_idx").on(
+      t.restriction_id
+    ),
+  ],
+);
+
+export type DeviceAppRule =
+  typeof deviceAppRulesTable.$inferSelect;
 
 // ── user_progress ──────────────────────────────────────────────────────────────
 export const userProgressTable = pgTable('user_progress', {

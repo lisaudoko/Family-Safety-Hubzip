@@ -40,4 +40,8 @@ Parent-only aggregation endpoints (`routes/analytics.ts`):
 - `/api/dashboard/overview` — snapshot of all children's status + recent activity.
 - `/api/dashboard/children/:childId` — detailed per-child breakdown.
 
+## Device Restrictions (parent-set, not yet enforced)
+
+`GET|PATCH /api/devices/:deviceId/restrictions` (parent-only, `services/deviceRestrictions.ts`) lets a parent store per-device intent — screen time limit, bedtime window, block Safari/new-app-installs/explicit-content, require-parent-approval — in `device_restrictions`. This is storage of parent intent only; see `docs/POLICY_ENGINE.md` for why nothing enforces it on-device yet.
+
 Mobile surfaces this in the Family tab and `child/[id]` screen.

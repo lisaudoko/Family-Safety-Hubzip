@@ -2,6 +2,13 @@
 
 **There is no automated policy-enforcement engine in Digital Village today.** This document describes the policy-adjacent features that actually exist, to prevent future agents from assuming enforcement capabilities.
 
+## Device Restrictions (2026-07-10 — first policy-engine building block)
+
+- `device_restrictions` (one row per device) lets a parent set: `screen_time_limit_minutes`, `bedtime_start`/`bedtime_end`, `block_new_app_installs`, `block_safari`, `block_explicit_content`, `require_parent_approval`.
+- API: `GET|PATCH /api/devices/:deviceId/restrictions` (parent-only, family-ownership checked, 404 on cross-family access). Mobile UI: Profile screen's "Device Restrictions" section (`app/(tabs)/profile.tsx`), via `useDeviceRestrictions` hook.
+- **This is storage only — parent intent, not enforcement.** Nothing on the device reads or applies these values yet; there is no OS-level screen-time API, Safari blocker, or content filter wired up. It's the same "policy definition, no enforcement surface" pattern as the family agreement below, scoped to a single device instead of the whole family.
+- Two related tables were added to the schema alongside this but are **not wired to anything**: `device_app_rules` (per-app block/bedtime-lock/daily-limit rows) and `blocked_app_events` (a log of blocked launch attempts). Building enforcement would mean: (1) a device-side agent that reads `device_restrictions`/`device_app_rules` and actually applies them (OS-specific, out of scope for this cross-platform backend), and (2) `blocked_app_events` ingestion via the existing `device_events`-style pipeline.
+
 ## What exists
 
 ### Family Technology Agreement (social contract, not enforcement)

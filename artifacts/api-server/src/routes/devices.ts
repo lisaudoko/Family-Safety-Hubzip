@@ -9,6 +9,12 @@ import {
   EVENT_TYPE_CAPABILITY,
   EVENT_TYPES,
 } from '../lib/capabilities.js';
+import {
+  getDeviceRestrictions,
+  updateDeviceRestrictions,
+  type DeviceRestrictionsInput,
+} from "../services/deviceRestrictions.js";
+import { deviceRestrictionsTable } from "@workspace/db";
 
 const router = Router();
 router.use(requireAuth as any);
@@ -614,5 +620,135 @@ router.post('/devices/:deviceId/events', async (req: AuthRequest, res, next) => 
     next(err);
   }
 });
+function safeDeviceRestrictions(r: typeof deviceRestrictionsTable.$inferSelect) {
+  return {
+    id: r.id,
+    deviceId: r.device_id,
+    familyId: r.family_id,
+    screenTimeLimitMinutes: r.screen_time_limit_minutes,
+    bedtimeStart: r.bedtime_start,
+    bedtimeEnd: r.bedtime_end,
+    blockNewAppInstalls: r.block_new_app_installs,
+    blockSafari: r.block_safari,
+    blockExplicitContent: r.block_explicit_content,
+    requireParentApproval: r.require_parent_approval,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
+  };
+}
+
+function validateRestrictionsPatch(body: unknown): { data?: DeviceRestrictionsInput; error?: string } {
+  if (!isPlainObject(body)) {
+    return { error: "request body must be a JSON object" };
+  }
+
+  const data: DeviceRestrictionsInput = {};
+  const b = body as Record<string, unknown>;
+
+  if ("screenTimeLimitMinutes" in b) {
+    if (b.screenTimeLimitMinutes !== null && typeof b.screenTimeLimitMinutes !== "number") {
+      return { error: "screenTimeLimitMinutes must be a number or null" };
+    }
+    data.screen_time_limit_minutes = b.screenTimeLimitMinutes as number | null;
+  }
+  if ("bedtimeStart" in b) {
+    if (b.bedtimeStart !== null && typeof b.bedtimeStart !== "string") {
+      return { error: "bedtimeStart must be a string or null" };
+    }
+    data.bedtime_start = b.bedtimeStart as string | null;
+  }
+  if ("bedtimeEnd" in b) {
+    if (b.bedtimeEnd !== null && typeof b.bedtimeEnd !== "string") {
+      return { error: "bedtimeEnd must be a string or null" };
+    }
+    data.bedtime_end = b.bedtimeEnd as string | null;
+  }
+  if ("blockNewAppInstalls" in b) {
+    if (typeof b.blockNewAppInstalls !== "boolean") {
+      return { error: "blockNewAppInstalls must be a boolean" };
+    }
+    data.block_new_app_installs = b.blockNewAppInstalls;
+  }
+  if ("blockSafari" in b) {
+    if (typeof b.blockSafari !== "boolean") {
+      return { error: "blockSafari must be a boolean" };
+    }
+    data.block_safari = b.blockSafari;
+  }
+  if ("blockExplicitContent" in b) {
+    if (typeof b.blockExplicitContent !== "boolean") {
+      return { error: "blockExplicitContent must be a boolean" };
+    }
+    data.block_explicit_content = b.blockExplicitContent;
+  }
+  if ("requireParentApproval" in b) {
+    if (typeof b.requireParentApproval !== "boolean") {
+      return { error: "requireParentApproval must be a boolean" };
+    }
+    data.require_parent_approval = b.requireParentApproval;
+  }
+
+  return { data };
+}
+
+// GET /api/devices/:deviceId/restrictions
+router.get(
+  "/devices/:deviceId/restrictions",
+  requireParent as any,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+      if (!device || !authorized) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      const restrictions = await getDeviceRestrictions(
+        String(req.params.deviceId),
+        req.familyId!
+      );
+
+      res.json({ restrictions: restrictions ? safeDeviceRestrictions(restrictions) : null });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PATCH /api/devices/:deviceId/restrictions
+router.patch(
+  "/devices/:deviceId/restrictions",
+  requireParent as any,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+      if (!device || !authorized) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      const { data, error } = validateRestrictionsPatch(req.body);
+      if (error || !data) {
+        res.status(400).json({ error });
+        return;
+      }
+
+      const restrictions = await updateDeviceRestrictions(
+        String(req.params.deviceId),
+        req.familyId!,
+        data
+      );
+
+      if (!restrictions) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      res.json({ restrictions: safeDeviceRestrictions(restrictions) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export default router;

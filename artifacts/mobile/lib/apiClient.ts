@@ -226,6 +226,13 @@ export async function apiDeleteChild(childId: string): Promise<void> {
   await apiFetch(`/family/children/${childId}`, { method: "DELETE" });
 }
 
+export async function apiCreateSupportCode(): Promise<{
+  code: string;
+  expiresAt: string;
+}> {
+  return apiFetch("/family/support-code", { method: "POST" });
+}
+
 // ── Child login ─────────────────────────────────────────────────────────────
 
 export interface ApiFamilyByCodeChild {
@@ -659,4 +666,44 @@ export async function apiSendWeeklyDigest(): Promise<{
   digest: ApiWeeklyDigest;
 }> {
   return apiFetch("/notifications/weekly-digest/send", { method: "POST" });
+}
+// ── Device Restrictions ─────────────────────────────────────────────
+
+export interface DeviceRestrictions {
+  id: string;
+  deviceId: string;
+  familyId: string;
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiGetDeviceRestrictions(
+  deviceId: string
+): Promise<{ restrictions: DeviceRestrictions | null }> {
+  return apiFetch(`/devices/${deviceId}/restrictions`);
+}
+
+export async function apiUpdateDeviceRestrictions(
+  deviceId: string,
+  data: Partial<{
+    screenTimeLimitMinutes: number | null;
+    bedtimeStart: string | null;
+    bedtimeEnd: string | null;
+    blockNewAppInstalls: boolean;
+    blockSafari: boolean;
+    blockExplicitContent: boolean;
+    requireParentApproval: boolean;
+  }>
+): Promise<{ restrictions: DeviceRestrictions }> {
+  return apiFetch(`/devices/${deviceId}/restrictions`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
