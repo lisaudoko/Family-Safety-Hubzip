@@ -414,6 +414,99 @@ export const deviceAppRulesTable = pgTable(
 export type DeviceAppRule =
   typeof deviceAppRulesTable.$inferSelect;
 
+// ── family_policies ────────────────────────────────────────────────────────────
+export const familyPoliciesTable = pgTable(
+  "family_policies",
+  {
+    id: text("id").primaryKey(),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    screen_time_limit_minutes: integer("screen_time_limit_minutes"),
+
+    bedtime_start: text("bedtime_start"),
+
+    bedtime_end: text("bedtime_end"),
+
+    block_new_app_installs: boolean("block_new_app_installs")
+      .notNull()
+      .default(false),
+
+    block_safari: boolean("block_safari")
+      .notNull()
+      .default(false),
+
+    block_explicit_content: boolean("block_explicit_content")
+      .notNull()
+      .default(false),
+
+    require_parent_approval: boolean("require_parent_approval")
+      .notNull()
+      .default(false),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("family_policies_family_unique").on(t.family_id),
+  ],
+);
+
+export type FamilyPolicy =
+  typeof familyPoliciesTable.$inferSelect;
+
+// ── child_policies ─────────────────────────────────────────────────────────────
+export const childPoliciesTable = pgTable(
+  "child_policies",
+  {
+    id: text("id").primaryKey(),
+
+    child_id: text("child_id")
+      .notNull()
+      .references(() => childrenTable.id, { onDelete: "cascade" }),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    screen_time_limit_minutes: integer("screen_time_limit_minutes"),
+
+    bedtime_start: text("bedtime_start"),
+
+    bedtime_end: text("bedtime_end"),
+
+    block_new_app_installs: boolean("block_new_app_installs")
+      .notNull()
+      .default(false),
+
+    block_safari: boolean("block_safari")
+      .notNull()
+      .default(false),
+
+    block_explicit_content: boolean("block_explicit_content")
+      .notNull()
+      .default(false),
+
+    require_parent_approval: boolean("require_parent_approval")
+      .notNull()
+      .default(false),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("child_policies_child_unique").on(t.child_id),
+    index("child_policies_family_idx").on(t.family_id),
+  ],
+);
+
+export type ChildPolicy =
+  typeof childPoliciesTable.$inferSelect;
+
 // ── user_progress ──────────────────────────────────────────────────────────────
 export const userProgressTable = pgTable('user_progress', {
   user_id: text('user_id')

@@ -63,15 +63,28 @@ Goal: complete the foundation for the parent/child safety ecosystem while mainta
 - [ ] Child onboarding flow — review/polish end-to-end (not part of this pass)
 - [x] Parent-child relationship validation — IDOR fixes landed (`POST/PATCH/DELETE /family/children*`, `PUT /family/agreement` now verify `req.familyId`); moved off Priority 6 backlog.
 
-## Priority 5 — Policy Engine (Architecture Approved — In Progress)
+## Priority 5 — Policy Engine & Cross-Platform Device Enforcement (In Progress)
 
-_The family agreement remains a social contract with no enforcement (see `docs/POLICY_ENGINE.md`)._
+_The family agreement remains a social contract. Device restrictions are stored but not yet enforced._
 
-- [x] Device policies (schema + storage) — _completed 2026-07-10: `device_restrictions` table + `GET|PATCH /api/devices/:deviceId/restrictions` (parent-only, family-ownership-checked). Found half-built and broken in the working tree (signature mismatch, IDOR, no validation, no migration); fixed and completed. Storage of parent intent only — see next item._
-- [ ] Family policies, child policies (schema + storage) — not started
-- [ ] Rule evaluation system — not started
-- [ ] Permission enforcement — server-side, parent-controlled — not started; also blocked on an on-device enforcement agent (OS-specific, outside this backend's scope) actually reading/applying `device_restrictions`/`device_app_rules`
-- [ ] `device_app_rules` (per-app block/bedtime-lock/daily-limit) and `blocked_app_events` (blocked-launch log) tables exist in schema/migrations but are completely unwired — no route or service touches them yet
+### Policy Definition (In Progress)
+
+- [x] Device policies (schema + storage)
+- [x] Family policies — _completed 2026-07-10: `family_policies` table (one row per family) + `GET|PATCH /api/family/policy` (parent-only), mirroring `device_restrictions` field set (screen_time_limit_minutes, bedtime_start/end, block_new_app_installs, block_safari, block_explicit_content, require_parent_approval). Storage only, no enforcement. See `services/familyPolicy.ts`, `routes/family.ts`, `docs/POLICY_ENGINE.md`._
+- [x] Child policies — _completed 2026-07-10: `child_policies` table (one row per child, family_id denormalized for ownership checks) + `GET|PATCH /api/family/children/:childId/policy` (parent-only, 404 on cross-family child access). Same field set/pattern as family policies. See `services/childPolicy.ts`. Precedence (family < child < device) documented in `docs/POLICY_ENGINE.md` but not coded — no rule evaluation exists._
+- [ ] Rule evaluation engine
+- [ ] Policy conflict resolution
+
+### Device Enforcement (Not Started)
+
+- [ ] Cross-platform enforcement agent (iOS & Android)
+- [ ] App install blocking
+- [ ] App usage schedules & time limits
+- [ ] Device lock schedules (bedtime/school hours)
+- [ ] Website & content filtering
+- [ ] Remote device controls
+- [ ] Parent alerts & activity monitoring
+- [ ] Tamper detection & prevention
 
 ## Priority 6 — Security Implementation Review (Required Before Production) — DONE (2026-07-10)
 
@@ -101,7 +114,7 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 ## Priority 9 — Testing and Quality Assurance (Before Production)
 
 - Environment: [ ] Node / pnpm / DB connection / build process verification
-- Application: [x] parent registration/login, family + child creation, child login, permissions, dashboard, device sync, analytics — _Vitest coverage exists (devices, analytics, dashboard, notifications, cross-family, family, auth session-expiry, device-restrictions); register/login/forgot-password/reset-password/child-login flows now covered directly (`test/auth-flows.test.ts`, 7 tests, added 2026-07-10)._
+- Application: [x] parent registration/login, family + child creation, child login, permissions, dashboard, device sync, analytics — _Vitest coverage exists (devices, analytics, dashboard, notifications, cross-family, family, auth session-expiry, device-restrictions, family-policy, child-policy); register/login/forgot-password/reset-password/child-login flows now covered directly (`test/auth-flows.test.ts`, 7 tests, added 2026-07-10)._
 - Security: [x] family data isolation tests exist (`cross-family.test.ts`, extended 2026-07-10 with device PATCH/DELETE, analytics, and child-role-403 cases) — [x] session expiry enforcement tests (`auth.test.ts`, added 2026-07-10) — [ ] extend further to remaining unaudited endpoints (coach, billing, curriculum, notifications — audited 2026-07-10 but not yet covered by dedicated cross-family tests)
 
 ## Priority 10 — Production Readiness (Before Launch)
@@ -115,12 +128,15 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 
 ## Pending Decisions
 
-- Curriculum single-source: serve exclusively from DB and retire `data/seed.ts`, or keep as offline fallback?
+- ~~Curriculum single-source~~ — resolved 2026-07-10 (product owner): serve exclusively from DB; retire `artifacts/mobile/data/seed.ts`. Not yet implemented — see backlog below.
 - ~~Admin role~~ — resolved 2026-07-10: `admin` role added, scoped to consent-gated, time-boxed support sessions only (see Priority 6). No standing admin UI/surface exists or is planned; redemption is API-only.
-- Update or retire outdated sections of `replit.md`.
+- ~~replit.md~~ — resolved 2026-07-10 (product owner): update it to match current reality rather than retiring it. Not yet implemented — see backlog below.
+- ~~Priority 5 policy engine scope~~ — resolved 2026-07-10 (product owner): proceed with family/child-level policy schema + storage (same pattern as the `device_restrictions` groundwork), understanding nothing enforces these server-side or on-device yet. Implemented 2026-07-10 — see Priority 5 Policy Definition.
 
 ## Backlog / Known Follow-ups
 
-- API Server workflow fails in dev: `STRIPE_SECRET_KEY` not set → `src/lib/stripe.ts` throws at import time. Set the secret (or lazy-init the Stripe client).
-- Implement or remove the email verification flow (table + column exist, endpoints don't).
+- ~~Coach chat broken ("The coach couldn't respond")~~ — fixed 2026-07-10: root cause was mobile-only — `configureApi()` (`artifacts/mobile/lib/api.ts`), required to set the shared `@workspace/api-client-react` client's base URL and auth-token getter, was never called from `app/_layout.tsx`, and never wired `setAuthTokenGetter` even in its own body. Server-side `/api/coach/chat` was confirmed healthy via direct curl the whole time. See `AI_CHANGELOG.md`.
+- ~~Per-child devices/monitoring on Family tab~~ — implemented 2026-07-10: each child's detail screen (`app/child/[id].tsx`) now has its own "Default Restrictions" (bound to the `child_policies` endpoints) and "Devices" section (rename in place, expand to per-device restrictions), closing the mobile-UI gap flagged in the prior Family & Child Policies changelog entry. Removed the device-picker/restrictions UI from `app/(tabs)/profile.tsx`. The family-wide policy endpoint (`GET|PATCH /api/family/policy`) still has no mobile UI — remains open.
+- ~~API Server workflow fails in dev: `STRIPE_SECRET_KEY` not set → `src/lib/stripe.ts` throws at import time~~ — _verified 2026-07-10: this was already stale. `src/lib/stripe.ts` exports `stripe: Stripe | null` (null when `STRIPE_SECRET_KEY` is unset) and `billing.ts` guards every usage with `if (!stripe) res.status(503)...`; nothing throws at import. Proven by the full test suite, which imports `app.js` (and transitively `stripe.ts`) in every test file and boots fine with no `STRIPE_SECRET_KEY` set in the test environment. No code change needed — checkbox corrected._
+- ~~Implement or remove the email verification flow~~ — resolved 2026-07-10 (product owner): implement it (table + `email_verified` column already exist, endpoints don't). Not yet implemented — see Priority 1/backlog.
 - Open CORS — restrict before production.

@@ -19,6 +19,7 @@ import { AccessibilityProvider, useAccessibility } from "@/context/Accessibility
 import { FamilyProvider } from "@/context/FamilyContext";
 import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
+import { configureApi } from "@/lib/api";
 import { useDeviceSync, useForegroundScreenTime } from "@/lib/deviceSync";
 import { initializeRevenueCat } from "@/lib/revenuecat";
 import { SubscriptionProvider } from "@/lib/revenuecat";
@@ -26,6 +27,7 @@ import { SubscriptionProvider } from "@/lib/revenuecat";
 SplashScreen.preventAutoHideAsync();
 
 configureApiBase();
+configureApi();
 try {
   initializeRevenueCat();
 } catch (err: any) {

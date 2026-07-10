@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useSendCoachMessage } from "@workspace/api-client-react";
+import { ApiError, useSendCoachMessage } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 
 export type ChatRole = "user" | "assistant";
@@ -121,8 +121,12 @@ export function CoachProvider({ children }: { children: React.ReactNode }) {
           void persist(next);
           return next;
         });
-      } catch {
-        setSendError("The coach couldn't respond. Please try again.");
+      } catch (err) {
+        const message =
+          err instanceof ApiError && err.data && typeof err.data === "object" && "error" in err.data
+            ? String((err.data as { error: unknown }).error)
+            : "The coach couldn't respond. Please try again.";
+        setSendError(message);
       }
     },
     [activeConversationId, mutation, persist],

@@ -1,2 +1,1 @@
-Remember to change stripe.md back to stripe.ts and the setup.md back to setup.ts
-- Remember to change line 8 of billing.ts back to an actual import
+In each child "default restrictions", some of the options should be customizable for the parent, for example the parent should be able to set the screentime limit, and the bedtime for the child. As for the devices registered for each child, it should occur as soon as the child logs into their account, their device information is logged and given to the parent account, 

@@ -15,6 +15,17 @@ import { eq, and, desc, gte, lte, type SQL } from 'drizzle-orm';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { isFamilyPremium } from '../lib/subscription.js';
 import { logAuditEvent } from '../lib/audit.js';
+import {
+  getFamilyPolicy,
+  updateFamilyPolicy,
+  type FamilyPolicyInput,
+} from '../services/familyPolicy.js';
+import {
+  getChildPolicy,
+  updateChildPolicy,
+  type ChildPolicyInput,
+} from '../services/childPolicy.js';
+import { familyPoliciesTable, childPoliciesTable } from '@workspace/db';
 
 const router = Router();
 router.use(requireAuth as any);
@@ -357,6 +368,194 @@ router.delete('/family/children/:childId', requireParent, async (req: AuthReques
     next(err);
   }
 });
+
+// ── Policies ──────────────────────────────────────────────────────────────────
+// Storage of parent intent only - nothing enforces these server-side or
+// on-device yet (see docs/POLICY_ENGINE.md). Mirrors the device_restrictions
+// pattern (routes/devices.ts) at family and child scope instead of per-device.
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function safeFamilyPolicy(r: typeof familyPoliciesTable.$inferSelect) {
+  return {
+    id: r.id,
+    familyId: r.family_id,
+    screenTimeLimitMinutes: r.screen_time_limit_minutes,
+    bedtimeStart: r.bedtime_start,
+    bedtimeEnd: r.bedtime_end,
+    blockNewAppInstalls: r.block_new_app_installs,
+    blockSafari: r.block_safari,
+    blockExplicitContent: r.block_explicit_content,
+    requireParentApproval: r.require_parent_approval,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
+  };
+}
+
+function safeChildPolicy(r: typeof childPoliciesTable.$inferSelect) {
+  return {
+    id: r.id,
+    childId: r.child_id,
+    familyId: r.family_id,
+    screenTimeLimitMinutes: r.screen_time_limit_minutes,
+    bedtimeStart: r.bedtime_start,
+    bedtimeEnd: r.bedtime_end,
+    blockNewAppInstalls: r.block_new_app_installs,
+    blockSafari: r.block_safari,
+    blockExplicitContent: r.block_explicit_content,
+    requireParentApproval: r.require_parent_approval,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
+  };
+}
+
+function validatePolicyPatch(
+  body: unknown
+): { data?: FamilyPolicyInput | ChildPolicyInput; error?: string } {
+  if (!isPlainObject(body)) {
+    return { error: 'request body must be a JSON object' };
+  }
+
+  const data: FamilyPolicyInput = {};
+  const b = body;
+
+  if ('screenTimeLimitMinutes' in b) {
+    if (b.screenTimeLimitMinutes !== null && typeof b.screenTimeLimitMinutes !== 'number') {
+      return { error: 'screenTimeLimitMinutes must be a number or null' };
+    }
+    data.screen_time_limit_minutes = b.screenTimeLimitMinutes as number | null;
+  }
+  if ('bedtimeStart' in b) {
+    if (b.bedtimeStart !== null && typeof b.bedtimeStart !== 'string') {
+      return { error: 'bedtimeStart must be a string or null' };
+    }
+    data.bedtime_start = b.bedtimeStart as string | null;
+  }
+  if ('bedtimeEnd' in b) {
+    if (b.bedtimeEnd !== null && typeof b.bedtimeEnd !== 'string') {
+      return { error: 'bedtimeEnd must be a string or null' };
+    }
+    data.bedtime_end = b.bedtimeEnd as string | null;
+  }
+  if ('blockNewAppInstalls' in b) {
+    if (typeof b.blockNewAppInstalls !== 'boolean') {
+      return { error: 'blockNewAppInstalls must be a boolean' };
+    }
+    data.block_new_app_installs = b.blockNewAppInstalls;
+  }
+  if ('blockSafari' in b) {
+    if (typeof b.blockSafari !== 'boolean') {
+      return { error: 'blockSafari must be a boolean' };
+    }
+    data.block_safari = b.blockSafari;
+  }
+  if ('blockExplicitContent' in b) {
+    if (typeof b.blockExplicitContent !== 'boolean') {
+      return { error: 'blockExplicitContent must be a boolean' };
+    }
+    data.block_explicit_content = b.blockExplicitContent;
+  }
+  if ('requireParentApproval' in b) {
+    if (typeof b.requireParentApproval !== 'boolean') {
+      return { error: 'requireParentApproval must be a boolean' };
+    }
+    data.require_parent_approval = b.requireParentApproval;
+  }
+
+  return { data };
+}
+
+// GET /api/family/policy
+router.get('/family/policy', requireParent, async (req: AuthRequest, res, next) => {
+  try {
+    if (!req.familyId) {
+      res.json({ policy: null });
+      return;
+    }
+
+    const policy = await getFamilyPolicy(req.familyId);
+    res.json({ policy: policy ? safeFamilyPolicy(policy) : null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/family/policy
+router.patch('/family/policy', requireParent, async (req: AuthRequest, res, next) => {
+  try {
+    if (!req.familyId) {
+      res.status(400).json({ error: 'join or create a family first' });
+      return;
+    }
+
+    const { data, error } = validatePolicyPatch(req.body);
+    if (error || !data) {
+      res.status(400).json({ error });
+      return;
+    }
+
+    const policy = await updateFamilyPolicy(req.familyId, data);
+    res.json({ policy: safeFamilyPolicy(policy) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/family/children/:childId/policy
+router.get(
+  '/family/children/:childId/policy',
+  requireParent,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const childId = String(req.params.childId);
+
+      const [child] = await db
+        .select({ id: childrenTable.id, family_id: childrenTable.family_id })
+        .from(childrenTable)
+        .where(eq(childrenTable.id, childId))
+        .limit(1);
+
+      if (!child || child.family_id !== req.familyId) {
+        res.status(404).json({ error: 'Child not found' });
+        return;
+      }
+
+      const policy = await getChildPolicy(childId, req.familyId!);
+      res.json({ policy: policy ? safeChildPolicy(policy) : null });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PATCH /api/family/children/:childId/policy
+router.patch(
+  '/family/children/:childId/policy',
+  requireParent,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const childId = String(req.params.childId);
+
+      const { data, error } = validatePolicyPatch(req.body);
+      if (error || !data) {
+        res.status(400).json({ error });
+        return;
+      }
+
+      const policy = await updateChildPolicy(childId, req.familyId!, data);
+      if (!policy) {
+        res.status(404).json({ error: 'Child not found' });
+        return;
+      }
+
+      res.json({ policy: safeChildPolicy(policy) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ── Agreement ─────────────────────────────────────────────────────────────────
 

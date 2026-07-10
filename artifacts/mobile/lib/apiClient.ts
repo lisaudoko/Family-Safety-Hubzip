@@ -707,3 +707,44 @@ export async function apiUpdateDeviceRestrictions(
     body: JSON.stringify(data),
   });
 }
+
+// ── Child Policy ────────────────────────────────────────────────────
+
+export interface ChildPolicy {
+  id: string;
+  childId: string;
+  familyId: string;
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiGetChildPolicy(
+  childId: string
+): Promise<{ policy: ChildPolicy | null }> {
+  return apiFetch(`/family/children/${childId}/policy`);
+}
+
+export async function apiUpdateChildPolicy(
+  childId: string,
+  data: Partial<{
+    screenTimeLimitMinutes: number | null;
+    bedtimeStart: string | null;
+    bedtimeEnd: string | null;
+    blockNewAppInstalls: boolean;
+    blockSafari: boolean;
+    blockExplicitContent: boolean;
+    requireParentApproval: boolean;
+  }>
+): Promise<{ policy: ChildPolicy }> {
+  return apiFetch(`/family/children/${childId}/policy`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}

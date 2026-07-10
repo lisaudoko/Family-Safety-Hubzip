@@ -8,6 +8,151 @@ import { useFamily } from "@/context/FamilyContext";
 import { AGE_BANDS, AgeBand } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
+import { useChildPolicy } from "@/hooks/useChildPolicy";
+import { useChildDevices } from "@/hooks/useChildDevices";
+import { useDeviceRestrictions } from "@/hooks/useDeviceRestrictions";
+import type { ApiDevice } from "@/lib/apiClient";
+
+type RestrictionToggles = {
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+};
+
+function RestrictionRows({
+  values,
+  onChange,
+  colors,
+}: {
+  values: Partial<RestrictionToggles> | null | undefined;
+  onChange: (data: Partial<RestrictionToggles>) => void;
+  colors: ReturnType<typeof useColors>;
+}) {
+  const rows: {
+    icon: React.ComponentProps<typeof Feather>["name"];
+    label: string;
+    value: string;
+    onPress: () => void;
+  }[] = [
+    {
+      icon: "clock",
+      label: "Screen Time Limit",
+      value: values?.screenTimeLimitMinutes ? `${values.screenTimeLimitMinutes} min` : "Off",
+      onPress: () => onChange({ screenTimeLimitMinutes: values?.screenTimeLimitMinutes === 120 ? null : 120 }),
+    },
+    {
+      icon: "globe",
+      label: "Block Safari",
+      value: values?.blockSafari ? "On" : "Off",
+      onPress: () => onChange({ blockSafari: !values?.blockSafari }),
+    },
+    {
+      icon: "check-circle",
+      label: "Require Parent Approval",
+      value: values?.requireParentApproval ? "On" : "Off",
+      onPress: () => onChange({ requireParentApproval: !values?.requireParentApproval }),
+    },
+    {
+      icon: "download",
+      label: "Block New App Installs",
+      value: values?.blockNewAppInstalls ? "On" : "Off",
+      onPress: () => onChange({ blockNewAppInstalls: !values?.blockNewAppInstalls }),
+    },
+    {
+      icon: "alert-triangle",
+      label: "Block Explicit Content",
+      value: values?.blockExplicitContent ? "On" : "Off",
+      onPress: () => onChange({ blockExplicitContent: !values?.blockExplicitContent }),
+    },
+    {
+      icon: "moon",
+      label: "Bedtime",
+      value: values?.bedtimeStart && values?.bedtimeEnd ? `${values.bedtimeStart}–${values.bedtimeEnd}` : "Off",
+      onPress: () =>
+        onChange({
+          bedtimeStart: values?.bedtimeStart ? null : "21:00",
+          bedtimeEnd: values?.bedtimeStart ? null : "07:00",
+        }),
+    },
+  ];
+
+  return (
+    <View style={[styles.settingsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {rows.map((row) => (
+        <TouchableOpacity key={row.label} style={styles.settingsRow} onPress={row.onPress}>
+          <Feather name={row.icon} size={18} color={colors.foreground} />
+          <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+            {row.label}
+          </Text>
+          <Text style={{ color: colors.mutedForeground }}>{row.value}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+function DeviceRow({ device, colors, onRename }: {
+  device: ApiDevice;
+  colors: ReturnType<typeof useColors>;
+  onRename: (name: string) => Promise<void>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(device.name);
+  const { restrictions, updateRestrictions } = useDeviceRestrictions(device.id);
+
+  const handleSaveName = async () => {
+    if (!name.trim()) return;
+    try {
+      await onRename(name.trim());
+      setRenaming(false);
+    } catch {
+      Alert.alert("Error", "Failed to rename device. Please try again.");
+    }
+  };
+
+  return (
+    <View style={[styles.deviceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <TouchableOpacity style={styles.deviceHeader} onPress={() => setExpanded((v) => !v)} activeOpacity={0.8}>
+        <Feather name="smartphone" size={18} color={colors.primary} />
+        {renaming ? (
+          <TextInput
+            style={[styles.deviceNameInput, { color: colors.foreground, borderColor: colors.primary }]}
+            value={name}
+            onChangeText={setName}
+            autoFocus
+            onSubmitEditing={handleSaveName}
+          />
+        ) : (
+          <Text style={[styles.deviceName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+            {device.name}
+          </Text>
+        )}
+        {device.isStale && (
+          <View style={[styles.staleBadge, { backgroundColor: colors.destructive + "22" }]}>
+            <Text style={[styles.staleText, { color: colors.destructive }]}>Inactive</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={() => (renaming ? handleSaveName() : setRenaming(true))}
+        >
+          <Feather name={renaming ? "check" : "edit-2"} size={16} color={colors.mutedForeground} />
+        </TouchableOpacity>
+        <Feather name={expanded ? "chevron-up" : "chevron-down"} size={18} color={colors.mutedForeground} />
+      </TouchableOpacity>
+      {expanded && (
+        <View style={styles.deviceRestrictions}>
+          <RestrictionRows values={restrictions} onChange={updateRestrictions} colors={colors} />
+        </View>
+      )}
+    </View>
+  );
+}
 
 const AGE_COLORS: Record<string, string> = { "6-9": "#4CAF7D", "10-13": "#4A90A4", "14-17": "#7B5EA7" };
 
@@ -24,6 +169,8 @@ export default function ChildProfileScreen() {
   const [ageBand, setAgeBand] = useState<AgeBand>(child?.ageBand ?? "10-13");
   const [settingPin, setSettingPin] = useState(false);
   const [newPin, setNewPin] = useState("");
+  const { policy, updatePolicy } = useChildPolicy(child?.id);
+  const { devices, renameDevice } = useChildDevices(child?.id);
 
   if (!child) { router.back(); return null; }
 
@@ -155,6 +302,34 @@ export default function ChildProfileScreen() {
         )}
       </View>
 
+      <View style={styles.infoSection}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          {child.name}'s Default Restrictions
+        </Text>
+        <Text style={[styles.restrictionsHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+          Applies to {child.name} generally. Individual devices below can be adjusted separately.
+        </Text>
+        <RestrictionRows values={policy} onChange={updatePolicy} colors={colors} />
+      </View>
+
+      <View style={styles.infoSection}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Devices</Text>
+        {devices.length === 0 ? (
+          <Text style={[styles.restrictionsHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            No devices registered for {child.name} yet.
+          </Text>
+        ) : (
+          devices.map((device) => (
+            <DeviceRow
+              key={device.id}
+              device={device}
+              colors={colors}
+              onRename={(newName) => renameDevice(device.id, newName)}
+            />
+          ))
+        )}
+      </View>
+
       <View style={styles.conversationSection}>
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Conversation Starters</Text>
         {[
@@ -227,6 +402,17 @@ const styles = StyleSheet.create({
   bandText: { fontSize: 13 },
   saveBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center" },
   saveBtnText: { color: "#FFFFFF", fontSize: 15 },
+  restrictionsHint: { fontSize: 13, marginTop: -6 },
+  settingsList: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  settingsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, gap: 12 },
+  settingsLabel: { flex: 1, fontSize: 15 },
+  deviceCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  deviceHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
+  deviceName: { flex: 1, fontSize: 15 },
+  deviceNameInput: { flex: 1, fontSize: 15, borderBottomWidth: 1.5, paddingBottom: 2 },
+  staleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  staleText: { fontSize: 11 },
+  deviceRestrictions: { paddingHorizontal: 8, paddingBottom: 8 },
   infoSection: { gap: 10 },
   sectionTitle: { fontSize: 18 },
   guidanceCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },

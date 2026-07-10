@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { getToken } from "@/lib/apiClient";
 
 let configured = false;
 
@@ -13,4 +14,6 @@ export function configureApi() {
   } else if (Platform.OS === "web") {
     setBaseUrl(null);
   }
+
+  setAuthTokenGetter(getToken);
 }
