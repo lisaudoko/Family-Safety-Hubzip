@@ -85,6 +85,52 @@ export async function runStartupMigrations(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS device_events_owner_id_occurred_at_idx ON device_events(owner_id, occurred_at)`,
       `CREATE INDEX IF NOT EXISTS device_events_family_id_event_type_idx ON device_events(family_id, event_type)`,
 
+      // ── support_codes ─────────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS support_codes (
+         id TEXT PRIMARY KEY,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         created_by TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+         code_hash TEXT NOT NULL,
+         expires_at TIMESTAMP NOT NULL,
+         used_at TIMESTAMP,
+         used_by TEXT REFERENCES profiles(id),
+         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS support_codes_family_id_idx ON support_codes(family_id)`,
+
+      // ── support_sessions ──────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS support_sessions (
+         id TEXT PRIMARY KEY,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         admin_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+         code_id TEXT NOT NULL REFERENCES support_codes(id) ON DELETE CASCADE,
+         started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         expires_at TIMESTAMP NOT NULL,
+         ended_at TIMESTAMP
+       )`,
+      `CREATE INDEX IF NOT EXISTS support_sessions_family_id_idx ON support_sessions(family_id)`,
+      `CREATE INDEX IF NOT EXISTS support_sessions_admin_id_idx ON support_sessions(admin_id)`,
+
+      // ── sessions.support_session_id (added after support_sessions exists) ──────
+      `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS support_session_id TEXT REFERENCES support_sessions(id) ON DELETE CASCADE`,
+
+      // ── audit_log ─────────────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS audit_log (
+         id TEXT PRIMARY KEY,
+         actor_id TEXT REFERENCES profiles(id) ON DELETE CASCADE,
+         actor_role TEXT NOT NULL,
+         family_id TEXT REFERENCES families(id) ON DELETE CASCADE,
+         action TEXT NOT NULL,
+         target_type TEXT,
+         target_id TEXT,
+         metadata JSONB NOT NULL DEFAULT '{}',
+         ip TEXT,
+         is_support_session BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS audit_log_family_id_created_at_idx ON audit_log(family_id, created_at)`,
+      `CREATE INDEX IF NOT EXISTS audit_log_actor_id_created_at_idx ON audit_log(actor_id, created_at)`,
+
       // ── badges ────────────────────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS badges (
          id TEXT PRIMARY KEY,

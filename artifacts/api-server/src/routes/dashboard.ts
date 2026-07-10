@@ -3,7 +3,7 @@ import { db } from '@workspace/db';
 import { childrenTable, devicesTable, deviceEventsTable } from '@workspace/db';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
-import { getScreenTimeSummary, getActivitySummary } from '../lib/analytics.js';
+import { getScreenTimeSummary, getActivitySummary, getEducationActivitySummary } from '../lib/analytics.js';
 
 const router = Router();
 router.use(requireAuth as any);
@@ -42,9 +42,12 @@ async function loadRecentActivityByOwner(
   familyId: string,
   ownerIds: string[],
   deviceOwnerById: Map<string, string>,
-): Promise<Map<string, { screenTimeSeconds: number; activityCount: number }>> {
-  const result = new Map<string, { screenTimeSeconds: number; activityCount: number }>();
-  for (const id of ownerIds) result.set(id, { screenTimeSeconds: 0, activityCount: 0 });
+): Promise<Map<string, { screenTimeSeconds: number; activityCount: number; educationCount: number }>> {
+  const result = new Map<
+    string,
+    { screenTimeSeconds: number; activityCount: number; educationCount: number }
+  >();
+  for (const id of ownerIds) result.set(id, { screenTimeSeconds: 0, activityCount: 0, educationCount: 0 });
   if (ownerIds.length === 0) return result;
 
   const range = {
@@ -52,9 +55,10 @@ async function loadRecentActivityByOwner(
     to: new Date(),
   };
 
-  const [screenTime, activity] = await Promise.all([
+  const [screenTime, activity, education] = await Promise.all([
     getScreenTimeSummary(familyId, range),
     getActivitySummary(familyId, range),
+    getEducationActivitySummary(familyId, range),
   ]);
 
   for (const row of screenTime.byDevice) {
@@ -66,6 +70,11 @@ async function loadRecentActivityByOwner(
     const ownerId = deviceOwnerById.get(row.deviceId);
     const bucket = ownerId ? result.get(ownerId) : undefined;
     if (bucket) bucket.activityCount += row.eventCount;
+  }
+  for (const row of education.byDevice) {
+    const ownerId = deviceOwnerById.get(row.deviceId);
+    const bucket = ownerId ? result.get(ownerId) : undefined;
+    if (bucket) bucket.educationCount += row.eventCount;
   }
 
   return result;
@@ -123,6 +132,7 @@ router.get('/dashboard/overview', async (req: AuthRequest, res, next) => {
           windowDays: ROLLUP_DAYS,
           screenTimeSeconds: activityByOwner.get(k.id)?.screenTimeSeconds ?? 0,
           activityCount: activityByOwner.get(k.id)?.activityCount ?? 0,
+          educationCount: activityByOwner.get(k.id)?.educationCount ?? 0,
         },
       })),
     });
@@ -178,6 +188,7 @@ router.get('/dashboard/children/:childId', async (req: AuthRequest, res, next) =
 
     const screenTimeByDay = new Map<string, number>();
     const activityByType = new Map<string, number>();
+    const educationByType = new Map<string, number>();
 
     for (const e of events) {
       if (e.eventType === 'screen_time') {
@@ -186,10 +197,11 @@ router.get('/dashboard/children/:childId', async (req: AuthRequest, res, next) =
           const day = e.occurredAt.toISOString().slice(0, 10);
           screenTimeByDay.set(day, (screenTimeByDay.get(day) ?? 0) + duration);
         }
-      } else if (e.eventType === 'activity') {
+      } else if (e.eventType === 'activity' || e.eventType === 'education_activity') {
         const activityType = (e.payload as Record<string, unknown>)?.activityType;
         const key = typeof activityType === 'string' && activityType ? activityType : 'unknown';
-        activityByType.set(key, (activityByType.get(key) ?? 0) + 1);
+        const bucket = e.eventType === 'activity' ? activityByType : educationByType;
+        bucket.set(key, (bucket.get(key) ?? 0) + 1);
       }
     }
 
@@ -205,6 +217,10 @@ router.get('/dashboard/children/:childId', async (req: AuthRequest, res, next) =
       activity: {
         windowDays: ROLLUP_DAYS,
         byType: Array.from(activityByType.entries()).map(([type, count]) => ({ type, count })),
+      },
+      education: {
+        windowDays: ROLLUP_DAYS,
+        byType: Array.from(educationByType.entries()).map(([type, count]) => ({ type, count })),
       },
     });
   } catch (err) {

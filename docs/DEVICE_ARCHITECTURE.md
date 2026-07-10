@@ -24,13 +24,15 @@ How device tracking works today. All routes in `artifacts/api-server/src/routes/
 - `POST /api/devices/:deviceId/events` records events into `device_events`: `event_type`, jsonb `payload`, `occurred_at`. Payloads validated by `validateEventPayload`.
 - `lib/deviceSync.ts` reports foreground screen time and device status in the background.
 - `GET /api/devices/events` (parent) lists family events with filters.
+- Event types: `heartbeat` (device_sync), `screen_time` (screen_time_reporting), `activity` (activity_summary — general app usage), `education_activity` (lesson_participation — lesson/quiz/challenge/assessment completions, submitted via `submitActivityEvent` in `lib/deviceSync.ts` from `FamilyContext.tsx`'s completion handlers). Kept as a separate event type from `activity` so the dashboard can distinguish learning activity from general app usage — see `AI_CHANGELOG.md` 2026-07-10.
 
 ## Analytics
 
 Parent-only aggregation endpoints (`routes/analytics.ts`):
 - `/api/analytics/screen-time` — screen time summarized by date/device.
-- `/api/analytics/activity` — summarized activity events.
-- `/api/analytics/summary` — combined view.
+- `/api/analytics/activity` — summarized general app-activity events.
+- `/api/analytics/education` — summarized education-activity events (lesson/quiz/challenge/assessment completions).
+- `/api/analytics/summary` — combined view (screen time + activity + education).
 
 ## Parent Dashboard
 

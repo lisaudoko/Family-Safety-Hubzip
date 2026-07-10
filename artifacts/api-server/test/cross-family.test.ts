@@ -87,4 +87,70 @@ describe('cross-family authorization', () => {
     expect(ids).toContain(childA.childId);
     expect(ids).not.toContain(childB.childId);
   });
+
+  it("family A's parent gets 404 patching or deleting family B's device", async () => {
+    const parentA = await createParentWithFamily(cleanup, 'xf-A6');
+    const parentB = await createParentWithFamily(cleanup, 'xf-B6');
+    const { deviceId } = await registerDevice(parentB.token, { capabilities: [] });
+
+    const patchRes = await api
+      .patch(`/api/devices/${deviceId}`)
+      .set('Authorization', `Bearer ${parentA.token}`)
+      .send({ name: 'Renamed' });
+    expect(patchRes.status).toBe(404);
+
+    const deleteRes = await api
+      .delete(`/api/devices/${deviceId}`)
+      .set('Authorization', `Bearer ${parentA.token}`);
+    expect(deleteRes.status).toBe(404);
+
+    // Confirm it wasn't actually deleted.
+    const check = await api
+      .get(`/api/devices/${deviceId}`)
+      .set('Authorization', `Bearer ${parentB.token}`);
+    expect(check.status).toBe(200);
+  });
+
+  it("family A's parent never sees family B's data in analytics summary", async () => {
+    const parentA = await createParentWithFamily(cleanup, 'xf-A7');
+    const parentB = await createParentWithFamily(cleanup, 'xf-B7');
+    const { deviceId: deviceA } = await registerDevice(parentA.token, {
+      capabilities: ['screen_time_reporting'],
+    });
+    const { deviceId: deviceB } = await registerDevice(parentB.token, {
+      capabilities: ['screen_time_reporting'],
+    });
+
+    await api
+      .post(`/api/devices/${deviceA}/events`)
+      .set('Authorization', `Bearer ${parentA.token}`)
+      .send({ id: randomUUID(), eventType: 'screen_time', payload: { durationSeconds: 100 } });
+    await api
+      .post(`/api/devices/${deviceB}/events`)
+      .set('Authorization', `Bearer ${parentB.token}`)
+      .send({ id: randomUUID(), eventType: 'screen_time', payload: { durationSeconds: 9000 } });
+
+    const res = await api
+      .get('/api/analytics/screen-time')
+      .set('Authorization', `Bearer ${parentA.token}`);
+    expect(res.status).toBe(200);
+    const deviceIds = res.body.byDevice.map((d: any) => d.deviceId);
+    expect(deviceIds).toContain(deviceA);
+    expect(deviceIds).not.toContain(deviceB);
+  });
+
+  it("a child account cannot access parent-only dashboard/analytics endpoints", async () => {
+    const parent = await createParentWithFamily(cleanup, 'xf-A8');
+    const child = await addChildAndLogin(cleanup, parent, 'xf-A8-kid');
+
+    const overview = await api
+      .get('/api/dashboard/overview')
+      .set('Authorization', `Bearer ${child.token}`);
+    expect(overview.status).toBe(403);
+
+    const analytics = await api
+      .get('/api/analytics/summary')
+      .set('Authorization', `Bearer ${child.token}`);
+    expect(analytics.status).toBe(403);
+  });
 });

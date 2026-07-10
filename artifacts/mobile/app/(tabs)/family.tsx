@@ -139,7 +139,58 @@ export default function FamilyScreen() {
       ))}
 
       {addingChild && (
-        /* KEEP YOUR EXISTING Add Child form EXACTLY HERE */
+        <View style={[styles.addChildCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.childInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.secondary }]}
+            placeholder="Child's name"
+            placeholderTextColor={colors.mutedForeground}
+            value={childName}
+            onChangeText={setChildName}
+          />
+          <Text style={[styles.ageLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Age group</Text>
+          <View style={styles.ageBandRow}>
+            {AGE_BANDS.map((band) => (
+              <TouchableOpacity
+                key={band}
+                style={[
+                  styles.bandBtn,
+                  {
+                    borderColor: childAge === band ? colors.primary : colors.border,
+                    backgroundColor: childAge === band ? colors.primary + "22" : "transparent",
+                  },
+                ]}
+                onPress={() => setChildAge(band)}
+              >
+                <Text
+                  style={[
+                    styles.bandText,
+                    { color: childAge === band ? colors.primary : colors.mutedForeground, fontFamily: "Inter_500Medium" },
+                  ]}
+                >
+                  {band}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.addBtns}>
+            <TouchableOpacity
+              style={[styles.cancelBtn, { borderColor: colors.border }]}
+              onPress={() => {
+                setAddingChild(false);
+                setChildName("");
+                setChildAge("10-13");
+              }}
+            >
+              <Text style={[styles.cancelText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
+              onPress={handleAddChild}
+            >
+              <Text style={[styles.confirmText, { fontFamily: "Inter_600SemiBold" }]}>Add Child</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </>
   ) : (
@@ -214,6 +265,7 @@ export default function FamilyScreen() {
           <ChildCard
             key={child.id}
             child={child}
+            onPress={() => {}}
           />
         ))
       )}

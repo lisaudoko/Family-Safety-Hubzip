@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import request from 'supertest';
+import bcrypt from 'bcryptjs';
 import app from '../src/app.js';
 import { db, familiesTable, profilesTable } from '@workspace/db';
 import { inArray } from 'drizzle-orm';
@@ -139,6 +140,39 @@ export async function registerDevice(
       capabilities: overrides.capabilities ?? [],
     });
   return { status: res.status, body: res.body, deviceId };
+}
+
+/**
+ * Simulates a manually-seeded admin/support account (there's no
+ * self-registration endpoint for the admin role) by inserting a profile
+ * directly, then logging in through the normal /api/auth/login flow.
+ */
+export async function createAdmin(cleanup: Cleanup, label = 'admin'): Promise<{
+  userId: string;
+  email: string;
+  password: string;
+  token: string;
+}> {
+  const email = uniqueEmail(label);
+  const password = 'adminPassword123';
+  const userId = randomUUID();
+  cleanup.trackUser(userId);
+
+  await db.insert(profilesTable).values({
+    id: userId,
+    email,
+    full_name: `Test ${label}`,
+    password_hash: await bcrypt.hash(password, 12),
+    role: 'admin',
+    has_completed_onboarding: true,
+  });
+
+  const loginRes = await api.post('/api/auth/login').send({ email, password });
+  if (loginRes.status !== 200) {
+    throw new Error(`admin login failed: ${loginRes.status} ${JSON.stringify(loginRes.body)}`);
+  }
+
+  return { userId, email, password, token: loginRes.body.token as string };
 }
 
 export function isoDaysAgo(days: number): string {

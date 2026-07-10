@@ -134,3 +134,61 @@ describe('GET /api/analytics/activity', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('GET /api/analytics/education', () => {
+  it('computes education activity aggregates separately from general activity', async () => {
+    const parent = await createParentWithFamily(cleanup, 'an-edu');
+    const { deviceId } = await registerDevice(parent.token, {
+      capabilities: ['lesson_participation', 'activity_summary'],
+    });
+
+    await postEvent(parent.token, deviceId, 'education_activity', { activityType: 'lesson_completed' }, isoDaysAgo(1));
+    await postEvent(parent.token, deviceId, 'education_activity', { activityType: 'lesson_completed' }, isoDaysAgo(2));
+    await postEvent(parent.token, deviceId, 'education_activity', { activityType: 'quiz_completed' }, isoDaysAgo(1));
+    // A general (non-education) activity event on the same device must not leak into education totals.
+    await postEvent(parent.token, deviceId, 'activity', { activityType: 'reading' }, isoDaysAgo(1));
+
+    const res = await api
+      .get('/api/analytics/education')
+      .set('Authorization', `Bearer ${parent.token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.familyEventCount).toBe(3);
+    const lessons = res.body.byActivityType.find((a: any) => a.activityType === 'lesson_completed');
+    const quizzes = res.body.byActivityType.find((a: any) => a.activityType === 'quiz_completed');
+    expect(lessons).toMatchObject({ activityType: 'lesson_completed', eventCount: 2 });
+    expect(quizzes).toMatchObject({ activityType: 'quiz_completed', eventCount: 1 });
+  });
+
+  it('returns 403 for a child role', async () => {
+    const parent = await createParentWithFamily(cleanup, 'an-edu-child');
+    const child = await addChildAndLogin(cleanup, parent, 'an-edu-kid');
+
+    const res = await api
+      .get('/api/analytics/education')
+      .set('Authorization', `Bearer ${child.token}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/analytics/summary', () => {
+  it('includes screenTime, activity, and education in one response', async () => {
+    const parent = await createParentWithFamily(cleanup, 'an-summary');
+    const { deviceId } = await registerDevice(parent.token, {
+      capabilities: ['screen_time_reporting', 'activity_summary', 'lesson_participation'],
+    });
+
+    await postEvent(parent.token, deviceId, 'screen_time', { durationSeconds: 10 }, isoDaysAgo(1));
+    await postEvent(parent.token, deviceId, 'activity', { activityType: 'reading' }, isoDaysAgo(1));
+    await postEvent(parent.token, deviceId, 'education_activity', { activityType: 'lesson_completed' }, isoDaysAgo(1));
+
+    const res = await api
+      .get('/api/analytics/summary')
+      .set('Authorization', `Bearer ${parent.token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.screenTime.familyEventCount).toBe(1);
+    expect(res.body.activity.familyEventCount).toBe(1);
+    expect(res.body.education.familyEventCount).toBe(1);
+  });
+});

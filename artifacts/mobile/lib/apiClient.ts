@@ -174,6 +174,7 @@ export interface ApiFamily {
   createdAt: string;
   parents: ApiParent[];
   children: ApiChild[];
+  siblings: ApiChild[];
 }
 
 export interface ApiChild {

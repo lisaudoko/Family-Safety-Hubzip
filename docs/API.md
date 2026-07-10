@@ -26,13 +26,13 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 ## Family & Progress
 | Method | Path | Auth | Notes |
 | --- | --- | --- | --- |
-| GET | `/api/family` | auth | Family details + children list. |
+| GET | `/api/family` | auth | Family details + `parents`, `children`; also `siblings` (same list as `children`, self-excluded for child sessions). |
 | POST | `/api/family` | parent | Create/update family name. |
-| POST | `/api/family/children` | parent | Add/update child; enforces subscription-tier child limits. |
-| PATCH | `/api/family/children/:childId` | parent | Update child details/PIN. |
-| DELETE | `/api/family/children/:childId` | parent | Remove child. |
-| GET | `/api/family/agreement` | auth | Agreement for the family where `parent_id = userId`; child sessions get `agreement: null`. |
-| PUT | `/api/family/agreement` | auth | Upserts by client-supplied `familyId`; **no ownership check today** (see docs/SECURITY.md). |
+| POST | `/api/family/children` | parent | Add/update child; enforces subscription-tier child limits; 403 if `familyId` doesn't match the caller's own family. |
+| PATCH | `/api/family/children/:childId` | parent | Update child details/PIN; 404 if the child doesn't belong to the caller's family. |
+| DELETE | `/api/family/children/:childId` | parent | Remove child; 404 if the child doesn't belong to the caller's family. |
+| GET | `/api/family/agreement` | auth | Agreement resolved via the session's `familyId` — works for both parent and child sessions. |
+| PUT | `/api/family/agreement` | parent | Upserts; 403 if the supplied `familyId` doesn't match the caller's own family. |
 | GET | `/api/progress` | auth | User's learning/challenge progress. |
 | PUT | `/api/progress` | auth | Update progress state. |
 
@@ -75,10 +75,11 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/api/analytics/screen-time` | Screen time by date/device. |
-| GET | `/api/analytics/activity` | Summarized activity events. |
-| GET | `/api/analytics/summary` | Combined screen time + activity. |
-| GET | `/api/dashboard/overview` | All children snapshot + recent activity. |
-| GET | `/api/dashboard/children/:childId` | Per-child activity/screen-time breakdown. |
+| GET | `/api/analytics/activity` | Summarized general app-activity events (`activity` event type). |
+| GET | `/api/analytics/education` | Summarized education activity — lesson/quiz/challenge/assessment completions (`education_activity` event type, `lesson_participation` capability). Kept separate from `/activity` so learning activity isn't mixed with general app usage. |
+| GET | `/api/analytics/summary` | Combined screen time + activity + education. |
+| GET | `/api/dashboard/overview` | All children snapshot + recent activity (`screenTimeSeconds`, `activityCount`, `educationCount`). |
+| GET | `/api/dashboard/children/:childId` | Per-child screen-time/activity/education breakdown. |
 
 ## Notifications
 | Method | Path | Auth | Notes |

@@ -107,7 +107,7 @@ export function useDeviceSync(isAuthenticated: boolean) {
 // caller, and silently drops the event on any network/registration failure -
 // matching the offline-friendly pattern used by syncDeviceNow above.
 async function submitDeviceEvent(
-  eventType: "screen_time" | "activity",
+  eventType: "screen_time" | "activity" | "education_activity",
   payload: Record<string, unknown>,
 ): Promise<void> {
   if (Platform.OS !== "ios" && Platform.OS !== "android") return;
@@ -119,14 +119,15 @@ async function submitDeviceEvent(
   }
 }
 
-// Records an in-app activity event (e.g. a lesson/quiz/challenge/assessment
+// Records an education activity event (lesson/quiz/challenge/assessment
 // completion) alongside wherever that completion is already persisted
-// server-side. Fire-and-forget - callers should not await this for UI flow.
+// server-side, so the parent dashboard can report it separately from
+// general app usage. Fire-and-forget - callers should not await this for UI flow.
 export function submitActivityEvent(
   activityType: string,
   details?: Record<string, unknown>,
 ): void {
-  submitDeviceEvent("activity", { activityType, details });
+  submitDeviceEvent("education_activity", { activityType, details });
 }
 
 // Tracks how long the app itself has been in the foreground and reports it as

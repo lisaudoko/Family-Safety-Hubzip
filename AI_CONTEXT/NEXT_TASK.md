@@ -15,15 +15,15 @@ Goal: complete the foundation for the parent/child safety ecosystem while mainta
 ## Priority 1 — Complete Backend Device Sync Infrastructure (In Progress)
 
 - [x] Device registration system — `POST /api/devices` exists (child + family association, status tracking)
-- [ ] Device ownership validation — _gap: ownership checks need hardening (see Security backlog)_
+- [x] Device ownership validation — _verified 2026-07-10: `loadDeviceForCaller` in `devices.ts` gates GET/PATCH/DELETE by `device.owner_id === req.userId` or (`req.role === 'parent' && device.family_id === req.familyId`); heartbeat/events endpoints require exact owner match. Was already implemented; checkbox was stale. Locked in with new cross-family tests (`cross-family.test.ts`)._
 - [x] Device synchronization APIs — heartbeat/sync endpoints exist (`routes/devices.ts`); last-active + connection status tracked
 - [x] Event ingestion — screen time / app activity / device activity events exist (`device_events`)
-- [ ] Educational activity events — not yet ingested as device events (progress is tracked separately via `user_progress`)
-- [ ] Event processing architecture — validation + storage exist; analytics generated on read (`routes/analytics.ts`); **no audit records yet**
+- [x] Educational activity events — _resolved 2026-07-10 (product owner decision: ingest via device-event pipeline). Found this was already substantially wired (`FamilyContext.tsx` already called `submitActivityEvent` on every lesson/quiz/challenge/assessment completion) but overloaded the generic `activity` event type. Split into a dedicated `education_activity` event type mapped to the previously-unused `lesson_participation` capability, so learning activity is now distinguishable from general app usage in `/api/analytics/education` and the dashboard's `education` breakdown. `user_progress` remains the detailed source of truth for progress state; `device_events` now also carries a lightweight completion signal for the unified activity timeline._
+- [ ] Event processing architecture — validation + storage exist; analytics generated on read (`routes/analytics.ts`); **no audit records yet** (overlaps Priority 6 "Audit logging")
 
-## Priority 2 — Device Capability System
+## Priority 2 — Device Capability System (Done)
 
-- [ ] Create platform-neutral device capability model (cross-platform only: screen time, activity summaries, app usage summaries, educational activity, device health). No platform-specific unsupported capabilities.
+- [x] Create platform-neutral device capability model — _verified 2026-07-10: `lib/capabilities.ts` already defines a cross-platform `CAPABILITIES` list (screen_time_reporting, activity_summary, device_sync, notifications, family_participation, lesson_participation, website_filtering_status) with no OS-specific entries, enforced at registration/update/event-ingestion time in `devices.ts`. Was already implemented; checkbox was stale._
 
 ## Priority 3 — Parent Dashboard Backend (Partially Implemented)
 
@@ -31,39 +31,37 @@ Goal: complete the foundation for the parent/child safety ecosystem while mainta
 - [x] Child activity summaries, device status, usage analytics (`routes/analytics.ts`)
 - [ ] Educational progress surfaced in dashboard — partial; connect to education progress (see Priority 7)
 - [ ] Policy status — blocked on Priority 5 (no policy engine exists)
-- [ ] Enforcement audit: parent-only access is in place via `requireParent`, but family-data isolation must be verified per endpoint (known ownership-check gaps)
+- [x] Enforcement audit — _completed 2026-07-10: reviewed `devices.ts`, `dashboard.ts`, `analytics.ts`, `family.ts`, `coach.ts`, `billing.ts`, `curriculum.ts`, `notifications.ts` for family-data isolation. All endpoints correctly scope by `req.familyId`/`req.userId`; `requireParent` correctly gates parent-only routes. No new gaps found (the previously-known family.ts IDOR gaps were already fixed same-day, see Priority 4/6). Added regression tests: cross-family device PATCH/DELETE 404, cross-family analytics isolation, child-role 403 on dashboard/analytics — see `cross-family.test.ts`._
 
-## Priority 4 — Child Account System (Mostly Implemented)
+## Priority 4 — Child Account System (Done)
 
 - [x] Parent creates child profile; child cannot self-register
 - [x] Child joins family; child authentication via family code + PIN
 - [x] Child permissions (limited to own devices/progress)
 
-### Child Family Experience (NEW)
+### Child Family Experience — DONE (2026-07-10)
 
-- [ ] Family tab role-aware rendering
+- [x] Family tab role-aware rendering
   - Parent accounts continue to see the parent Family management interface.
   - Child accounts must never see the parent management interface.
+  - _(Screen was already role-branched in `family.tsx`; the "Add Child" form JSX had been left as a placeholder comment and was filled in as part of this task — unrelated pre-existing gap found during typecheck.)_
 
-- [ ] Child Family view
-  - Display parent(s)/guardian(s).
-  - Display siblings (other child accounts in the same family).
-  - Exclude the currently logged-in child from the sibling list.
-  - Display appropriate empty states if there are no siblings.
+- [x] Child Family view
+  - Display parent(s)/guardian(s) — `GET /api/family` `parents` field (pre-existing).
+  - Display siblings (other child accounts in the same family) — new `siblings` field.
+  - Exclude the currently logged-in child from the sibling list — done server-side in `GET /api/family`.
+  - Display appropriate empty states if there are no siblings — "No siblings found." (pre-existing JSX, now reachable).
 
-- [ ] Backend support
-  - Audit existing family APIs.
-  - Reuse existing family, child, and authentication systems.
-  - Extend existing endpoints only if required.
-  - Do not duplicate database tables or APIs.
+- [x] Backend support
+  - Audited `family.ts`; reused `GET /api/family`, `GET/PUT /api/family/agreement`, extended in place — no new tables/endpoints.
 
-- [ ] Authorization review
-  - Ensure child accounts can only retrieve members of their own family.
-  - Prevent child accounts from accessing parent management data.
-  - Verify family ownership validation.
+- [x] Authorization review
+  - Child accounts only ever see their own family (`req.familyId`-scoped).
+  - `GET /api/family/agreement` now resolves via `req.familyId` (previously `parent_id`-only, so children got `agreement: null`); `PUT` now requires `requireParent` + familyId match.
+  - Verified family ownership validation — see Priority 6 below.
 
-- [ ] Child onboarding flow — review/polish end-to-end
-- [ ] Parent-child relationship validation — _gap: child CRUD routes lack family-ownership verification (security backlog)_
+- [ ] Child onboarding flow — review/polish end-to-end (not part of this pass)
+- [x] Parent-child relationship validation — IDOR fixes landed (`POST/PATCH/DELETE /family/children*`, `PUT /family/agreement` now verify `req.familyId`); moved off Priority 6 backlog.
 
 ## Priority 5 — Policy Engine (Architecture Approved — NOT started)
 
@@ -77,9 +75,9 @@ _No policy engine exists today; the family agreement is a social contract and de
 
 _Note: auth is opaque UUID session tokens, not JWT; there is no admin role today. See `docs/SECURITY.md`._
 
-- [ ] Session auth hardening — enforce `expires_at` in `requireAuth`
+- [x] Session auth hardening — enforce `expires_at` in `requireAuth` — _fixed 2026-07-10: `requireAuth` now rejects (401) and best-effort deletes sessions past their `expires_at`; regression tests in `test/auth.test.ts`._
 - [ ] RBAC verification — parent/child permissions per endpoint; decide if an admin role is needed
-- [ ] Fix known gaps: `PUT /family/agreement` IDOR, child CRUD ownership checks
+- [x] Fix known gaps: `PUT /family/agreement` IDOR, child CRUD ownership checks — fixed 2026-07-10 alongside Child Family Experience
 - [ ] Audit logging — does not exist; design + implement
 - [x] Rate limiting (global limiter in `app.ts`)
 - [x] Input validation (Zod) and SQL injection protection (drizzle parameterization) — keep verifying on new endpoints
@@ -92,7 +90,7 @@ _Note: auth is opaque UUID session tokens, not JWT; there is no admin role today
 - [ ] Identify + create missing lessons; resolve dual-source (DB vs `data/seed.ts`) decision first
 - [ ] Verify lesson progression
 - [x] Track child learning progress (`user_progress`)
-- [ ] Connect education progress to parent dashboard
+- [~] Connect education progress to parent dashboard — _partial: `GET /api/dashboard/children/:childId` and `/api/analytics/education` now surface education *activity* (completion events/counts) as of 2026-07-10; detailed progress state (course %, badges, assessment scores from `user_progress`) is not yet surfaced in the dashboard._
 
 ## Priority 8 — AI Documentation System ✅ COMPLETE (2026-07-08)
 
@@ -101,8 +99,8 @@ _Note: auth is opaque UUID session tokens, not JWT; there is no admin role today
 ## Priority 9 — Testing and Quality Assurance (Before Production)
 
 - Environment: [ ] Node / pnpm / DB connection / build process verification
-- Application: [ ] parent registration/login, family + child creation, child login, permissions, dashboard, device sync, analytics — _partial Vitest coverage exists (devices, analytics, dashboard, notifications, cross-family); auth & family routes untested_
-- Security: [x] family data isolation tests exist (`cross-family.test.ts`) — [ ] extend to unauthorized-access and role-permission testing across all routes
+- Application: [ ] parent registration/login, family + child creation, child login, permissions, dashboard, device sync, analytics — _Vitest coverage exists (devices, analytics, dashboard, notifications, cross-family, family, auth session-expiry); still no coverage for register/login/forgot-password/child-login flows themselves_
+- Security: [x] family data isolation tests exist (`cross-family.test.ts`, extended 2026-07-10 with device PATCH/DELETE, analytics, and child-role-403 cases) — [x] session expiry enforcement tests (`auth.test.ts`, added 2026-07-10) — [ ] extend further to remaining unaudited endpoints (coach, billing, curriculum, notifications — audited 2026-07-10 but not yet covered by dedicated cross-family tests)
 
 ## Priority 10 — Production Readiness (Before Launch)
 
@@ -117,7 +115,6 @@ _Note: auth is opaque UUID session tokens, not JWT; there is no admin role today
 
 - Curriculum single-source: serve exclusively from DB and retire `data/seed.ts`, or keep as offline fallback?
 - Admin role: roadmap security review lists admin permissions, but no admin role exists — build one or drop the requirement?
-- Educational activity events: ingest through the device-event pipeline or keep separate in `user_progress`?
 - Update or retire outdated sections of `replit.md`.
 
 ## Backlog / Known Follow-ups

@@ -3,6 +3,7 @@ import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middle
 import {
   getScreenTimeSummary,
   getActivitySummary,
+  getEducationActivitySummary,
   type DateRangeParseResult,
 } from '../lib/analytics.js';
 
@@ -94,8 +95,31 @@ router.get('/analytics/activity', requireParent as any, async (req: AuthRequest,
   }
 });
 
-// GET /api/analytics/summary?from=&to=&deviceId= - combined screen-time and
-// activity summaries in a single response, for convenience.
+// GET /api/analytics/education?from=&to=&deviceId= - lesson/quiz/challenge/
+// assessment completions, kept separate from /activity (general app usage).
+router.get('/analytics/education', requireParent as any, async (req: AuthRequest, res, next) => {
+  try {
+    if (!req.familyId) {
+      res.status(400).json({ error: 'join or create a family first' });
+      return;
+    }
+
+    const parsed = parseDateRange(req.query as Record<string, unknown>);
+    if ('error' in parsed) {
+      res.status(400).json({ error: parsed.error });
+      return;
+    }
+
+    const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : undefined;
+    const summary = await getEducationActivitySummary(req.familyId, parsed.range, deviceId);
+    res.json(summary);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/analytics/summary?from=&to=&deviceId= - combined screen-time,
+// activity, and education summaries in a single response, for convenience.
 router.get('/analytics/summary', requireParent as any, async (req: AuthRequest, res, next) => {
   try {
     if (!req.familyId) {
@@ -110,11 +134,12 @@ router.get('/analytics/summary', requireParent as any, async (req: AuthRequest, 
     }
 
     const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : undefined;
-    const [screenTime, activity] = await Promise.all([
+    const [screenTime, activity, education] = await Promise.all([
       getScreenTimeSummary(req.familyId, parsed.range, deviceId),
       getActivitySummary(req.familyId, parsed.range, deviceId),
+      getEducationActivitySummary(req.familyId, parsed.range, deviceId),
     ]);
-    res.json({ screenTime, activity });
+    res.json({ screenTime, activity, education });
   } catch (err) {
     next(err);
   }

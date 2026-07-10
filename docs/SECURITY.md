@@ -5,7 +5,7 @@ Documentation of the security implementation **as it exists today**.
 ## Authentication (session tokens, not JWT)
 
 - The system uses **opaque UUID session tokens**, not JWTs. Tokens are created at login/registration, stored in the `sessions` table with a **90-day expiry**, and sent as `Authorization: Bearer <token>`.
-- `requireAuth` middleware (`src/lib/auth-middleware.ts`) validates the token by joining `sessions` with `profiles` and attaching `userId`, `role`, `familyId` to the request. **Caveat: it does NOT currently check `sessions.expires_at`** — the 90-day TTL is written at issuance but never enforced at request time.
+- `requireAuth` middleware (`src/lib/auth-middleware.ts`) validates the token by joining `sessions` with `profiles` and attaching `userId`, `role`, `familyId` to the request, and rejects (401) if `sessions.expires_at` is in the past — the expired row is also deleted (best-effort) so it doesn't linger. Enforced as of 2026-07-10; previously the 90-day TTL was written at issuance but never checked at request time.
 - Passwords hashed with **bcryptjs** before storage. Child logins use PINs (short numeric secrets) scoped to a family code.
 - Password reset uses **hashed one-time codes** (`code_hash`) with `expires_at` and `used_at` tracking. Email verification: the `email_verification_codes` table and `profiles.email_verified` column exist, but **no verification endpoints/flow are implemented**.
 - Logout deletes the session row. Sessions cascade-delete when a profile is deleted.
@@ -47,10 +47,6 @@ Documentation of the security implementation **as it exists today**.
 
 ## Known Gaps (documented, not fixed here)
 
-- **Session expiry not enforced**: `requireAuth` never compares `expires_at` to now; expired tokens keep working until the row is deleted.
-- **Broken access control on family agreement writes**: `PUT /api/family/agreement` trusts the client-supplied `familyId` with no ownership check — any authenticated user can upsert another family's agreement (IDOR).
-- **Child CRUD ownership not verified**: child add/update/delete routes do not confirm the target `familyId`/`childId` belongs to the authenticated parent's family.
-- **Agreement reads are parent-scoped only**: `GET /api/family/agreement` resolves the family via `parent_id = userId`, so child sessions receive `agreement: null` (docs elsewhere describing child read access describe intent, not behavior).
 - Email verification flow not implemented (table exists, endpoints do not).
 - No audit logging system (device_events records activity, but there is no security audit trail).
 - No admin role or admin tooling.

@@ -47,6 +47,7 @@ describe('GET /api/dashboard/overview', () => {
       windowDays: 7,
       screenTimeSeconds: 300,
       activityCount: 2,
+      educationCount: 0,
     });
   });
 
@@ -66,12 +67,13 @@ describe('GET /api/dashboard/children/:childId', () => {
     const parent = await createParentWithFamily(cleanup, 'dash-detail');
     const child = await addChildAndLogin(cleanup, parent, 'dash-detail-kid');
     const { deviceId } = await registerDevice(child.token, {
-      capabilities: ['screen_time_reporting', 'activity_summary'],
+      capabilities: ['screen_time_reporting', 'activity_summary', 'lesson_participation'],
     });
 
     await postEvent(child.token, deviceId, 'screen_time', { durationSeconds: 100 }, isoDaysAgo(1));
     await postEvent(child.token, deviceId, 'screen_time', { durationSeconds: 50 }, isoDaysAgo(1));
     await postEvent(child.token, deviceId, 'activity', { activityType: 'chores' }, isoDaysAgo(1));
+    await postEvent(child.token, deviceId, 'education_activity', { activityType: 'lesson_completed' }, isoDaysAgo(1));
 
     const res = await api
       .get(`/api/dashboard/children/${child.childId}`)
@@ -86,6 +88,11 @@ describe('GET /api/dashboard/children/:childId', () => {
 
     const chores = res.body.activity.byType.find((a: any) => a.type === 'chores');
     expect(chores).toMatchObject({ type: 'chores', count: 1 });
+    // Education completions must not leak into the general activity bucket.
+    expect(res.body.activity.byType.find((a: any) => a.type === 'lesson_completed')).toBeUndefined();
+
+    const lesson = res.body.education.byType.find((a: any) => a.type === 'lesson_completed');
+    expect(lesson).toMatchObject({ type: 'lesson_completed', count: 1 });
   });
 
   it('returns 404 for a child id belonging to another family', async () => {

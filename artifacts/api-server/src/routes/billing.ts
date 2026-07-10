@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { stripe, STRIPE_PRICE_IDS, type BillingPlan } from '../lib/stripe.js';
+import { logAuditEvent } from '../lib/audit.js';
 
 const router = Router();
 
@@ -83,6 +84,16 @@ router.post('/billing/checkout-session', requireAuth as any, requireParent, asyn
       subscription_data: { metadata: { familyId: req.familyId, plan } },
     });
 
+    void logAuditEvent({
+      actorId: req.userId!,
+      actorRole: req.actorRole!,
+      familyId: req.familyId,
+      action: 'billing_checkout_started',
+      metadata: { plan },
+      ip: req.ip,
+      isSupportSession: req.isSupportSession,
+    });
+
     res.json({ url: session.url });
   } catch (err) {
     next(err);
@@ -115,6 +126,15 @@ router.post('/billing/portal-session', requireAuth as any, requireParent, async 
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: `${scheme}://profile`,
+    });
+
+    void logAuditEvent({
+      actorId: req.userId!,
+      actorRole: req.actorRole!,
+      familyId: req.familyId,
+      action: 'billing_portal_opened',
+      ip: req.ip,
+      isSupportSession: req.isSupportSession,
     });
 
     res.json({ url: session.url });

@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import router from './routes';
 import { logger } from './lib/logger';
 import { billingWebhookHandler } from './routes/billing';
+import { logSupportSessionWrite } from './lib/audit';
 
 const app: Express = express();
 
@@ -45,7 +46,7 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), bill
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api', globalLimiter, router);
+app.use('/api', globalLimiter, logSupportSessionWrite as any, router);
 
 const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   logger.error({ err }, 'unhandled request error');

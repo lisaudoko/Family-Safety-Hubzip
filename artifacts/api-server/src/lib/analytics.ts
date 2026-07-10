@@ -151,14 +151,15 @@ export interface ActivitySummary {
   byDevice: ActivityByDeviceRow[];
 }
 
-export async function getActivitySummary(
+async function summarizeActivityLikeEvents(
+  eventType: 'activity' | 'education_activity',
   familyId: string,
   range: DateRange,
   deviceId?: string,
 ): Promise<ActivitySummary> {
   const conditions = [
     eq(deviceEventsTable.family_id, familyId),
-    eq(deviceEventsTable.event_type, 'activity'),
+    eq(deviceEventsTable.event_type, eventType),
     gte(deviceEventsTable.occurred_at, range.from),
     lte(deviceEventsTable.occurred_at, range.to),
   ];
@@ -202,4 +203,27 @@ export async function getActivitySummary(
       eventCount: Number(r.eventCount ?? 0),
     })),
   };
+}
+
+// In-app "activity" events (app_usage, misc taps) — see submitActivityEvent
+// on the mobile side prior to 2026-07-10; renamed there to education-specific
+// use only, so this bucket is now general/non-education app activity.
+export async function getActivitySummary(
+  familyId: string,
+  range: DateRange,
+  deviceId?: string,
+): Promise<ActivitySummary> {
+  return summarizeActivityLikeEvents('activity', familyId, range, deviceId);
+}
+
+// Lesson/quiz/challenge/assessment completions, submitted via
+// submitActivityEvent in artifacts/mobile/lib/deviceSync.ts against the
+// 'lesson_participation' capability — kept separate from getActivitySummary
+// so the dashboard can distinguish learning activity from general app usage.
+export async function getEducationActivitySummary(
+  familyId: string,
+  range: DateRange,
+  deviceId?: string,
+): Promise<ActivitySummary> {
+  return summarizeActivityLikeEvents('education_activity', familyId, range, deviceId);
 }

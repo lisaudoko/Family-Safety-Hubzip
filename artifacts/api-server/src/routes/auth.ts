@@ -12,6 +12,7 @@ import {
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import { requireAuth, type AuthRequest } from '../lib/auth-middleware.js';
 import { sendPasswordResetEmail } from '../lib/email.js';
+import { logAuditEvent } from '../lib/audit.js';
 
 const router = Router();
 
@@ -92,6 +93,13 @@ router.post('/auth/register', async (req, res, next) => {
       expires_at: sessionExpiry(),
     });
 
+    void logAuditEvent({
+      actorId: id,
+      actorRole: 'parent',
+      action: 'register',
+      ip: req.ip,
+    });
+
     res.status(201).json({ token, user: safeUser(profile) });
   } catch (err) {
     next(err);
@@ -124,12 +132,25 @@ router.post('/auth/login', async (req, res, next) => {
       .limit(1);
 
     if (!profile) {
+      void logAuditEvent({
+        actorRole: 'unknown',
+        action: 'login_failed',
+        metadata: { email: normalizedEmail },
+        ip: req.ip,
+      });
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
     const valid = await bcrypt.compare(password, profile.password_hash);
     if (!valid) {
+      void logAuditEvent({
+        actorId: profile.id,
+        actorRole: profile.role,
+        familyId: profile.family_id,
+        action: 'login_failed',
+        ip: req.ip,
+      });
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
@@ -139,6 +160,14 @@ router.post('/auth/login', async (req, res, next) => {
       token,
       user_id: profile.id,
       expires_at: sessionExpiry(),
+    });
+
+    void logAuditEvent({
+      actorId: profile.id,
+      actorRole: profile.role,
+      familyId: profile.family_id,
+      action: 'login',
+      ip: req.ip,
     });
 
     res.json({ token, user: safeUser(profile) });
@@ -204,12 +233,27 @@ router.post('/auth/child-login', async (req, res, next) => {
       .limit(1);
 
     if (!profile || profile.role !== 'child') {
+      void logAuditEvent({
+        actorId: profile?.id,
+        actorRole: 'unknown',
+        familyId: profile?.family_id,
+        action: 'child_login_failed',
+        metadata: { childId: childId.trim() },
+        ip: req.ip,
+      });
       res.status(401).json({ error: 'Invalid child or PIN' });
       return;
     }
 
     const valid = await bcrypt.compare(pin, profile.password_hash);
     if (!valid) {
+      void logAuditEvent({
+        actorId: profile.id,
+        actorRole: 'child',
+        familyId: profile.family_id,
+        action: 'child_login_failed',
+        ip: req.ip,
+      });
       res.status(401).json({ error: 'Invalid child or PIN' });
       return;
     }
@@ -219,6 +263,14 @@ router.post('/auth/child-login', async (req, res, next) => {
       token,
       user_id: profile.id,
       expires_at: sessionExpiry(),
+    });
+
+    void logAuditEvent({
+      actorId: profile.id,
+      actorRole: 'child',
+      familyId: profile.family_id,
+      action: 'child_login',
+      ip: req.ip,
     });
 
     res.json({ token, user: safeUser(profile) });
@@ -260,6 +312,13 @@ router.post('/auth/forgot-password', async (req, res, next) => {
       });
 
       await sendPasswordResetEmail(profile.email!, code);
+
+      void logAuditEvent({
+        actorId: profile.id,
+        actorRole: 'parent',
+        action: 'password_reset_requested',
+        ip: req.ip,
+      });
     }
 
     res.json({ ok: true });
@@ -335,6 +394,13 @@ router.post('/auth/reset-password', async (req, res, next) => {
     // Force re-login everywhere after a password reset.
     await db.delete(sessionsTable).where(eq(sessionsTable.user_id, profile.id));
 
+    void logAuditEvent({
+      actorId: profile.id,
+      actorRole: 'parent',
+      action: 'password_reset_completed',
+      ip: req.ip,
+    });
+
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -347,6 +413,15 @@ router.post('/auth/logout', requireAuth as any, async (req: AuthRequest, res, ne
     const header = req.headers.authorization!;
     const token = header.slice(7);
     await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
+
+    void logAuditEvent({
+      actorId: req.userId!,
+      actorRole: req.actorRole!,
+      familyId: req.familyId,
+      action: 'logout',
+      ip: req.ip,
+    });
+
     res.json({ ok: true });
   } catch (err) {
     next(err);

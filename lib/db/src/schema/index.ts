@@ -30,6 +30,10 @@ export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type Profile = typeof profilesTable.$inferSelect;
 
 // ── sessions ───────────────────────────────────────────────────────────────────
+// support_session_id forward-references supportSessionsTable (declared further
+// down, after familiesTable which it depends on) - safe because drizzle's
+// .references() callback is only invoked lazily, after the whole module has
+// finished evaluating.
 export const sessionsTable = pgTable(
   'sessions',
   {
@@ -38,6 +42,12 @@ export const sessionsTable = pgTable(
       .notNull()
       .references(() => profilesTable.id, { onDelete: 'cascade' }),
     expires_at: timestamp('expires_at').notNull(),
+    // Set only for a token minted by redeeming a support code (see
+    // supportSessionsTable) - when present, requireAuth scopes the request to
+    // that support session's family instead of the admin's own family.
+    support_session_id: text('support_session_id').references(() => supportSessionsTable.id, {
+      onDelete: 'cascade',
+    }),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [index('sessions_user_id_idx').on(t.user_id)],
@@ -125,6 +135,92 @@ export const insertChildSchema = createInsertSchema(childrenTable).omit({
 });
 export type InsertChild = z.infer<typeof insertChildSchema>;
 export type Child = typeof childrenTable.$inferSelect;
+
+// ── support_codes ────────────────────────────────────────────────────────────────
+// A parent-minted, one-time, short-lived code a support/admin account redeems
+// (see supportSessionsTable) to get temporary, fully-logged access to that
+// family. Mirrors the passwordResetCodesTable hashed-code pattern.
+export const supportCodesTable = pgTable(
+  'support_codes',
+  {
+    id: text('id').primaryKey(),
+    family_id: text('family_id')
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: 'cascade' }),
+    created_by: text('created_by')
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    code_hash: text('code_hash').notNull(),
+    expires_at: timestamp('expires_at').notNull(),
+    used_at: timestamp('used_at'),
+    used_by: text('used_by').references(() => profilesTable.id),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('support_codes_family_id_idx').on(t.family_id)],
+);
+
+export type SupportCode = typeof supportCodesTable.$inferSelect;
+
+// ── support_sessions ───────────────────────────────────────────────────────────
+// Created when an admin redeems a support_codes row. The admin's session
+// token (sessionsTable.support_session_id) points here; requireAuth uses this
+// row's family_id/expires_at/ended_at to scope and time-box the admin's access.
+export const supportSessionsTable = pgTable(
+  'support_sessions',
+  {
+    id: text('id').primaryKey(),
+    family_id: text('family_id')
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: 'cascade' }),
+    admin_id: text('admin_id')
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    code_id: text('code_id')
+      .notNull()
+      .references(() => supportCodesTable.id, { onDelete: 'cascade' }),
+    started_at: timestamp('started_at').notNull().defaultNow(),
+    expires_at: timestamp('expires_at').notNull(),
+    ended_at: timestamp('ended_at'),
+  },
+  (t) => [
+    index('support_sessions_family_id_idx').on(t.family_id),
+    index('support_sessions_admin_id_idx').on(t.admin_id),
+  ],
+);
+
+export type SupportSession = typeof supportSessionsTable.$inferSelect;
+
+// ── audit_log ──────────────────────────────────────────────────────────────────
+// Security-relevant event log: auth events, family/agreement changes, billing
+// checkout/portal opens, and every action taken during a support session.
+// Mirrors deviceEventsTable's owner/family/type/payload/occurred_at shape.
+export const auditLogTable = pgTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    // Nullable: a login_failed event for an email with no matching account
+    // has no profile to attribute it to.
+    actor_id: text('actor_id').references(() => profilesTable.id, { onDelete: 'cascade' }),
+    // Snapshot of the actor's role at the time of the action - important
+    // because a support session overrides req.role to 'parent' for
+    // authorization purposes, but the audit trail must still show 'admin'.
+    actor_role: text('actor_role').notNull(),
+    family_id: text('family_id').references(() => familiesTable.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(),
+    target_type: text('target_type'),
+    target_id: text('target_id'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+    ip: text('ip'),
+    is_support_session: boolean('is_support_session').notNull().default(false),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('audit_log_family_id_created_at_idx').on(t.family_id, t.created_at),
+    index('audit_log_actor_id_created_at_idx').on(t.actor_id, t.created_at),
+  ],
+);
+
+export type AuditLog = typeof auditLogTable.$inferSelect;
 
 // ── devices ────────────────────────────────────────────────────────────────────
 export const devicesTable = pgTable(

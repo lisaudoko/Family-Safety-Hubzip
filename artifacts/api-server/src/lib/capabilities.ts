@@ -22,6 +22,7 @@ export const EVENT_TYPE_CAPABILITY: Record<string, Capability> = {
   heartbeat: 'device_sync',
   screen_time: 'screen_time_reporting',
   activity: 'activity_summary',
+  education_activity: 'lesson_participation',
 };
 
 export const EVENT_TYPES = Object.keys(EVENT_TYPE_CAPABILITY);

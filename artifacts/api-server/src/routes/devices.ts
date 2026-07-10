@@ -41,15 +41,15 @@ function validateEventPayload(eventType: string, payload: unknown): string | nul
     if (p.category !== undefined && typeof p.category !== 'string') {
       return 'screen_time payload category must be a string';
     }
-  } else if (eventType === 'activity') {
+  } else if (eventType === 'activity' || eventType === 'education_activity') {
     if (typeof p.activityType !== 'string' || !p.activityType.trim()) {
-      return 'activity payload requires a non-empty string activityType';
+      return `${eventType} payload requires a non-empty string activityType`;
     }
     if (
       p.details !== undefined &&
       (typeof p.details !== 'object' || p.details === null || Array.isArray(p.details))
     ) {
-      return 'activity payload details must be an object';
+      return `${eventType} payload details must be an object`;
     }
   }
 
@@ -429,7 +429,10 @@ router.patch('/devices/:deviceId', async (req: AuthRequest, res, next) => {
 });
 
 // DELETE /api/devices/:deviceId
-router.delete('/devices/:deviceId', async (req: AuthRequest, res, next) => {
+// Parent-only: a child de-registering a monitored device would let them
+// evade oversight, unlike POST (self-registration) which is legitimately
+// something a child's own device does on first launch.
+router.delete('/devices/:deviceId', requireParent, async (req: AuthRequest, res, next) => {
   try {
     const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
     if (!device) {

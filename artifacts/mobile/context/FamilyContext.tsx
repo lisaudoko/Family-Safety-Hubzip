@@ -35,6 +35,7 @@ export interface FamilyProfile {
   familyCode: string;
   parents: Parent[];
   children: Child[];
+  siblings: Child[];
   createdAt: string;
 }
 
@@ -222,6 +223,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
             ...c,
             ageBand: c.ageBand as AgeBand,
           })),
+          siblings: (serverFamily.siblings ?? []).map((c) => ({
+            ...c,
+            ageBand: c.ageBand as AgeBand,
+          })),
         };
         setFamily(fam);
         await AsyncStorage.setItem(keys.family, JSON.stringify(fam));
@@ -349,6 +354,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
      familyCode: "",
       parents: [],
       children: [],
+      siblings: [],
       createdAt: new Date().toISOString(),
     }
     await saveFamily(f);
@@ -372,6 +378,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           familyCode: "",
           parents: [],
           children: [child],
+          siblings: [],
           createdAt: new Date().toISOString(),
         };
     await saveFamily(updated);
