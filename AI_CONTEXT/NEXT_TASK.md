@@ -38,6 +38,30 @@ Goal: complete the foundation for the parent/child safety ecosystem while mainta
 - [x] Parent creates child profile; child cannot self-register
 - [x] Child joins family; child authentication via family code + PIN
 - [x] Child permissions (limited to own devices/progress)
+
+### Child Family Experience (NEW)
+
+- [ ] Family tab role-aware rendering
+  - Parent accounts continue to see the parent Family management interface.
+  - Child accounts must never see the parent management interface.
+
+- [ ] Child Family view
+  - Display parent(s)/guardian(s).
+  - Display siblings (other child accounts in the same family).
+  - Exclude the currently logged-in child from the sibling list.
+  - Display appropriate empty states if there are no siblings.
+
+- [ ] Backend support
+  - Audit existing family APIs.
+  - Reuse existing family, child, and authentication systems.
+  - Extend existing endpoints only if required.
+  - Do not duplicate database tables or APIs.
+
+- [ ] Authorization review
+  - Ensure child accounts can only retrieve members of their own family.
+  - Prevent child accounts from accessing parent management data.
+  - Verify family ownership validation.
+
 - [ ] Child onboarding flow — review/polish end-to-end
 - [ ] Parent-child relationship validation — _gap: child CRUD routes lack family-ownership verification (security backlog)_
 

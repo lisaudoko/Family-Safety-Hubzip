@@ -24,12 +24,16 @@ export interface Child {
   familyId: string;
   createdAt: string;
 }
-
+export interface Parent {
+  id: string;
+  name: string;
+}
 export interface FamilyProfile {
   id: string;
   name: string;
   parentId: string;
   familyCode: string;
+  parents: Parent[];
   children: Child[];
   createdAt: string;
 }
@@ -213,7 +217,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       if (serverFamily) {
         const fam: FamilyProfile = {
           ...serverFamily,
-          children: serverFamily.children.map(c => ({
+          parents: serverFamily.parents ?? [],
+          children: serverFamily.children.map((c) => ({
             ...c,
             ageBand: c.ageBand as AgeBand,
           })),
@@ -341,10 +346,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       id: familyId,
       name,
       parentId,
-      familyCode: "",
+     familyCode: "",
+      parents: [],
       children: [],
       createdAt: new Date().toISOString(),
-    };
+    }
     await saveFamily(f);
   }, [user?.id]);
 
@@ -360,10 +366,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     const updated = fam
       ? { ...fam, children: [...fam.children, child] }
       : {
-          id: familyId,
+        id: familyId,
           name: "My Family",
           parentId: user?.id ?? "",
           familyCode: "",
+          parents: [],
           children: [child],
           createdAt: new Date().toISOString(),
         };

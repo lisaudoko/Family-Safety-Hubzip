@@ -115,3 +115,35 @@ Available skills should be applied based on task type:
 - Completed features → update-project-context skill
 
 Do not wait for the user to explicitly request a skill.
+
+
+## Additional Documentation
+
+Only read detailed documentation when required.
+Reference:
+
+- docs/API.md
+
+- docs/DATABASE.md
+
+- docs/ARCHITECTURE.md
+
+- docs/SECURITY.md
+
+- docs/DEVICE_ARCHITECTURE.md
+
+- docs/ACCOUNT_MODEL.md
+
+- docs/EDUCATION_SYSTEM.md
+
+- docs/POLICY_ENGINE.md
+
+- docs/CODING_STANDARDS.md
+
+- docs/ROADMAP.md
+
+- docs/STATUS.md
+
+- docs/AI_AGENT_WORKFLOW.md
+
+- docs/AI_MODEL_POLICY.md

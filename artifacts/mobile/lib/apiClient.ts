@@ -161,6 +161,10 @@ export async function apiCreatePortalSession(): Promise<{ url: string }> {
 }
 
 // ── Family ──────────────────────────────────────────────────────────────────
+export interface ApiParent {
+  id: string;
+  name: string;
+}
 
 export interface ApiFamily {
   id: string;
@@ -168,6 +172,7 @@ export interface ApiFamily {
   parentId: string;
   familyCode: string;
   createdAt: string;
+  parents: ApiParent[];
   children: ApiChild[];
 }
 
