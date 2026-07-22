@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { randomInt, randomUUID } from 'crypto';
 import { db } from '@workspace/db';
 import {
   childrenTable,
+  emailVerificationCodesTable,
   familiesTable,
   passwordResetCodesTable,
   profilesTable,
@@ -11,10 +13,21 @@ import {
 } from '@workspace/db';
 import { and, desc, eq, gt, isNull } from 'drizzle-orm';
 import { requireAuth, type AuthRequest } from '../lib/auth-middleware.js';
-import { sendPasswordResetEmail } from '../lib/email.js';
+import { sendPasswordResetEmail, sendEmailVerificationEmail } from '../lib/email.js';
 import { logAuditEvent } from '../lib/audit.js';
 
 const router = Router();
+
+// Sends a real outbound email, so this needs a tighter cap than the global
+// API limiter to prevent inbox spam / SMTP quota exhaustion (same pattern as
+// notifications.ts digestSendLimiter).
+const verificationResendLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: AuthRequest) => req.userId ?? ipKeyGenerator(req.ip ?? 'unknown'),
+});
 
 const SESSION_TTL_DAYS = 90;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,8 +47,26 @@ function safeUser(p: typeof profilesTable.$inferSelect) {
     isPremium: p.subscription_tier === 'premium',
     familyId: p.family_id ?? '',
     hasCompletedOnboarding: p.has_completed_onboarding,
+    emailVerified: p.email_verified,
     createdAt: p.created_at.toISOString(),
   };
+}
+
+const VERIFICATION_CODE_TTL_MINUTES = 15;
+
+async function issueEmailVerificationCode(userId: string, email: string): Promise<void> {
+  const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+  const codeHash = await bcrypt.hash(code, 12);
+  const expiresAt = new Date(Date.now() + VERIFICATION_CODE_TTL_MINUTES * 60_000);
+
+  await db.insert(emailVerificationCodesTable).values({
+    id: randomUUID(),
+    user_id: userId,
+    code_hash: codeHash,
+    expires_at: expiresAt,
+  });
+
+  await sendEmailVerificationEmail(email, code);
 }
 
 // POST /api/auth/register
@@ -99,6 +130,21 @@ router.post('/auth/register', async (req, res, next) => {
       action: 'register',
       ip: req.ip,
     });
+
+    // Best-effort - do not fail registration if the verification email
+    // can't be sent (e.g. SMTP misconfiguration). Verification is
+    // informational only today; see docs/ACCOUNT_MODEL.md.
+    try {
+      await issueEmailVerificationCode(id, normalizedEmail);
+      void logAuditEvent({
+        actorId: id,
+        actorRole: 'parent',
+        action: 'email_verification_requested',
+        ip: req.ip,
+      });
+    } catch (emailErr) {
+      req.log.error({ err: emailErr }, 'failed to send registration verification email');
+    }
 
     res.status(201).json({ token, user: safeUser(profile) });
   } catch (err) {
@@ -406,6 +452,126 @@ router.post('/auth/reset-password', async (req, res, next) => {
     next(err);
   }
 });
+
+// POST /api/auth/verify-email
+router.post('/auth/verify-email', requireAuth as any, async (req: AuthRequest, res, next) => {
+  try {
+    const { code } = req.body as { code?: string };
+    if (!code?.trim()) {
+      res.status(400).json({ error: 'code required' });
+      return;
+    }
+
+    const [profile] = await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.id, req.userId!))
+      .limit(1);
+
+    if (!profile) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    if (profile.email_verified) {
+      res.json({ ok: true, user: safeUser(profile) });
+      return;
+    }
+
+    const candidates = await db
+      .select()
+      .from(emailVerificationCodesTable)
+      .where(
+        and(
+          eq(emailVerificationCodesTable.user_id, profile.id),
+          isNull(emailVerificationCodesTable.used_at),
+          gt(emailVerificationCodesTable.expires_at, new Date()),
+        ),
+      )
+      .orderBy(desc(emailVerificationCodesTable.created_at));
+
+    let matched: (typeof candidates)[number] | undefined;
+    for (const candidate of candidates) {
+      if (await bcrypt.compare(code, candidate.code_hash)) {
+        matched = candidate;
+        break;
+      }
+    }
+
+    if (!matched) {
+      res.status(400).json({ error: 'Invalid or expired code' });
+      return;
+    }
+
+    const [updated] = await db
+      .update(profilesTable)
+      .set({ email_verified: true, updated_at: new Date() })
+      .where(eq(profilesTable.id, profile.id))
+      .returning();
+
+    await db
+      .update(emailVerificationCodesTable)
+      .set({ used_at: new Date() })
+      .where(eq(emailVerificationCodesTable.id, matched.id));
+
+    void logAuditEvent({
+      actorId: profile.id,
+      actorRole: req.actorRole!,
+      familyId: req.familyId,
+      action: 'email_verification_completed',
+      ip: req.ip,
+    });
+
+    res.json({ ok: true, user: safeUser(updated) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/resend-verification
+router.post(
+  '/auth/resend-verification',
+  requireAuth as any,
+  verificationResendLimiter,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const [profile] = await db
+        .select()
+        .from(profilesTable)
+        .where(eq(profilesTable.id, req.userId!))
+        .limit(1);
+
+      if (!profile) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      if (profile.email_verified) {
+        res.json({ ok: true });
+        return;
+      }
+
+      if (!profile.email) {
+        res.status(400).json({ error: 'No email on file for this account' });
+        return;
+      }
+
+      await issueEmailVerificationCode(profile.id, profile.email);
+
+      void logAuditEvent({
+        actorId: profile.id,
+        actorRole: req.actorRole!,
+        familyId: req.familyId,
+        action: 'email_verification_requested',
+        ip: req.ip,
+      });
+
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // POST /api/auth/logout
 router.post('/auth/logout', requireAuth as any, async (req: AuthRequest, res, next) => {

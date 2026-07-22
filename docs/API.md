@@ -18,6 +18,8 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 | POST | `/api/auth/child-login` | none | Body: child ID + PIN. Returns child-scoped session. |
 | POST | `/api/auth/forgot-password` | none | Sends reset code email. |
 | POST | `/api/auth/reset-password` | none | Body: code + new password. |
+| POST | `/api/auth/verify-email` | auth | Body: `{ code }`. Confirms the 6-digit code sent on registration; sets `profiles.email_verified = true`. Informational only — not required for any other endpoint (2026-07-11). |
+| POST | `/api/auth/resend-verification` | auth | Rate-limited 5/hr per user. Reissues a verification code (no-op if already verified). |
 | POST | `/api/auth/logout` | auth | Deletes current session row. |
 | GET | `/api/auth/me` | auth | Current profile. |
 | PATCH | `/api/auth/me` | auth | Update name/email. |
@@ -65,6 +67,8 @@ Express 5 server (`artifacts/api-server`). All paths prefixed `/api`. An OpenAPI
 | POST | `/api/devices/:deviceId/heartbeat` | auth | Update last-synced status. |
 | POST | `/api/devices/:deviceId/events` | auth | Report events (screen time, activity); payload checked by `validateEventPayload`. |
 | GET/PATCH | `/api/devices/:deviceId/restrictions` | parent | Screen time limit, bedtime window, block Safari/new-app-installs/explicit-content, require-parent-approval. Storage only — not enforced on-device yet, see `docs/POLICY_ENGINE.md`. Cross-family access returns 404. |
+| GET/POST | `/api/devices/:deviceId/app-rules` | parent | "General Apps" per-installed-app rules: blocked, bedtime-locked, daily limit minutes, restricted-start/end (HH:MM inaccessible window). POST upserts by `appBundleId`. Storage only — not enforced on-device yet, see `docs/POLICY_ENGINE.md`. Cross-family access returns 404. |
+| PATCH/DELETE | `/api/devices/:deviceId/app-rules/:ruleId` | parent | Update or remove a single app rule. Cross-family/foreign ruleId returns 404. |
 
 ## AI Coach
 | Method | Path | Auth | Notes |

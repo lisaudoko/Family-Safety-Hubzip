@@ -14,7 +14,35 @@ import {
   updateDeviceRestrictions,
   type DeviceRestrictionsInput,
 } from "../services/deviceRestrictions.js";
-import { deviceRestrictionsTable } from "@workspace/db";
+import {
+  listDeviceAppRules,
+  createDeviceAppRule,
+  updateDeviceAppRule,
+  deleteDeviceAppRule,
+} from "../services/deviceAppRules.js";
+import { deviceRestrictionsTable, deviceAppRulesTable } from "@workspace/db";
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+function isValidTimeOrNull(v: unknown) {
+  return v === null || v === undefined || (typeof v === "string" && TIME_PATTERN.test(v));
+}
+
+function safeDeviceAppRule(r: typeof deviceAppRulesTable.$inferSelect) {
+  return {
+    id: r.id,
+    restrictionId: r.restriction_id,
+    appBundleId: r.app_bundle_id,
+    appName: r.app_name,
+    blocked: r.blocked,
+    bedtimeLocked: r.bedtime_locked,
+    dailyLimitMinutes: r.daily_limit_minutes,
+    restrictedStart: r.restricted_start,
+    restrictedEnd: r.restricted_end,
+    createdAt: r.created_at.toISOString(),
+    updatedAt: r.updated_at.toISOString(),
+  };
+}
 
 const router = Router();
 router.use(requireAuth as any);
@@ -745,6 +773,219 @@ router.patch(
       }
 
       res.json({ restrictions: safeDeviceRestrictions(restrictions) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── Device App Rules (per-installed-app accessible/inaccessible windows) ────
+//
+// Scope note: this is policy storage only ("General Apps" — parent sets
+// per-app time windows and block/limit intent). There is no on-device
+// enforcement agent; nothing here actually restricts app access on the
+// device. See docs/POLICY_ENGINE.md.
+
+// GET /api/devices/:deviceId/app-rules
+router.get(
+  "/devices/:deviceId/app-rules",
+  requireParent as any,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+      if (!device || !authorized) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      const rules = await listDeviceAppRules(String(req.params.deviceId), req.familyId!);
+      if (rules === null) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      res.json({ rules: rules.map(safeDeviceAppRule) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/devices/:deviceId/app-rules
+router.post(
+  "/devices/:deviceId/app-rules",
+  requireParent as any,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+      if (!device || !authorized) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      if (!isPlainObject(req.body)) {
+        res.status(400).json({ error: "request body must be a JSON object" });
+        return;
+      }
+      const b = req.body;
+
+      const appBundleId = typeof b.appBundleId === "string" ? b.appBundleId.trim() : "";
+      const appName = typeof b.appName === "string" ? b.appName.trim() : "";
+      if (!appBundleId || !appName) {
+        res.status(400).json({ error: "appBundleId and appName are required" });
+        return;
+      }
+      if (b.blocked !== undefined && typeof b.blocked !== "boolean") {
+        res.status(400).json({ error: "blocked must be a boolean" });
+        return;
+      }
+      if (b.bedtimeLocked !== undefined && typeof b.bedtimeLocked !== "boolean") {
+        res.status(400).json({ error: "bedtimeLocked must be a boolean" });
+        return;
+      }
+      if (
+        b.dailyLimitMinutes !== undefined &&
+        b.dailyLimitMinutes !== null &&
+        (typeof b.dailyLimitMinutes !== "number" || b.dailyLimitMinutes <= 0)
+      ) {
+        res.status(400).json({ error: "dailyLimitMinutes must be a positive number or null" });
+        return;
+      }
+      if (!isValidTimeOrNull(b.restrictedStart) || !isValidTimeOrNull(b.restrictedEnd)) {
+        res.status(400).json({ error: "restrictedStart/restrictedEnd must be HH:MM or null" });
+        return;
+      }
+
+      const rule = await createDeviceAppRule(String(req.params.deviceId), req.familyId!, {
+        app_bundle_id: appBundleId,
+        app_name: appName,
+        blocked: b.blocked as boolean | undefined,
+        bedtime_locked: b.bedtimeLocked as boolean | undefined,
+        daily_limit_minutes: b.dailyLimitMinutes as number | null | undefined,
+        restricted_start: b.restrictedStart as string | null | undefined,
+        restricted_end: b.restrictedEnd as string | null | undefined,
+      });
+
+      if (!rule) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      res.status(201).json({ rule: safeDeviceAppRule(rule) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PATCH /api/devices/:deviceId/app-rules/:ruleId
+router.patch(
+  "/devices/:deviceId/app-rules/:ruleId",
+  requireParent as any,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+      if (!device || !authorized) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      if (!isPlainObject(req.body)) {
+        res.status(400).json({ error: "request body must be a JSON object" });
+        return;
+      }
+      const b = req.body;
+      const patch: Parameters<typeof updateDeviceAppRule>[3] = {};
+
+      if ("appName" in b) {
+        if (typeof b.appName !== "string" || !b.appName.trim()) {
+          res.status(400).json({ error: "appName must be a non-empty string" });
+          return;
+        }
+        patch.app_name = b.appName.trim();
+      }
+      if ("blocked" in b) {
+        if (typeof b.blocked !== "boolean") {
+          res.status(400).json({ error: "blocked must be a boolean" });
+          return;
+        }
+        patch.blocked = b.blocked;
+      }
+      if ("bedtimeLocked" in b) {
+        if (typeof b.bedtimeLocked !== "boolean") {
+          res.status(400).json({ error: "bedtimeLocked must be a boolean" });
+          return;
+        }
+        patch.bedtime_locked = b.bedtimeLocked;
+      }
+      if ("dailyLimitMinutes" in b) {
+        if (
+          b.dailyLimitMinutes !== null &&
+          (typeof b.dailyLimitMinutes !== "number" || b.dailyLimitMinutes <= 0)
+        ) {
+          res.status(400).json({ error: "dailyLimitMinutes must be a positive number or null" });
+          return;
+        }
+        patch.daily_limit_minutes = b.dailyLimitMinutes as number | null;
+      }
+      if ("restrictedStart" in b) {
+        if (!isValidTimeOrNull(b.restrictedStart)) {
+          res.status(400).json({ error: "restrictedStart must be HH:MM or null" });
+          return;
+        }
+        patch.restricted_start = b.restrictedStart as string | null;
+      }
+      if ("restrictedEnd" in b) {
+        if (!isValidTimeOrNull(b.restrictedEnd)) {
+          res.status(400).json({ error: "restrictedEnd must be HH:MM or null" });
+          return;
+        }
+        patch.restricted_end = b.restrictedEnd as string | null;
+      }
+
+      const rule = await updateDeviceAppRule(
+        String(req.params.deviceId),
+        req.familyId!,
+        String(req.params.ruleId),
+        patch
+      );
+
+      if (!rule) {
+        res.status(404).json({ error: "app rule not found" });
+        return;
+      }
+
+      res.json({ rule: safeDeviceAppRule(rule) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// DELETE /api/devices/:deviceId/app-rules/:ruleId
+router.delete(
+  "/devices/:deviceId/app-rules/:ruleId",
+  requireParent as any,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+      if (!device || !authorized) {
+        res.status(404).json({ error: "device not found" });
+        return;
+      }
+
+      const ok = await deleteDeviceAppRule(
+        String(req.params.deviceId),
+        req.familyId!,
+        String(req.params.ruleId)
+      );
+
+      if (!ok) {
+        res.status(404).json({ error: "app rule not found" });
+        return;
+      }
+
+      res.json({ ok: true });
     } catch (err) {
       next(err);
     }

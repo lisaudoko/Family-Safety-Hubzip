@@ -4,7 +4,7 @@
 
 ### Parent accounts
 - Created via `POST /api/auth/register` with full name, email, password (bcrypt-hashed).
-- Stored in `profiles` with `role = 'parent'`, `subscription_tier` (`'free'` default), `has_completed_onboarding`, `email_verified`.
+- Stored in `profiles` with `role = 'parent'`, `subscription_tier` (`'free'` default), `has_completed_onboarding`, `email_verified`. Registration auto-sends a 6-digit verification code (`email_verification_codes`, 15-min TTL); `POST /api/auth/verify-email`/`POST /api/auth/resend-verification` (2026-07-11) confirm/reissue it. Verification is informational only — not required for any action today.
 - Each parent owns exactly one family (`families.parent_id`). The family has a unique `family_code`.
 - Parents manage: family name, children, agreement, devices/analytics, billing.
 

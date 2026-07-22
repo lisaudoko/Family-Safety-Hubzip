@@ -400,7 +400,18 @@ export const deviceAppRulesTable = pgTable(
 
     daily_limit_minutes: integer("daily_limit_minutes"),
 
+    // Time-of-day window (HH:MM, 24h) during which this app is INACCESSIBLE,
+    // e.g. "21:00"-"07:00". Mirrors the bedtime_start/bedtime_end pattern
+    // used by device_restrictions/child_policies/family_policies. Only
+    // enforced when restricted_start and restricted_end are both set.
+    restricted_start: text("restricted_start"),
+    restricted_end: text("restricted_end"),
+
     created_at: timestamp("created_at")
+      .notNull()
+      .defaultNow(),
+
+    updated_at: timestamp("updated_at")
       .notNull()
       .defaultNow(),
   },
@@ -408,11 +419,21 @@ export const deviceAppRulesTable = pgTable(
     index("device_app_rules_restriction_idx").on(
       t.restriction_id
     ),
+    unique("device_app_rules_restriction_bundle_unique").on(
+      t.restriction_id,
+      t.app_bundle_id
+    ),
   ],
 );
 
 export type DeviceAppRule =
   typeof deviceAppRulesTable.$inferSelect;
+export const insertDeviceAppRuleSchema = createInsertSchema(deviceAppRulesTable).omit({
+  id: true,
+  restriction_id: true,
+  created_at: true,
+  updated_at: true,
+});
 
 // ── family_policies ────────────────────────────────────────────────────────────
 export const familyPoliciesTable = pgTable(

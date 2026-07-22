@@ -10,13 +10,17 @@ import { useCurriculum } from "@/hooks/useCurriculum";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { AppText as Text } from "@/components/AppText";
-import { apiCreateSupportCode } from "@/lib/apiClient";
+import { apiCreateSupportCode, apiResendVerification, apiVerifyEmail } from "@/lib/apiClient";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, updateProfile, canReturnToParent, returnToParent, manageSubscription } = useAuth();
+  const { user, logout, updateProfile, canReturnToParent, returnToParent, manageSubscription, refreshUser } = useAuth();
   const [managingSubscription, setManagingSubscription] = useState(false);
+  const [verifyModal, setVerifyModal] = useState(false);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const haptics = useHaptics();
   const { progress } = useFamily();
   const { badges: BADGES } = useCurriculum();
@@ -57,6 +61,39 @@ export default function ProfileScreen() {
   const performLogout = async () => {
     await logout();
     router.replace("/welcome");
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      setResendLoading(true);
+      await apiResendVerification();
+      Alert.alert("Code Sent", "Check your email for a new verification code.");
+      setVerifyModal(true);
+    } catch (err: any) {
+      Alert.alert("Couldn't Send Code", err?.message || "Please try again in a bit.");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verifyCode.trim()) {
+      Alert.alert("Missing Code", "Please enter the verification code from your email.");
+      return;
+    }
+    try {
+      setVerifyLoading(true);
+      await apiVerifyEmail(verifyCode.trim());
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
+      setVerifyModal(false);
+      setVerifyCode("");
+      await refreshUser();
+      Alert.alert("Email Verified", "Your email address has been verified.");
+    } catch (err: any) {
+      Alert.alert("Verification Failed", err?.message || "Invalid or expired code. Please try again.");
+    } finally {
+      setVerifyLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -159,6 +196,23 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
+
+      {user?.role === "parent" && user?.emailVerified === false && (
+        <View style={[styles.upgradeCard, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginTop: 12 }]}>
+          <View style={styles.upgradeContent}>
+            <Feather name="mail" size={20} color={colors.primary} />
+            <View>
+              <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Verify your email</Text>
+              <Text style={[styles.upgradeDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                We sent you a code when you signed up.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={() => setVerifyModal(true)} activeOpacity={0.8}>
+            <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>Enter code</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.statsRow}>
         {[
@@ -358,6 +412,49 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
           >
             <Text style={[styles.modalSaveBtnText, { fontFamily: "Inter_700Bold" }]}>Save Changes</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal visible={verifyModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setVerifyModal(false)}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background, paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setVerifyModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Verify Email</Text>
+            <View style={{ width: 22 }} />
+          </View>
+          <View style={styles.modalBody}>
+            <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Verification Code</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+              value={verifyCode}
+              onChangeText={setVerifyCode}
+              placeholder="6-digit code"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoFocus
+            />
+            <Text style={[styles.modalNote, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              Check your email ({user?.email}) for the code we sent when you signed up.
+            </Text>
+            <TouchableOpacity onPress={handleResendVerification} disabled={resendLoading} style={{ paddingTop: 4 }}>
+              <Text style={{ color: colors.primary, fontFamily: "Inter_500Medium", fontSize: 14 }}>
+                {resendLoading ? "Sending…" : "Resend code"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.modalSaveBtn, { backgroundColor: verifyLoading ? colors.muted : colors.primary }]}
+            disabled={verifyLoading || !verifyCode.trim()}
+            onPress={handleVerifyEmail}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.modalSaveBtnText, { fontFamily: "Inter_700Bold" }]}>
+              {verifyLoading ? "Verifying…" : "Verify Email"}
+            </Text>
           </TouchableOpacity>
         </View>
       </Modal>

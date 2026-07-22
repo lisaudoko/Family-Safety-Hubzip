@@ -79,6 +79,7 @@ export interface ApiUser {
   isPremium: boolean;
   familyId: string;
   hasCompletedOnboarding: boolean;
+  emailVerified?: boolean;
   createdAt: string;
 }
 
@@ -119,6 +120,17 @@ export async function apiResetPassword(
     method: "POST",
     body: JSON.stringify({ email, code, newPassword }),
   });
+}
+
+export async function apiVerifyEmail(code: string): Promise<{ user: ApiUser }> {
+  return apiFetch("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function apiResendVerification(): Promise<void> {
+  await apiFetch("/auth/resend-verification", { method: "POST" });
 }
 
 export async function apiLogout(): Promise<void> {
@@ -591,6 +603,7 @@ export interface ApiDashboardChild {
     windowDays: number;
     screenTimeSeconds: number;
     activityCount: number;
+    educationCount: number;
   };
 }
 
@@ -609,10 +622,31 @@ export interface ApiChildDashboard {
     windowDays: number;
     byType: { type: string; count: number }[];
   };
+  education: {
+    windowDays: number;
+    byType: { type: string; count: number }[];
+  };
 }
 
 export async function apiGetChildDashboard(childId: string): Promise<ApiChildDashboard> {
   return apiFetch(`/dashboard/children/${childId}`);
+}
+
+export interface ApiChildProgress {
+  child: { id: string; name: string; ageBand: string };
+  progress: {
+    completedLessonsCount: number;
+    completedQuizzesCount: number;
+    courseProgress: { courseId: string; title: string; percent: number }[];
+    earnedBadges: { id: string; title: string; iconName: string; color: string }[];
+    assessmentScore: number | null;
+    assessmentCompletedAt: string | null;
+    updatedAt: string;
+  } | null;
+}
+
+export async function apiGetChildProgress(childId: string): Promise<ApiChildProgress> {
+  return apiFetch(`/dashboard/children/${childId}/progress`);
 }
 
 // ── Analytics ───────────────────────────────────────────────────────────────
@@ -747,4 +781,74 @@ export async function apiUpdateChildPolicy(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+// ── Device App Rules (General Apps — per-app accessible/inaccessible windows) ─
+//
+// Storage/definition only: nothing here enforces app access on-device. There
+// is no on-device enforcement agent, and no OS API in this Expo-managed app
+// to enumerate installed apps, so the parent adds each app manually by
+// bundle id + display name.
+
+export interface ApiDeviceAppRule {
+  id: string;
+  restrictionId: string;
+  appBundleId: string;
+  appName: string;
+  blocked: boolean;
+  bedtimeLocked: boolean;
+  dailyLimitMinutes: number | null;
+  restrictedStart: string | null;
+  restrictedEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiListDeviceAppRules(
+  deviceId: string
+): Promise<{ rules: ApiDeviceAppRule[] }> {
+  return apiFetch(`/devices/${deviceId}/app-rules`);
+}
+
+export async function apiCreateDeviceAppRule(
+  deviceId: string,
+  data: {
+    appBundleId: string;
+    appName: string;
+    blocked?: boolean;
+    bedtimeLocked?: boolean;
+    dailyLimitMinutes?: number | null;
+    restrictedStart?: string | null;
+    restrictedEnd?: string | null;
+  }
+): Promise<{ rule: ApiDeviceAppRule }> {
+  return apiFetch(`/devices/${deviceId}/app-rules`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiUpdateDeviceAppRule(
+  deviceId: string,
+  ruleId: string,
+  data: Partial<{
+    appName: string;
+    blocked: boolean;
+    bedtimeLocked: boolean;
+    dailyLimitMinutes: number | null;
+    restrictedStart: string | null;
+    restrictedEnd: string | null;
+  }>
+): Promise<{ rule: ApiDeviceAppRule }> {
+  return apiFetch(`/devices/${deviceId}/app-rules/${ruleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiDeleteDeviceAppRule(
+  deviceId: string,
+  ruleId: string
+): Promise<void> {
+  await apiFetch(`/devices/${deviceId}/app-rules/${ruleId}`, { method: "DELETE" });
 }

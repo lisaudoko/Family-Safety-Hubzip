@@ -7,7 +7,14 @@
 - `device_restrictions` (one row per device) lets a parent set: `screen_time_limit_minutes`, `bedtime_start`/`bedtime_end`, `block_new_app_installs`, `block_safari`, `block_explicit_content`, `require_parent_approval`.
 - API: `GET|PATCH /api/devices/:deviceId/restrictions` (parent-only, family-ownership checked, 404 on cross-family access). Mobile UI: Profile screen's "Device Restrictions" section (`app/(tabs)/profile.tsx`), via `useDeviceRestrictions` hook.
 - **This is storage only — parent intent, not enforcement.** Nothing on the device reads or applies these values yet; there is no OS-level screen-time API, Safari blocker, or content filter wired up. It's the same "policy definition, no enforcement surface" pattern as the family agreement below, scoped to a single device instead of the whole family.
-- Two related tables were added to the schema alongside this but are **not wired to anything**: `device_app_rules` (per-app block/bedtime-lock/daily-limit rows) and `blocked_app_events` (a log of blocked launch attempts). Building enforcement would mean: (1) a device-side agent that reads `device_restrictions`/`device_app_rules` and actually applies them (OS-specific, out of scope for this cross-platform backend), and (2) `blocked_app_events` ingestion via the existing `device_events`-style pipeline.
+- `blocked_app_events` (a log of blocked launch attempts) was added to the schema alongside this but is **not wired to anything**. Ingestion would use the existing `device_events`-style pipeline.
+
+## Device App Rules / "General Apps" (2026-07-11 — third policy-engine building block)
+
+- `device_app_rules` (one row per app per device restriction) lets a parent set, per installed app: `blocked`, `bedtime_locked`, `daily_limit_minutes`, and `restricted_start`/`restricted_end` (HH:MM 24h — the time window during which the app is intended to be inaccessible, mirroring the `bedtime_start`/`bedtime_end` pattern used elsewhere).
+- API: `GET|POST /api/devices/:deviceId/app-rules`, `PATCH|DELETE /api/devices/:deviceId/app-rules/:ruleId` (parent-only, family/device-ownership checked, 404 on cross-family access; `POST` upserts by `app_bundle_id` so re-adding the same app updates it in place). See `services/deviceAppRules.ts`.
+- Mobile UI: a "General Apps" section on each device's expanded card (`app/child/[id].tsx`, `hooks/useDeviceAppRules.ts`) where a parent manually adds an app by name + bundle/package id (there is no OS API in this Expo-managed React Native app to enumerate installed apps without a custom native module) and edits its blocked/limit/window fields.
+- **This is storage only — parent intent, not enforcement.** Same pattern as `device_restrictions`. Building enforcement would still mean a device-side agent (OS-specific, out of scope for this cross-platform backend) that reads `device_app_rules` and actually restricts app launches during the configured windows, plus `blocked_app_events` ingestion when it fires.
 
 ## Family & Child Restrictions (2026-07-10 — second policy-engine building block)
 

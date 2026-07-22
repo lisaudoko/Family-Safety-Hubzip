@@ -133,4 +133,60 @@ describe('auth flows', () => {
     const newLogin = await api.post('/api/auth/login').send({ email, password: 'newpassword123' });
     expect(newLogin.status).toBe(200);
   });
+
+  it('completes the email verification / resend round trip', async () => {
+    const email = uniqueEmail('verify');
+
+    // Registration itself sends the first verification code; capture it the
+    // same way the forgot-password test captures the reset code (SMTP isn't
+    // configured in tests, so src/lib/email.ts falls back to console.log).
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const reg = await api
+      .post('/api/auth/register')
+      .send({ name: 'Verify Test', email, password: 'password123' });
+    cleanup.trackUser(reg.body.user.id);
+    expect(reg.body.user.emailVerified).toBe(false);
+
+    let logged = logSpy.mock.calls.map((args) => args.join(' ')).join('\n');
+    let match = logged.match(/verification code for .*: (\d{6})/);
+    expect(match).toBeTruthy();
+    const token = reg.body.token;
+
+    const badCode = await api
+      .post('/api/auth/verify-email')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code: '000000' });
+    expect(badCode.status).toBe(400);
+
+    logSpy.mockClear();
+    const resend = await api
+      .post('/api/auth/resend-verification')
+      .set('Authorization', `Bearer ${token}`);
+    expect(resend.status).toBe(200);
+
+    logged = logSpy.mock.calls.map((args) => args.join(' ')).join('\n');
+    logSpy.mockRestore();
+    match = logged.match(/verification code for .*: (\d{6})/);
+    expect(match).toBeTruthy();
+    const code = match![1];
+
+    const goodVerify = await api
+      .post('/api/auth/verify-email')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code });
+    expect(goodVerify.status).toBe(200);
+    expect(goodVerify.body.user.emailVerified).toBe(true);
+
+    // Already-verified accounts short-circuit both endpoints.
+    const reVerify = await api
+      .post('/api/auth/verify-email')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code });
+    expect(reVerify.status).toBe(200);
+
+    const reResend = await api
+      .post('/api/auth/resend-verification')
+      .set('Authorization', `Bearer ${token}`);
+    expect(reResend.status).toBe(200);
+  });
 });

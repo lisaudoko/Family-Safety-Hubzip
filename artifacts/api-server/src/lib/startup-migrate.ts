@@ -111,9 +111,25 @@ export async function runStartupMigrations(): Promise<void> {
          blocked BOOLEAN NOT NULL DEFAULT FALSE,
          bedtime_locked BOOLEAN NOT NULL DEFAULT FALSE,
          daily_limit_minutes INTEGER,
-         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+         restricted_start TEXT,
+         restricted_end TEXT,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
        )`,
       `CREATE INDEX IF NOT EXISTS device_app_rules_restriction_idx ON device_app_rules(restriction_id)`,
+      `ALTER TABLE device_app_rules ADD COLUMN IF NOT EXISTS restricted_start TEXT`,
+      `ALTER TABLE device_app_rules ADD COLUMN IF NOT EXISTS restricted_end TEXT`,
+      `ALTER TABLE device_app_rules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()`,
+      // Drizzle's schema push can create the backing unique index for this
+      // constraint under a name Postgres treats as a distinct relation, so
+      // ADD CONSTRAINT can fail with duplicate_table (42P07) rather than
+      // duplicate_object (42710) depending on which path created it first —
+      // catch both so this stays idempotent across dev (push) and prod
+      // (startup migration) paths.
+      `DO $$ BEGIN
+         ALTER TABLE device_app_rules ADD CONSTRAINT device_app_rules_restriction_bundle_unique UNIQUE (restriction_id, app_bundle_id);
+       EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
+       END $$`,
 
       // ── blocked_app_events ─────────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS blocked_app_events (

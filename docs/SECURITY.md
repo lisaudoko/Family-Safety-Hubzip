@@ -7,7 +7,7 @@ Documentation of the security implementation **as it exists today**.
 - The system uses **opaque UUID session tokens**, not JWTs. Tokens are created at login/registration, stored in the `sessions` table with a **90-day expiry**, and sent as `Authorization: Bearer <token>`.
 - `requireAuth` middleware (`src/lib/auth-middleware.ts`) validates the token by joining `sessions` with `profiles` and attaching `userId`, `role`, `familyId` to the request, and rejects (401) if `sessions.expires_at` is in the past — the expired row is also deleted (best-effort) so it doesn't linger. Enforced as of 2026-07-10; previously the 90-day TTL was written at issuance but never checked at request time.
 - Passwords hashed with **bcryptjs** before storage. Child logins use PINs (short numeric secrets) scoped to a family code.
-- Password reset uses **hashed one-time codes** (`code_hash`) with `expires_at` and `used_at` tracking. Email verification: the `email_verification_codes` table and `profiles.email_verified` column exist, but **no verification endpoints/flow are implemented**.
+- Password reset uses **hashed one-time codes** (`code_hash`) with `expires_at` and `used_at` tracking. Email verification (implemented 2026-07-11) uses the same hashed-code pattern via `email_verification_codes`: `POST /api/auth/verify-email` (`{ code }`) sets `profiles.email_verified = true`; `POST /api/auth/resend-verification` (rate-limited 5/hr per user) reissues a code. Registration auto-sends the first code. **Verification is informational only — no route or feature checks `email_verified` today**; this is a deliberate least-disruptive default in the absence of an explicit gating decision (see Known Gaps).
 - Logout deletes the session row. Sessions cascade-delete when a profile is deleted.
 - Mobile stores the token in AsyncStorage (`@dv_auth_token`); offline account passwords are stashed in **SecureStore** during pending sync.
 
@@ -67,7 +67,7 @@ Added 2026-07-10. New `audit_log` table (`family_id`/`actor_id` indexed) records
 
 ## Known Gaps (documented, not fixed here)
 
-- Email verification flow not implemented (table exists, endpoints do not).
+- Email verification exists (implemented 2026-07-11) but is not enforced — unverified accounts have unrestricted access to every feature. Open question: should any endpoints (e.g. billing, coach) gate on `profiles.email_verified`? No decision made yet.
 - CORS is open to all origins.
 - Child PINs are low-entropy by design (UX tradeoff); brute-force protection relies on the global rate limit only.
 - GET reads during an admin support session are not individually audit-logged, only mutations.

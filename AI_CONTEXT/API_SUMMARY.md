@@ -13,6 +13,8 @@ Express 5, base path `/api`. Auth: `Bearer <uuid-token>` (sessions table; `expir
 - `GET /api/auth/family-by-code/:code` — none — child names for a family code
 - `POST /api/auth/child-login` — none — child ID + PIN
 - `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` — none
+- `POST /api/auth/verify-email` — auth — body `{ code }`; marks `email_verified = true` (2026-07-11, informational only, not access-gated)
+- `POST /api/auth/resend-verification` — auth — rate-limited 5/hr, reissues a verification code
 - `POST /api/auth/logout` — auth — delete session
 - `GET /api/auth/me`, `PATCH /api/auth/me` — auth
 - `PATCH /api/auth/onboarding` — auth — mark onboarding complete

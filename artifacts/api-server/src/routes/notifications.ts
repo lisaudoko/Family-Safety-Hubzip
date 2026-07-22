@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { db } from '@workspace/db';
 import { profilesTable, devicesTable, childrenTable } from '@workspace/db';
 import { eq } from 'drizzle-orm';
@@ -17,7 +17,7 @@ const digestSendLimiter = rateLimit({
   limit: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: AuthRequest) => req.userId ?? req.ip ?? 'unknown',
+  keyGenerator: (req: AuthRequest) => req.userId ?? ipKeyGenerator(req.ip ?? 'unknown'),
 });
 
 const DIGEST_RANGE_DAYS = 7;

@@ -14,6 +14,8 @@ export type AuditAction =
   | 'logout'
   | 'password_reset_requested'
   | 'password_reset_completed'
+  | 'email_verification_requested'
+  | 'email_verification_completed'
   | 'family_created'
   | 'child_added'
   | 'child_updated'

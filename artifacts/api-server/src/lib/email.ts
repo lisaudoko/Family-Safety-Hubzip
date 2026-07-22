@@ -31,6 +31,20 @@ export async function sendPasswordResetEmail(to: string, code: string): Promise<
   });
 }
 
+export async function sendEmailVerificationEmail(to: string, code: string): Promise<void> {
+  const transport = getTransporter();
+  if (!transport) {
+    console.log(`[email] SMTP not configured — verification code for ${to}: ${code}`);
+    return;
+  }
+  await transport.sendMail({
+    from: process.env.SMTP_FROM ?? "no-reply@digitalvillage.app",
+    to,
+    subject: "Verify your Digital Village email",
+    text: `Your email verification code is ${code}. It expires in 15 minutes. If you didn't request this, you can ignore this email.`,
+  });
+}
+
 export interface WeeklyDigestDeviceHealth {
   name: string;
   platform: string;

@@ -11,6 +11,7 @@ import { useHaptics } from "@/lib/haptics";
 import { useChildPolicy } from "@/hooks/useChildPolicy";
 import { useChildDevices } from "@/hooks/useChildDevices";
 import { useDeviceRestrictions } from "@/hooks/useDeviceRestrictions";
+import { useDeviceAppRules } from "@/hooks/useDeviceAppRules";
 import type { ApiDevice } from "@/lib/apiClient";
 
 type RestrictionToggles = {
@@ -23,67 +24,192 @@ type RestrictionToggles = {
   requireParentApproval: boolean;
 };
 
+const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 function RestrictionRows({
   values,
   onChange,
   colors,
 }: {
   values: Partial<RestrictionToggles> | null | undefined;
-  onChange: (data: Partial<RestrictionToggles>) => void;
+  onChange: (data: Partial<RestrictionToggles>) => void | Promise<void>;
   colors: ReturnType<typeof useColors>;
 }) {
-  const rows: {
+  const [editingLimit, setEditingLimit] = useState(false);
+  const [limitInput, setLimitInput] = useState(values?.screenTimeLimitMinutes ? String(values.screenTimeLimitMinutes) : "");
+  const [editingBedtime, setEditingBedtime] = useState(false);
+  const [bedtimeStartInput, setBedtimeStartInput] = useState(values?.bedtimeStart ?? "21:00");
+  const [bedtimeEndInput, setBedtimeEndInput] = useState(values?.bedtimeEnd ?? "07:00");
+
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  const applyChange = async (key: string, data: Partial<RestrictionToggles>) => {
+    setSavingKey(key);
+    try {
+      await onChange(data);
+    } catch (e: any) {
+      console.error(`[restrictions] failed to save ${key}:`, e?.message || e);
+      Alert.alert("Error", "Failed to save this restriction. Please check your connection and try again.");
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const saveLimit = () => {
+    const trimmed = limitInput.trim();
+    if (!trimmed) {
+      applyChange("screenTimeLimitMinutes", { screenTimeLimitMinutes: null });
+      setEditingLimit(false);
+      return;
+    }
+    const minutes = parseInt(trimmed, 10);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      Alert.alert("Invalid Limit", "Enter a whole number of minutes greater than 0.");
+      return;
+    }
+    applyChange("screenTimeLimitMinutes", { screenTimeLimitMinutes: minutes });
+    setEditingLimit(false);
+  };
+
+  const saveBedtime = () => {
+    if (!TIME_PATTERN.test(bedtimeStartInput) || !TIME_PATTERN.test(bedtimeEndInput)) {
+      Alert.alert("Invalid Time", "Enter times in 24-hour HH:MM format, e.g. 21:00.");
+      return;
+    }
+    applyChange("bedtime", { bedtimeStart: bedtimeStartInput, bedtimeEnd: bedtimeEndInput });
+    setEditingBedtime(false);
+  };
+
+  const toggleRows: {
+    key: string;
     icon: React.ComponentProps<typeof Feather>["name"];
     label: string;
     value: string;
     onPress: () => void;
   }[] = [
     {
-      icon: "clock",
-      label: "Screen Time Limit",
-      value: values?.screenTimeLimitMinutes ? `${values.screenTimeLimitMinutes} min` : "Off",
-      onPress: () => onChange({ screenTimeLimitMinutes: values?.screenTimeLimitMinutes === 120 ? null : 120 }),
-    },
-    {
+      key: "blockSafari",
       icon: "globe",
-      label: "Block Safari",
+      label: "Block Search Engines",
       value: values?.blockSafari ? "On" : "Off",
-      onPress: () => onChange({ blockSafari: !values?.blockSafari }),
+      onPress: () => applyChange("blockSafari", { blockSafari: !values?.blockSafari }),
     },
     {
+      key: "requireParentApproval",
       icon: "check-circle",
       label: "Require Parent Approval",
       value: values?.requireParentApproval ? "On" : "Off",
-      onPress: () => onChange({ requireParentApproval: !values?.requireParentApproval }),
+      onPress: () => applyChange("requireParentApproval", { requireParentApproval: !values?.requireParentApproval }),
     },
     {
+      key: "blockNewAppInstalls",
       icon: "download",
       label: "Block New App Installs",
       value: values?.blockNewAppInstalls ? "On" : "Off",
-      onPress: () => onChange({ blockNewAppInstalls: !values?.blockNewAppInstalls }),
+      onPress: () => applyChange("blockNewAppInstalls", { blockNewAppInstalls: !values?.blockNewAppInstalls }),
     },
     {
+      key: "blockExplicitContent",
       icon: "alert-triangle",
       label: "Block Explicit Content",
       value: values?.blockExplicitContent ? "On" : "Off",
-      onPress: () => onChange({ blockExplicitContent: !values?.blockExplicitContent }),
-    },
-    {
-      icon: "moon",
-      label: "Bedtime",
-      value: values?.bedtimeStart && values?.bedtimeEnd ? `${values.bedtimeStart}–${values.bedtimeEnd}` : "Off",
-      onPress: () =>
-        onChange({
-          bedtimeStart: values?.bedtimeStart ? null : "21:00",
-          bedtimeEnd: values?.bedtimeStart ? null : "07:00",
-        }),
+      onPress: () => applyChange("blockExplicitContent", { blockExplicitContent: !values?.blockExplicitContent }),
     },
   ];
 
   return (
     <View style={[styles.settingsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {rows.map((row) => (
-        <TouchableOpacity key={row.label} style={styles.settingsRow} onPress={row.onPress}>
+      <TouchableOpacity
+        style={styles.settingsRow}
+        onPress={() => {
+          setLimitInput(values?.screenTimeLimitMinutes ? String(values.screenTimeLimitMinutes) : "");
+          setEditingLimit((v) => !v);
+        }}
+      >
+        <Feather name="clock" size={18} color={colors.foreground} />
+        <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+          Screen Time Limit
+        </Text>
+        <Text style={{ color: colors.mutedForeground }}>
+          {values?.screenTimeLimitMinutes ? `${values.screenTimeLimitMinutes} min` : "Off"}
+        </Text>
+      </TouchableOpacity>
+      {editingLimit && (
+        <View style={styles.editableRow}>
+          <TextInput
+            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
+            value={limitInput}
+            onChangeText={setLimitInput}
+            keyboardType="number-pad"
+            placeholder="Minutes per day (blank = off)"
+            placeholderTextColor={colors.mutedForeground}
+          />
+          <TouchableOpacity
+            style={[styles.editableSaveBtn, { backgroundColor: colors.primary, opacity: savingKey === "screenTimeLimitMinutes" ? 0.5 : 1 }]}
+            onPress={saveLimit}
+            disabled={savingKey === "screenTimeLimitMinutes"}
+          >
+            <Feather name="check" size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={styles.settingsRow}
+        onPress={() => {
+          setBedtimeStartInput(values?.bedtimeStart ?? "21:00");
+          setBedtimeEndInput(values?.bedtimeEnd ?? "07:00");
+          setEditingBedtime((v) => !v);
+        }}
+      >
+        <Feather name="moon" size={18} color={colors.foreground} />
+        <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+          Bedtime
+        </Text>
+        <Text style={{ color: colors.mutedForeground }}>
+          {values?.bedtimeStart && values?.bedtimeEnd ? `${values.bedtimeStart}–${values.bedtimeEnd}` : "Off"}
+        </Text>
+      </TouchableOpacity>
+      {editingBedtime && (
+        <View style={styles.editableRow}>
+          <TextInput
+            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
+            value={bedtimeStartInput}
+            onChangeText={setBedtimeStartInput}
+            placeholder="Start (HH:MM)"
+            placeholderTextColor={colors.mutedForeground}
+          />
+          <TextInput
+            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
+            value={bedtimeEndInput}
+            onChangeText={setBedtimeEndInput}
+            placeholder="End (HH:MM)"
+            placeholderTextColor={colors.mutedForeground}
+          />
+          <TouchableOpacity
+            style={[styles.editableSaveBtn, { backgroundColor: colors.primary, opacity: savingKey === "bedtime" ? 0.5 : 1 }]}
+            onPress={saveBedtime}
+            disabled={savingKey === "bedtime"}
+          >
+            <Feather name="check" size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.editableSaveBtn, { backgroundColor: colors.border, opacity: savingKey === "bedtime" ? 0.5 : 1 }]}
+            onPress={() => applyChange("bedtime", { bedtimeStart: null, bedtimeEnd: null })}
+            disabled={savingKey === "bedtime"}
+          >
+            <Feather name="x" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {toggleRows.map((row) => (
+        <TouchableOpacity
+          key={row.key}
+          style={[styles.settingsRow, { opacity: savingKey === row.key ? 0.5 : 1 }]}
+          onPress={row.onPress}
+          disabled={savingKey === row.key}
+        >
           <Feather name={row.icon} size={18} color={colors.foreground} />
           <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
             {row.label}
@@ -91,6 +217,108 @@ function RestrictionRows({
           <Text style={{ color: colors.mutedForeground }}>{row.value}</Text>
         </TouchableOpacity>
       ))}
+    </View>
+  );
+}
+
+function GeneralAppsSection({ deviceId, colors }: { deviceId: string; colors: ReturnType<typeof useColors> }) {
+  const { rules, addRule, updateRule, removeRule } = useDeviceAppRules(deviceId);
+  const [adding, setAdding] = useState(false);
+  const [bundleId, setBundleId] = useState("");
+  const [appName, setAppName] = useState("");
+
+  const handleAdd = async () => {
+    if (!bundleId.trim() || !appName.trim()) {
+      Alert.alert("Missing Info", "Enter both an app name and its bundle/package id.");
+      return;
+    }
+    try {
+      await addRule({ appBundleId: bundleId.trim(), appName: appName.trim() });
+      setBundleId("");
+      setAppName("");
+      setAdding(false);
+    } catch {
+      Alert.alert("Error", "Failed to add app. Please try again.");
+    }
+  };
+
+  return (
+    <View style={styles.generalApps}>
+      <Text style={[styles.generalAppsTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
+        General Apps
+      </Text>
+      <Text style={[styles.restrictionsHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+        Set accessible/inaccessible time windows per installed app. Storage only — nothing here blocks the app on
+        the device yet; there is no on-device enforcement agent.
+      </Text>
+      {rules.map((rule) => (
+        <View key={rule.id} style={[styles.appRuleCard, { borderColor: colors.border }]}>
+          <View style={styles.appRuleHeader}>
+            <Text style={[styles.appRuleName, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
+              {rule.appName}
+            </Text>
+            <TouchableOpacity onPress={() => removeRule(rule.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="trash-2" size={14} color={colors.destructive} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.appRuleRow}
+            onPress={() => updateRule(rule.id, { blocked: !rule.blocked })}
+          >
+            <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>Blocked</Text>
+            <Text style={{ color: colors.foreground, fontSize: 13 }}>{rule.blocked ? "On" : "Off"}</Text>
+          </TouchableOpacity>
+          <View style={styles.appRuleRow}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>Inaccessible window</Text>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <TextInput
+                style={[styles.appRuleTimeInput, { color: colors.foreground, borderColor: colors.primary }]}
+                value={rule.restrictedStart ?? ""}
+                placeholder="HH:MM"
+                placeholderTextColor={colors.mutedForeground}
+                onChangeText={(v) => updateRule(rule.id, { restrictedStart: v || null })}
+              />
+              <TextInput
+                style={[styles.appRuleTimeInput, { color: colors.foreground, borderColor: colors.primary }]}
+                value={rule.restrictedEnd ?? ""}
+                placeholder="HH:MM"
+                placeholderTextColor={colors.mutedForeground}
+                onChangeText={(v) => updateRule(rule.id, { restrictedEnd: v || null })}
+              />
+            </View>
+          </View>
+        </View>
+      ))}
+      {adding ? (
+        <View style={styles.editableRow}>
+          <TextInput
+            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
+            value={appName}
+            onChangeText={setAppName}
+            placeholder="App name (e.g. YouTube)"
+            placeholderTextColor={colors.mutedForeground}
+          />
+          <TextInput
+            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
+            value={bundleId}
+            onChangeText={setBundleId}
+            placeholder="Bundle/package id"
+            placeholderTextColor={colors.mutedForeground}
+            autoCapitalize="none"
+          />
+          <TouchableOpacity style={[styles.editableSaveBtn, { backgroundColor: colors.primary }]} onPress={handleAdd}>
+            <Feather name="check" size={16} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.addAppBtn, { borderColor: colors.border }]}
+          onPress={() => setAdding(true)}
+        >
+          <Feather name="plus" size={14} color={colors.primary} />
+          <Text style={{ color: colors.primary, fontSize: 13, fontFamily: "Inter_500Medium" }}>Add App</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -148,6 +376,7 @@ function DeviceRow({ device, colors, onRename }: {
       {expanded && (
         <View style={styles.deviceRestrictions}>
           <RestrictionRows values={restrictions} onChange={updateRestrictions} colors={colors} />
+          <GeneralAppsSection deviceId={device.id} colors={colors} />
         </View>
       )}
     </View>
@@ -406,6 +635,9 @@ const styles = StyleSheet.create({
   settingsList: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
   settingsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, gap: 12 },
   settingsLabel: { flex: 1, fontSize: 15 },
+  editableRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, gap: 8 },
+  editableInput: { flex: 1, fontSize: 14, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  editableSaveBtn: { width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   deviceCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
   deviceHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
   deviceName: { flex: 1, fontSize: 15 },
@@ -413,6 +645,14 @@ const styles = StyleSheet.create({
   staleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   staleText: { fontSize: 11 },
   deviceRestrictions: { paddingHorizontal: 8, paddingBottom: 8 },
+  generalApps: { marginTop: 12, gap: 8 },
+  generalAppsTitle: { fontSize: 14 },
+  appRuleCard: { borderWidth: 1, borderRadius: 12, padding: 10, gap: 6 },
+  appRuleHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  appRuleName: { fontSize: 14 },
+  appRuleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  appRuleTimeInput: { width: 64, fontSize: 12, borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4, textAlign: "center" },
+  addAppBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderStyle: "dashed", borderRadius: 10, paddingVertical: 10 },
   infoSection: { gap: 10 },
   sectionTitle: { fontSize: 18 },
   guidanceCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },

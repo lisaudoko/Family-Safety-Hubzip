@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '@workspace/db';
-import { childrenTable, devicesTable, deviceEventsTable } from '@workspace/db';
+import { childrenTable, devicesTable, deviceEventsTable, userProgressTable, badgesTable, coursesTable } from '@workspace/db';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { getScreenTimeSummary, getActivitySummary, getEducationActivitySummary } from '../lib/analytics.js';
@@ -221,6 +221,86 @@ router.get('/dashboard/children/:childId', async (req: AuthRequest, res, next) =
       education: {
         windowDays: ROLLUP_DAYS,
         byType: Array.from(educationByType.entries()).map(([type, count]) => ({ type, count })),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/dashboard/children/:childId/progress
+// Surfaces the child's curriculum progress (course completion %, earned
+// badges, assessment score) to the parent. `user_progress` is keyed by
+// user_id with no family scoping of its own, so ownership is enforced here
+// the same way as the other child-scoped dashboard route: look the child up
+// in the caller's family first, 404 if it's not there or doesn't exist.
+router.get('/dashboard/children/:childId/progress', async (req: AuthRequest, res, next) => {
+  try {
+    const childId = String(req.params.childId);
+
+    if (!req.familyId) {
+      res.status(404).json({ error: 'Child not found' });
+      return;
+    }
+
+    const [child] = await db
+      .select()
+      .from(childrenTable)
+      .where(and(eq(childrenTable.id, childId), eq(childrenTable.family_id, req.familyId)))
+      .limit(1);
+
+    if (!child) {
+      res.status(404).json({ error: 'Child not found' });
+      return;
+    }
+
+    const [progress] = await db
+      .select()
+      .from(userProgressTable)
+      .where(eq(userProgressTable.user_id, childId))
+      .limit(1);
+
+    if (!progress) {
+      res.json({
+        child: { id: child.id, name: child.name, ageBand: child.age_band },
+        progress: null,
+      });
+      return;
+    }
+
+    const courseIds = Object.keys(progress.course_progress);
+    const badgeIds = progress.earned_badges;
+
+    const [courseRows, badgeRows] = await Promise.all([
+      courseIds.length > 0
+        ? db.select().from(coursesTable).where(inArray(coursesTable.id, courseIds))
+        : Promise.resolve([]),
+      badgeIds.length > 0
+        ? db.select().from(badgesTable).where(inArray(badgesTable.id, badgeIds))
+        : Promise.resolve([]),
+    ]);
+
+    const courseTitleById = new Map(courseRows.map((c) => [c.id, c.title]));
+
+    res.json({
+      child: { id: child.id, name: child.name, ageBand: child.age_band },
+      progress: {
+        completedLessonsCount: progress.completed_lessons.length,
+        completedQuizzesCount: progress.completed_quizzes.length,
+        courseProgress: courseIds.map((id) => ({
+          courseId: id,
+          title: courseTitleById.get(id) ?? 'Unknown course',
+          percent: progress.course_progress[id],
+        })),
+        earnedBadges: badgeRows.map((b) => ({
+          id: b.id,
+          title: b.title,
+          iconName: b.icon_name,
+          color: b.color,
+        })),
+        assessmentScore: progress.assessment_score,
+        assessmentCompletedAt: progress.assessment_completed_at,
+        updatedAt: progress.updated_at.toISOString(),
       },
     });
   } catch (err) {

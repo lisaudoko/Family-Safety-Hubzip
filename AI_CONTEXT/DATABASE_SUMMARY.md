@@ -15,7 +15,7 @@ PostgreSQL (Replit) + Drizzle ORM. Schema: `lib/db/src/schema/index.ts`. 25 tabl
 | `devices` | Registered devices. `platform`, `capabilities` jsonb[], `permission_status` jsonb, `status` | `owner_id` → profiles, → families |
 | `device_events` | Activity logs. `event_type`, `payload` jsonb, `occurred_at` | → devices, profiles, families |
 | `device_restrictions` | Parent-set restrictions per device (2026-07-10, Priority 5 groundwork): `screen_time_limit_minutes`, `bedtime_start`/`end`, `block_new_app_installs`/`block_safari`/`block_explicit_content`, `require_parent_approval`. `device_id` unique | → devices, families |
-| `device_app_rules` | Per-app rule rows (block/bedtime-lock/daily-limit) scoped to a `device_restrictions` row. Schema exists but **unused** — no route/service reads or writes it yet | → device_restrictions |
+| `device_app_rules` | Per-app rule rows scoped to a `device_restrictions` row: `blocked`, `bedtime_locked`, `daily_limit_minutes`, plus `restricted_start`/`restricted_end` (HH:MM inaccessible window, added 2026-07-11). Wired 2026-07-11 via `GET/POST /api/devices/:deviceId/app-rules`, `PATCH/DELETE .../:ruleId` (`services/deviceAppRules.ts`) + mobile "General Apps" UI. Unique on `(restriction_id, app_bundle_id)`. Storage only — no on-device enforcement | → device_restrictions |
 | `blocked_app_events` | Log of blocked app-launch attempts (`app_name`, `blocked_reason`). Schema exists but **unused** — no ingestion path yet | → devices, families |
 | `user_progress` | `user_id` PK. `completed_lessons` text[], `course_progress` jsonb, `weekly_tip_index` | → profiles |
 | `family_agreements` | `family_id` unique. `rules` jsonb[], `custom_rules` text[] | → families |
