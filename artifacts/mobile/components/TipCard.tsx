@@ -1,9 +1,12 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+
 import { WeeklyTip } from "@/data/seed";
+import { Body, Card, H3, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 import { useColors } from "@/hooks/useColors";
-import { AppText as Text } from "@/components/AppText";
 
 interface Props {
   tip: WeeklyTip;
@@ -11,34 +14,39 @@ interface Props {
 
 export default function TipCard({ tip }: Props) {
   const colors = useColors();
+  const fg = colors.primaryForeground;
   return (
-    <View style={[styles.card, { backgroundColor: colors.primary }]}>
-      <View style={styles.header}>
-        <View style={styles.labelRow}>
-          <Feather name="zap" size={12} color="rgba(255,255,255,0.8)" />
-          <Text style={[styles.label, { fontFamily: "Inter_600SemiBold" }]}>WEEKLY TIP</Text>
-        </View>
+    <Card variant="elevated" style={[styles.card, { backgroundColor: colors.primary }]}>
+      <View style={styles.labelRow}>
+        <Feather name="zap" size={12} color={fg + "D9"} />
+        <Small style={[styles.label, { color: fg + "D9" }]}>WEEKLY TIP</Small>
       </View>
-      <View style={[styles.iconWrap, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
-        <Feather name={tip.iconName as never} size={20} color="#FFFFFF" />
+      <View style={[styles.iconWrap, { backgroundColor: fg + "26" }]}>
+        <Feather name={tip.iconName as never} size={20} color={fg} />
       </View>
-      <Text style={[styles.title, { fontFamily: "Inter_700Bold" }]}>{tip.title}</Text>
-      <Text style={[styles.content, { fontFamily: "Inter_400Regular" }]}>{tip.content}</Text>
-      <View style={[styles.categoryPill, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-        <Text style={[styles.category, { fontFamily: "Inter_500Medium" }]}>{tip.category}</Text>
+      <H3 style={[styles.title, { color: fg }]}>{tip.title}</H3>
+      <Body style={[styles.content, { color: fg + "E6" }]}>{tip.content}</Body>
+      <View style={[styles.categoryPill, { backgroundColor: fg + "33" }]}>
+        <Small style={[styles.category, { color: fg + "F2" }]}>{tip.category}</Small>
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 20, padding: 20, gap: 10 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  card: { gap: spacing.sm },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  label: { color: "rgba(255,255,255,0.8)", fontSize: 11, letterSpacing: 1 },
-  iconWrap: { alignSelf: "flex-start", width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  title: { color: "#FFFFFF", fontSize: 18, lineHeight: 24 },
-  content: { color: "rgba(255,255,255,0.85)", fontSize: 14, lineHeight: 21 },
-  categoryPill: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  category: { color: "rgba(255,255,255,0.9)", fontSize: 12 },
+  label: { letterSpacing: 1 },
+  iconWrap: {
+    alignSelf: "flex-start",
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {},
+  content: {},
+  categoryPill: { alignSelf: "flex-start", paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
+  category: {},
 });

@@ -1,14 +1,18 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { useColors } from "@/hooks/useColors";
 import { AGE_BANDS, AgeBand } from "@/data/seed";
 import { useHaptics } from "@/lib/haptics";
+import { Body, Button, Card, Caption, H1, Label, SegmentedControl, TextField } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 
 type Step = "family" | "children" | "done";
 
@@ -78,11 +82,12 @@ export default function OnboardingScreen() {
     done: { num: 2, total: 2 },
   };
   const stepInfo = STEP_INFO[step];
+  const ageBandSegments = AGE_BANDS.map(b => ({ key: b, label: b }));
 
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 32 }]}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxxl }]}
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.progressWrap}>
@@ -97,25 +102,21 @@ export default function OnboardingScreen() {
             <View style={[styles.stepIcon, { backgroundColor: colors.secondary }]}>
               <Feather name="home" size={28} color={colors.primary} />
             </View>
-            <Text style={[styles.stepTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Name your family</Text>
-            <Text style={[styles.stepDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>This appears in your Family Dashboard and Technology Agreement.</Text>
+            <H1 style={styles.stepTitle}>Name your family</H1>
+            <Body color={colors.mutedForeground} style={styles.stepDesc}>
+              This appears in your Family Dashboard and Technology Agreement.
+            </Body>
           </View>
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Family Name</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-              placeholder={user?.name ? `The ${user.name} Family` : "The Smith Family"}
-              placeholderTextColor={colors.mutedForeground}
-              value={familyName}
-              onChangeText={setFamilyName}
-              autoCapitalize="words"
-            />
-          </View>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: colors.primary }]} onPress={handleFamilyNext} activeOpacity={0.85}>
-            <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>Continue</Text>
-          </TouchableOpacity>
+          <TextField
+            label="Family Name"
+            placeholder={user?.name ? `The ${user.name} Family` : "The Smith Family"}
+            value={familyName}
+            onChangeText={setFamilyName}
+            autoCapitalize="words"
+          />
+          <Button title="Continue" onPress={handleFamilyNext} />
           <TouchableOpacity onPress={async () => { await completeOnboarding(); router.replace("/(tabs)"); }}>
-            <Text style={[styles.skipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Skip for now</Text>
+            <Body color={colors.mutedForeground} style={styles.skipText}>Skip for now</Body>
           </TouchableOpacity>
         </>
       )}
@@ -126,56 +127,44 @@ export default function OnboardingScreen() {
             <View style={[styles.stepIcon, { backgroundColor: colors.secondary }]}>
               <Feather name="users" size={28} color={colors.primary} />
             </View>
-            <Text style={[styles.stepTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Add your children</Text>
-            <Text style={[styles.stepDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>We use age bands to personalize content — no exact ages stored.</Text>
+            <H1 style={styles.stepTitle}>Add your children</H1>
+            <Body color={colors.mutedForeground} style={styles.stepDesc}>
+              We use age bands to personalize content — no exact ages stored.
+            </Body>
           </View>
 
           <View style={styles.childrenList}>
             {children.map((child, index) => (
-              <View key={index} style={[styles.childRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Card key={index} variant="outline" style={styles.childRow}>
                 <View style={styles.childInputWrap}>
-                  <TextInput
-                    style={[styles.childInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+                  <TextField
+                    containerStyle={{ flex: 1 }}
                     placeholder={`Child ${index + 1} name`}
-                    placeholderTextColor={colors.mutedForeground}
                     value={child.name}
                     onChangeText={(t) => handleChildName(index, t)}
                     autoCapitalize="words"
                   />
                   {children.length > 1 && (
-                    <TouchableOpacity onPress={() => handleRemoveChild(index)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <TouchableOpacity onPress={() => handleRemoveChild(index)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.removeBtn}>
                       <Feather name="x" size={16} color={colors.mutedForeground} />
                     </TouchableOpacity>
                   )}
                 </View>
-                <View style={styles.ageBandRow}>
-                  {AGE_BANDS.map(band => (
-                    <TouchableOpacity
-                      key={band}
-                      style={[styles.bandBtn, { borderColor: child.ageBand === band ? colors.primary : colors.border, backgroundColor: child.ageBand === band ? colors.secondary : "transparent" }]}
-                      onPress={() => handleAgeBand(index, band)}
-                    >
-                      <Text style={[styles.bandText, { color: child.ageBand === band ? colors.primary : colors.mutedForeground, fontFamily: child.ageBand === band ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                        {band}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+                <Label>Age band</Label>
+                <SegmentedControl segments={ageBandSegments} value={child.ageBand} onChange={(v) => handleAgeBand(index, v)} />
+              </Card>
             ))}
             {children.length < 6 && (
               <TouchableOpacity style={[styles.addChildBtn, { borderColor: colors.border }]} onPress={handleAddChild}>
                 <Feather name="plus" size={16} color={colors.primary} />
-                <Text style={[styles.addChildText, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>Add another child</Text>
+                <Caption color={colors.primary}>Add another child</Caption>
               </TouchableOpacity>
             )}
           </View>
 
-          <TouchableOpacity style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]} onPress={handleFinish} disabled={loading} activeOpacity={0.85}>
-            <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>{loading ? "Setting up..." : "Let's Go!"}</Text>
-          </TouchableOpacity>
+          <Button title={loading ? "Setting up..." : "Let's Go!"} onPress={handleFinish} loading={loading} disabled={loading} />
           <TouchableOpacity onPress={() => setStep("family")}>
-            <Text style={[styles.skipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Back</Text>
+            <Body color={colors.mutedForeground} style={styles.skipText}>Back</Body>
           </TouchableOpacity>
         </>
       )}
@@ -185,8 +174,10 @@ export default function OnboardingScreen() {
           <View style={[styles.doneIcon, { backgroundColor: colors.success + "22" }]}>
             <Feather name="check-circle" size={48} color={colors.success} />
           </View>
-          <Text style={[styles.doneTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>You're all set!</Text>
-          <Text style={[styles.doneDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Welcome to Digital Village. Your family's safety journey starts now.</Text>
+          <H1 style={styles.doneTitle}>You&apos;re all set!</H1>
+          <Body color={colors.mutedForeground} style={styles.doneDesc}>
+            Welcome to Digital Village. Your family&apos;s safety journey starts now.
+          </Body>
         </View>
       )}
     </ScrollView>
@@ -194,30 +185,30 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, paddingHorizontal: 24, gap: 24 },
-  progressWrap: { flexDirection: "row", gap: 6, height: 4 },
+  container: { flexGrow: 1, paddingHorizontal: spacing.xxl, gap: spacing.xxl },
+  progressWrap: { flexDirection: "row", gap: spacing.xs, height: 4 },
   progressDot: { height: 4, borderRadius: 2 },
-  stepHeader: { gap: 10, alignItems: "center", paddingVertical: 8 },
-  stepIcon: { width: 64, height: 64, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  stepTitle: { fontSize: 24, textAlign: "center" },
-  stepDesc: { fontSize: 14, textAlign: "center", lineHeight: 21 },
-  field: { gap: 8 },
-  label: { fontSize: 14 },
-  input: { borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15 },
-  btn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  btnText: { color: "#FFFFFF", fontSize: 16 },
-  skipText: { textAlign: "center", fontSize: 14, paddingVertical: 4 },
-  childrenList: { gap: 10 },
-  childRow: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 12 },
-  childInputWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
-  childInput: { flex: 1, fontSize: 15 },
-  ageBandRow: { flexDirection: "row", gap: 8 },
-  bandBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, alignItems: "center" },
-  bandText: { fontSize: 13 },
-  addChildBtn: { borderRadius: 14, borderWidth: 1, borderStyle: "dashed", paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
-  addChildText: { fontSize: 14 },
-  doneWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingVertical: 40 },
-  doneIcon: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center" },
-  doneTitle: { fontSize: 28 },
-  doneDesc: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+  stepHeader: { gap: spacing.sm, alignItems: "center", paddingVertical: spacing.sm },
+  stepIcon: { width: 64, height: 64, borderRadius: radius.xl, alignItems: "center", justifyContent: "center" },
+  stepTitle: { textAlign: "center" },
+  stepDesc: { textAlign: "center" },
+  skipText: { textAlign: "center", paddingVertical: spacing.xs },
+  childrenList: { gap: spacing.md },
+  childRow: { gap: spacing.md },
+  childInputWrap: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm },
+  removeBtn: { paddingBottom: spacing.md },
+  addChildBtn: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  doneWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.lg, paddingVertical: spacing.xxxl + 8 },
+  doneIcon: { width: 100, height: 100, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  doneTitle: { textAlign: "center" },
+  doneDesc: { textAlign: "center" },
 });

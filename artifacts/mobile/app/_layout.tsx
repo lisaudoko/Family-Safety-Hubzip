@@ -93,6 +93,7 @@ function RootLayoutNav() {
         <Stack.Screen name="quiz/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="child/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="agreement" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="family-policy" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="subscription" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="challenge/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="coach/history" options={{ headerShown: false, animation: slide }} />

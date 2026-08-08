@@ -8,30 +8,17 @@ import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { TABS } from "@/constants/tabs";
 
 function NativeTabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="learn">
-        <Icon sf={{ default: "book", selected: "book.fill" }} />
-        <Label>Learn</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="coach">
-        <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
-        <Label>Coach</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="family">
-        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>Family</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
+      {TABS.map(tab => (
+        <NativeTabs.Trigger key={tab.key} name={tab.key}>
+          <Icon sf={{ default: tab.sfSymbol as never, selected: tab.sfSymbolSelected as never }} />
+          <Label>{tab.label}</Label>
+        </NativeTabs.Trigger>
+      ))}
     </NativeTabs>
   );
 }
@@ -74,66 +61,21 @@ function ClassicTabLayout() {
           ) : null,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={24} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="learn"
-        options={{
-          title: "Learn",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="book" tintColor={color} size={24} />
-            ) : (
-              <Feather name="book-open" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: "Coach",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="bubble.left.and.bubble.right" tintColor={color} size={24} />
-            ) : (
-              <Feather name="message-circle" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{
-          title: "Family",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.2" tintColor={color} size={24} />
-            ) : (
-              <Feather name="users" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.crop.circle" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
-        }}
-      />
+      {TABS.map(tab => (
+        <Tabs.Screen
+          key={tab.key}
+          name={tab.key}
+          options={{
+            title: tab.label,
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name={tab.sfSymbol as never} tintColor={color} size={24} />
+              ) : (
+                <Feather name={tab.featherIcon} size={22} color={color} />
+              ),
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

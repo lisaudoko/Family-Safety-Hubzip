@@ -1,8 +1,9 @@
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef } from "react";
-import { Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+
 import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { CHALLENGES } from "@/data/seed";
@@ -10,10 +11,11 @@ import ChallengeCard from "@/components/ChallengeCard";
 import CourseCard from "@/components/CourseCard";
 import LessonCard from "@/components/LessonCard";
 import TipCard from "@/components/TipCard";
-import { SectionHeader } from "@/components/UI";
+import { Avatar, Body, Card, H1, SectionHeader, Small } from "@/components/primitives";
 import { useColors } from "@/hooks/useColors";
 import { useCurriculum } from "@/hooks/useCurriculum";
 import { useWeeklyTips } from "@/hooks/useWeeklyTips";
+import { spacing } from "@/constants/spacing";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -55,43 +57,43 @@ export default function DashboardScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const stats: { label: string; value: number; icon: React.ComponentProps<typeof Feather>["name"]; color: string }[] = [
+    { label: "Courses", value: completedCount, icon: "book-open", color: colors.primary },
+    { label: "Lessons", value: totalLessons, icon: "check-circle", color: colors.success },
+    { label: "Badges", value: earnedBadges, icon: "award", color: colors.accent },
+  ];
+
   return (
     <ScrollView
       ref={scrollRef}
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad + 100 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + spacing.lg, paddingBottom: bottomPad + 100 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       <View style={styles.header}>
         <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Good morning,</Text>
-          <Text style={[styles.name, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{user?.name ?? "Parent"}</Text>
-          {family && <Text style={[styles.familyName, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>{family.name}</Text>}
+          <Small color={colors.mutedForeground}>Good morning,</Small>
+          <H1 style={{ marginTop: 2 }}>{user?.name ?? "Parent"}</H1>
+          {family && <Body color={colors.primary} style={{ marginTop: 2 }}>{family.name}</Body>}
         </View>
-        <TouchableOpacity style={[styles.avatarBtn, { backgroundColor: colors.secondary }]} onPress={() => router.push("/(tabs)/profile")}>
-          <Text style={[styles.avatarLetter, { color: colors.primary, fontFamily: "Inter_700Bold" }]}>{user?.name?.[0]?.toUpperCase() ?? "P"}</Text>
-        </TouchableOpacity>
+        <Avatar initial={user?.name?.[0] ?? "P"} onPress={() => router.push("/(tabs)/profile")} />
       </View>
 
       <View style={styles.statsRow}>
-        {[
-          { label: "Courses", value: completedCount, icon: "book-open" as const, color: colors.primary },
-          { label: "Lessons", value: totalLessons, icon: "check-circle" as const, color: colors.success },
-          { label: "Badges", value: earnedBadges, icon: "award" as const, color: colors.accent },
-        ].map(stat => (
-          <View key={stat.label} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {stats.map(stat => (
+          <Card key={stat.label} variant="outline" style={styles.statCard}>
             <Feather name={stat.icon} size={18} color={stat.color} />
-            <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{stat.value}</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{stat.label}</Text>
-          </View>
+            <H1 style={styles.statValue}>{stat.value}</H1>
+            <Small color={colors.mutedForeground}>{stat.label}</Small>
+          </Card>
         ))}
       </View>
 
       <TipCard tip={tip} />
 
       {activeChallenges.length > 0 && (
-        <View>
+        <View style={styles.section}>
           <SectionHeader title="Active Challenges" action="See all" onAction={() => router.push("/(tabs)/learn")} />
           {activeChallenges.slice(0, 2).map(challenge => (
             <ChallengeCard
@@ -105,7 +107,7 @@ export default function DashboardScreen() {
       )}
 
       {recentCourses.length > 0 && (
-        <View>
+        <View style={styles.section}>
           <SectionHeader title="Continue Learning" action="View all" onAction={() => router.push("/(tabs)/learn")} />
           {recentCourses.map(course => (
             <CourseCard
@@ -120,7 +122,7 @@ export default function DashboardScreen() {
       )}
 
       {recentCourses.length === 0 && activeChallenges.length === 0 && (
-        <View>
+        <View style={styles.section}>
           <SectionHeader title="Start Your Journey" action="Browse all" onAction={() => router.push("/(tabs)/learn")} />
           {startingLessons.map(({ course, lesson }) => (
             <LessonCard
@@ -134,7 +136,7 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      <View>
+      <View style={styles.section}>
         <SectionHeader title="Family Challenges" action="View all" onAction={() => router.push("/(tabs)/learn")} />
         {CHALLENGES.filter(c => !c.isPremium && !progress.completedChallenges.includes(c.id) && !progress.activeChallenges.includes(c.id)).slice(0, 2).map(challenge => (
           <ChallengeCard
@@ -150,15 +152,10 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 24 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  greeting: { fontSize: 14 },
-  name: { fontSize: 26 },
-  familyName: { fontSize: 14, marginTop: 2 },
-  avatarBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  avatarLetter: { fontSize: 18 },
-  statsRow: { flexDirection: "row", gap: 10 },
-  statCard: { flex: 1, borderRadius: 14, borderWidth: 1, alignItems: "center", paddingVertical: 14, gap: 4 },
-  statValue: { fontSize: 22 },
-  statLabel: { fontSize: 11 },
+  statsRow: { flexDirection: "row", gap: spacing.md },
+  statCard: { flex: 1, alignItems: "center", gap: spacing.xs },
+  statValue: { marginTop: 0 },
+  section: { gap: spacing.md },
 });

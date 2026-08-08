@@ -1,17 +1,27 @@
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useFamily } from "@/context/FamilyContext";
 import { CHALLENGES } from "@/data/seed";
 import { useCurriculum } from "@/hooks/useCurriculum";
 import ChallengeCard from "@/components/ChallengeCard";
 import CourseCard from "@/components/CourseCard";
 import { AssessmentsPanel } from "@/components/AssessmentsPanel";
-import { EmptyState, SectionHeader } from "@/components/UI";
+import { EmptyState, H1, SectionHeader, SegmentedControl, Small } from "@/components/primitives";
 import { useColors } from "@/hooks/useColors";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { fontFamily } from "@/constants/typography";
 
-const TABS = ["Courses", "Challenges", "Assessments"] as const;
+const TABS = [
+  { key: "Courses", label: "Courses" },
+  { key: "Challenges", label: "Challenges" },
+  { key: "Assessments", label: "Assessments" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+
 const CATEGORIES = ["All", "Safety", "Social", "Privacy", "Technology", "Gaming", "Wellness"] as const;
 
 export default function LearnScreen() {
@@ -19,7 +29,7 @@ export default function LearnScreen() {
   const insets = useSafeAreaInsets();
   const { progress } = useFamily();
   const { courses: COURSES } = useCurriculum();
-  const [activeTab, setActiveTab] = useState<"Courses" | "Challenges" | "Assessments">("Courses");
+  const [activeTab, setActiveTab] = useState<TabKey>("Courses");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const scrollRef = useRef<ScrollView>(null);
 
@@ -39,7 +49,7 @@ export default function LearnScreen() {
     cat => cat === "All" || sourceItems.some(i => i.category === cat),
   );
 
-  const handleTabChange = (tab: "Courses" | "Challenges" | "Assessments") => {
+  const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
     const items = tab === "Courses" ? COURSES : CHALLENGES;
     if (activeCategory !== "All" && !items.some(i => i.category === activeCategory)) {
@@ -60,38 +70,29 @@ export default function LearnScreen() {
     <ScrollView
       ref={scrollRef}
       style={{ backgroundColor: colors.background }}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: bottomPad + 100 }]}
+      contentContainerStyle={[styles.content, { paddingTop: topPad + spacing.lg, paddingBottom: bottomPad + 100 }]}
       showsVerticalScrollIndicator={false}
       stickyHeaderIndices={[0]}
     >
       <View style={[styles.stickyHeader, { backgroundColor: colors.background }]}>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Learn</Text>
-        <View style={[styles.tabRow, { backgroundColor: colors.muted }]}>
-          {TABS.map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && { backgroundColor: colors.card }]}
-              onPress={() => handleTabChange(tab)}
-            >
-              <Text style={[styles.tabText, { color: activeTab === tab ? colors.foreground : colors.mutedForeground, fontFamily: activeTab === tab ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <H1>Learn</H1>
+        <SegmentedControl segments={TABS} value={activeTab} onChange={handleTabChange} />
       </View>
 
       {activeTab !== "Assessments" && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {visibleCategories.map(cat => (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.catBtn, { backgroundColor: activeCategory === cat ? colors.primary : colors.card, borderColor: activeCategory === cat ? colors.primary : colors.border }]}
-              onPress={() => setActiveCategory(cat)}
-            >
-              <Text style={[styles.catText, { color: activeCategory === cat ? "#FFFFFF" : colors.foreground, fontFamily: "Inter_500Medium" }]}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
+          {visibleCategories.map(cat => {
+            const active = activeCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.catBtn, { backgroundColor: active ? colors.primary : colors.card, borderColor: active ? colors.primary : colors.border }]}
+                onPress={() => setActiveCategory(cat)}
+              >
+                <Small style={{ color: active ? colors.primaryForeground : colors.foreground, fontFamily: fontFamily.medium }}>{cat}</Small>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       )}
 
@@ -145,14 +146,9 @@ export default function LearnScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: 16 },
-  stickyHeader: { paddingHorizontal: 20, paddingBottom: 12, gap: 14 },
-  pageTitle: { fontSize: 28 },
-  tabRow: { flexDirection: "row", borderRadius: 12, padding: 3 },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center" },
-  tabText: { fontSize: 14 },
-  categoryScroll: { paddingHorizontal: 20, gap: 8 },
-  catBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  catText: { fontSize: 13 },
-  list: { paddingHorizontal: 20, gap: 4 },
+  content: { gap: spacing.lg },
+  stickyHeader: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, gap: spacing.md },
+  categoryScroll: { paddingHorizontal: spacing.xl, gap: spacing.sm },
+  catBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.pill, borderWidth: 1 },
+  list: { paddingHorizontal: spacing.xl, gap: spacing.md },
 });

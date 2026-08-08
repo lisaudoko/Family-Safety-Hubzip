@@ -1,13 +1,17 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { useSubscription } from "@/lib/revenuecat";
+import { Badge, Body, Button, Card, Caption, H1, H2, H3, LoadingSpinner, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 
 function formatPeriod(period: string): string {
   const map: Record<string, string> = {
@@ -84,17 +88,15 @@ export default function SubscriptionScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loader, { backgroundColor: colors.background, paddingTop: topPad + 16 }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ color: colors.mutedForeground, marginTop: 12, fontFamily: "Inter_400Regular" }}>
-          Loading subscription options...
-        </Text>
+      <View style={[styles.loader, { backgroundColor: colors.background, paddingTop: topPad + spacing.lg }]}>
+        <LoadingSpinner />
+        <Body color={colors.mutedForeground} style={{ marginTop: spacing.md }}>Loading subscription options...</Body>
       </View>
     );
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 32 }]}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="x" size={22} color={colors.foreground} />
@@ -105,122 +107,92 @@ export default function SubscriptionScreen() {
         <View style={[styles.starIcon, { backgroundColor: colors.accent + "22" }]}>
           <Feather name="star" size={32} color={colors.accent} />
         </View>
-        <Text style={[styles.heroTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Digital Village Premium</Text>
-        <Text style={[styles.heroDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+        <H1 style={styles.heroTitle}>Digital Village Premium</H1>
+        <Body color={colors.mutedForeground} style={styles.heroDesc}>
           Unlock everything to give your family the complete digital safety toolkit.
-        </Text>
+        </Body>
       </View>
 
-      {/* Plans from RevenueCat */}
       <View style={styles.plans}>
         {availablePackages.length === 0 ? (
-          <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.planLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-              No subscription options available right now.
-            </Text>
-          </View>
+          <Card variant="outline" style={styles.planCard}>
+            <Body color={colors.mutedForeground}>No subscription options available right now.</Body>
+          </Card>
         ) : (
           availablePackages.map((pkg) => (
-            <TouchableOpacity
-              key={pkg.identifier}
-              style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
-              onPress={() => handleSelectPackage(pkg)}
-              activeOpacity={0.8}
-            >
+            <Card key={pkg.identifier} variant="outline" pressable onPress={() => handleSelectPackage(pkg)} style={styles.planCardRow}>
               <View style={styles.planLeft}>
-                <Text style={[styles.planLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                  {pkg.product.title || pkg.packageType}
-                </Text>
-                {pkg.product.introPrice && (
-                  <View style={[styles.savingTag, { backgroundColor: colors.success + "22" }]}>
-                    <Text style={[styles.savingText, { color: colors.success, fontFamily: "Inter_700Bold" }]}>
-                      Intro offer
-                    </Text>
-                  </View>
-                )}
+                <Body color={colors.foreground}>{pkg.product.title || pkg.packageType}</Body>
+                {pkg.product.introPrice && <Badge label="Intro offer" tone={colors.success} variant="soft" />}
               </View>
               <View style={styles.planRight}>
-                <Text style={[styles.planPrice, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                  {pkg.product.priceString}
-                </Text>
-                <Text style={[styles.planPeriod, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+                <H3 style={{ marginBottom: 0 }}>{pkg.product.priceString}</H3>
+                <Caption color={colors.mutedForeground}>
                   {pkg.product.subscriptionPeriod ? `/${formatPeriod(pkg.product.subscriptionPeriod)}` : ""}
-                </Text>
+                </Caption>
               </View>
-            </TouchableOpacity>
+            </Card>
           ))
         )}
       </View>
 
-      <View style={[styles.featuresCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Card variant="outline" style={styles.featuresCard} padding={0}>
         <View style={styles.featuresHeader}>
-          <Text style={[styles.featuresTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>What's included</Text>
+          <H2 style={{ marginBottom: 0 }}>What&apos;s included</H2>
           <View style={styles.planLabels}>
-            <Text style={[styles.planLabelText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Free</Text>
-            <Text style={[styles.planLabelText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>Pro</Text>
+            <Small color={colors.mutedForeground} style={styles.planLabelText}>Free</Small>
+            <Small color={colors.accent} style={styles.planLabelText}>Pro</Small>
           </View>
         </View>
         {FEATURES.map((feature) => (
           <View key={feature.label} style={[styles.featureRow, { borderTopWidth: 1, borderTopColor: colors.border }]}>
             <Feather name={feature.icon} size={15} color={colors.mutedForeground} style={{ flexShrink: 0 }} />
-            <Text style={[styles.featureLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{feature.label}</Text>
+            <Caption color={colors.foreground} style={styles.featureLabel}>{feature.label}</Caption>
             <View style={styles.featureChecks}>
               {feature.free ? <Feather name="check" size={16} color={colors.success} /> : <Feather name="minus" size={16} color={colors.mutedForeground} />}
               <Feather name="check" size={16} color={colors.success} />
             </View>
           </View>
         ))}
-      </View>
+      </Card>
 
       {isSubscribed || user?.isPremium ? (
-        <View style={[styles.alreadyPremium, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
+        <Card variant="outline" style={[styles.alreadyPremium, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
           <Feather name="check-circle" size={20} color={colors.success} />
-          <Text style={[styles.alreadyText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>You're already a Premium member!</Text>
-        </View>
+          <Body color={colors.success}>You&apos;re already a Premium member!</Body>
+        </Card>
       ) : (
         <>
-          <TouchableOpacity
-            style={[styles.upgradeBtn, { backgroundColor: isPurchasing ? colors.muted : colors.accent }]}
-            onPress={() => availablePackages[0] && handleSelectPackage(availablePackages[0])}
+          <Button
+            title={isPurchasing ? "Processing..." : availablePackages.length > 0 ? "Start Premium Plan" : "Subscription unavailable"}
+            loading={isPurchasing}
             disabled={isPurchasing || availablePackages.length === 0}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.upgradeBtnText, { fontFamily: "Inter_700Bold" }]}>
-              {isPurchasing ? "Processing..." : availablePackages.length > 0 ? "Start Premium Plan" : "Subscription unavailable"}
-            </Text>
-          </TouchableOpacity>
+            style={{ backgroundColor: colors.accent }}
+            onPress={() => availablePackages[0] && handleSelectPackage(availablePackages[0])}
+          />
 
-          <TouchableOpacity onPress={handleRestore} disabled={isRestoring} style={{ alignItems: "center", marginTop: 8 }}>
-            <Text style={{ color: colors.primary, fontFamily: "Inter_500Medium", fontSize: 14 }}>
-              {isRestoring ? "Restoring..." : "Restore Purchases"}
-            </Text>
+          <TouchableOpacity onPress={handleRestore} disabled={isRestoring} style={{ alignItems: "center", marginTop: spacing.sm }}>
+            <Body color={colors.primary} style={{ fontSize: 14 }}>{isRestoring ? "Restoring..." : "Restore Purchases"}</Body>
           </TouchableOpacity>
         </>
       )}
 
-      <Text style={[styles.legal, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+      <Caption color={colors.mutedForeground} style={styles.legal}>
         Cancel anytime. No commitments. Subscriptions renew automatically unless cancelled at least 24 hours before renewal.
-      </Text>
+      </Caption>
 
-      {/* Confirmation Modal */}
       <Modal visible={confirmModal} transparent animationType="fade">
         <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-              Confirm Purchase
-            </Text>
-            <Text style={[styles.modalDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+          <Card variant="elevated" style={styles.modalCard}>
+            <H2 style={{ textAlign: "center", marginBottom: 0 }}>Confirm Purchase</H2>
+            <Body color={colors.mutedForeground} style={styles.modalDesc}>
               Subscribe to {selectedPackage?.product?.title || "Premium"} for {selectedPackage?.product?.priceString || ""}?
-            </Text>
+            </Body>
             <View style={styles.modalButtons}>
-              <TouchableOpacity onPress={() => setConfirmModal(false)} style={[styles.modalBtn, { backgroundColor: colors.border }]}>
-                <Text style={{ color: colors.foreground, fontFamily: "Inter_600SemiBold" }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmPurchase} style={[styles.modalBtn, { backgroundColor: colors.accent }]}>
-                <Text style={{ color: "#FFFFFF", fontFamily: "Inter_700Bold" }}>Subscribe</Text>
-              </TouchableOpacity>
+              <Button title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmModal(false)} />
+              <Button title="Subscribe" style={{ flex: 1, backgroundColor: colors.accent }} onPress={handleConfirmPurchase} />
             </View>
-          </View>
+          </Card>
         </View>
       </Modal>
     </ScrollView>
@@ -228,39 +200,29 @@ export default function SubscriptionScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 24 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   header: { alignItems: "flex-end" },
-  heroSection: { alignItems: "center", gap: 12 },
-  starIcon: { width: 72, height: 72, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  heroTitle: { fontSize: 26, textAlign: "center" },
-  heroDesc: { fontSize: 14, textAlign: "center", lineHeight: 21 },
-  plans: { gap: 10 },
-  planCard: { borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  planLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  planLabel: { fontSize: 15 },
-  savingTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  savingText: { fontSize: 12 },
+  heroSection: { alignItems: "center", gap: spacing.md },
+  starIcon: { width: 72, height: 72, borderRadius: radius.xl, alignItems: "center", justifyContent: "center" },
+  heroTitle: { textAlign: "center" },
+  heroDesc: { textAlign: "center" },
+  plans: { gap: spacing.sm },
+  planCard: { alignItems: "center" },
+  planCardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  planLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   planRight: { alignItems: "flex-end" },
-  planPrice: { fontSize: 18 },
-  planPeriod: { fontSize: 12 },
-  featuresCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  featuresHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 14 },
-  featuresTitle: { fontSize: 16 },
-  planLabels: { flexDirection: "row", gap: 16 },
-  planLabelText: { fontSize: 13, width: 32, textAlign: "center" },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  featureLabel: { flex: 1, fontSize: 13, lineHeight: 18 },
-  featureChecks: { flexDirection: "row", gap: 16 },
-  alreadyPremium: { borderRadius: 14, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "center", gap: 10 },
-  alreadyText: { fontSize: 15 },
-  upgradeBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  upgradeBtnText: { color: "#FFFFFF", fontSize: 17 },
-  legal: { fontSize: 11, textAlign: "center", lineHeight: 16 },
+  featuresCard: { overflow: "hidden" },
+  featuresHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md },
+  planLabels: { flexDirection: "row", gap: spacing.lg },
+  planLabelText: { width: 32, textAlign: "center" },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  featureLabel: { flex: 1, lineHeight: 18 },
+  featureChecks: { flexDirection: "row", gap: spacing.lg },
+  alreadyPremium: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  legal: { textAlign: "center", lineHeight: 16 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center" },
-  modalOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
-  modalCard: { borderRadius: 20, padding: 24, width: "100%", maxWidth: 340, gap: 16 },
-  modalTitle: { fontSize: 20, textAlign: "center" },
-  modalDesc: { fontSize: 14, textAlign: "center", lineHeight: 20 },
-  modalButtons: { flexDirection: "row", gap: 12 },
-  modalBtn: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+  modalOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  modalCard: { width: "100%", maxWidth: 340, gap: spacing.lg },
+  modalDesc: { textAlign: "center" },
+  modalButtons: { flexDirection: "row", gap: spacing.md },
 });

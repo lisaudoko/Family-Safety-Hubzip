@@ -1,15 +1,17 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
-import {
-  apiGetDashboardOverview,
-  apiSendWeeklyDigest,
-  type ApiDashboardChild,
-} from "@/lib/apiClient";
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
+import { deviceStatusMeta } from "@/lib/deviceStatus";
+import { apiGetDashboardOverview, apiSendWeeklyDigest, type ApiDashboardChild } from "@/lib/apiClient";
+import { Badge, Body, Card, Caption, H3, LoadingSpinner, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "0m";
@@ -63,85 +65,76 @@ export function MonitoringPanel() {
   };
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: spacing.md }}>
       {loading && (
-        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={[styles.stateText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Loading monitoring data...
-          </Text>
-        </View>
+        <Card variant="outline" style={styles.stateCard}>
+          <LoadingSpinner size="small" />
+          <Body color={colors.mutedForeground} style={styles.stateText}>Loading monitoring data...</Body>
+        </Card>
       )}
 
       {!loading && error && (
-        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Card variant="outline" style={styles.stateCard}>
           <Feather name="alert-triangle" size={20} color={colors.destructive} />
-          <Text style={[styles.stateText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{error}</Text>
+          <Body color={colors.mutedForeground} style={styles.stateText}>{error}</Body>
           <TouchableOpacity onPress={load}>
-            <Text style={[styles.retryText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Retry</Text>
+            <Body color={colors.primary} style={{ fontSize: 13 }}>Retry</Body>
           </TouchableOpacity>
-        </View>
+        </Card>
       )}
 
       {!loading && !error && children && children.length === 0 && (
-        <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Card variant="outline" style={styles.stateCard}>
           <Feather name="smartphone" size={20} color={colors.mutedForeground} />
-          <Text style={[styles.stateText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Add a child to start monitoring their devices.
-          </Text>
-        </View>
+          <Body color={colors.mutedForeground} style={styles.stateText}>Add a child to start monitoring their devices.</Body>
+        </Card>
       )}
 
       {!loading && !error && children && children.length > 0 && (
         <>
           {children.every((c) => c.devices.length === 0) && (
-            <View style={[styles.stateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Card variant="outline" style={styles.stateCard}>
               <Feather name="smartphone" size={20} color={colors.mutedForeground} />
-              <Text style={[styles.stateText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Body color={colors.mutedForeground} style={styles.stateText}>
                 No devices registered yet. Once a child's device is set up, activity will show up here.
-              </Text>
-            </View>
+              </Body>
+            </Card>
           )}
 
-          {children.map((child) => {
-            const staleCount = child.devices.filter((d) => d.isStale).length;
-            return (
-              <View key={child.id} style={[styles.childCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.childHeader}>
-                  <Text style={[styles.childName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{child.name}</Text>
-                  {staleCount > 0 && (
-                    <View style={[styles.staleBadge, { backgroundColor: colors.destructive + "18" }]}>
-                      <Text style={[styles.staleBadgeText, { color: colors.destructive, fontFamily: "Inter_600SemiBold" }]}>
-                        {staleCount} stale
-                      </Text>
-                    </View>
-                  )}
+          {children.map((child) => (
+            <Card key={child.id} variant="elevated" style={styles.childCard}>
+              <H3>{child.name}</H3>
+
+              {child.devices.length > 0 && (
+                <View style={styles.deviceList}>
+                  {child.devices.map((device) => {
+                    const meta = deviceStatusMeta(device);
+                    return (
+                      <View key={device.id} style={styles.deviceRow}>
+                        <Feather name="smartphone" size={13} color={colors.mutedForeground} />
+                        <Body color={colors.foreground} style={styles.deviceName} numberOfLines={1}>{device.name}</Body>
+                        <Badge label={meta.label} tone={colors[meta.tone]} variant="soft" />
+                        <Caption color={colors.mutedForeground}>{formatRelativeTime(device.lastSyncedAt)}</Caption>
+                      </View>
+                    );
+                  })}
                 </View>
-                <View style={styles.metaRow}>
-                  <Feather name="smartphone" size={13} color={colors.mutedForeground} />
-                  <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
-                    {child.devices.length} device{child.devices.length === 1 ? "" : "s"}
-                  </Text>
+              )}
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Feather name="clock" size={14} color={colors.primary} />
+                  <Body color={colors.foreground} style={styles.statValue}>{formatDuration(child.recentActivity.screenTimeSeconds)}</Body>
+                  <Small color={colors.mutedForeground}>screen time (7d)</Small>
                 </View>
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Feather name="clock" size={14} color={colors.primary} />
-                    <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                      {formatDuration(child.recentActivity.screenTimeSeconds)}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>screen time (7d)</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Feather name="activity" size={14} color={colors.primary} />
-                    <Text style={[styles.statValue, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                      {child.recentActivity.activityCount}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>activity events (7d)</Text>
-                  </View>
+                <View style={styles.statItem}>
+                  <Feather name="activity" size={14} color={colors.primary} />
+                  <Body color={colors.foreground} style={styles.statValue}>{child.recentActivity.activityCount}</Body>
+                  <Small color={colors.mutedForeground}>activity events (7d)</Small>
                 </View>
               </View>
-            );
-          })}
+            </Card>
+          ))}
         </>
       )}
 
@@ -151,34 +144,30 @@ export function MonitoringPanel() {
         disabled={sendingDigest}
         activeOpacity={0.85}
       >
-        {sendingDigest ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : (
-          <Feather name="mail" size={18} color={colors.primary} />
-        )}
-        <Text style={[styles.digestBtnText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>
-          {sendingDigest ? "Sending..." : "Send weekly digest to my email"}
-        </Text>
+        {sendingDigest ? <LoadingSpinner size="small" /> : <Feather name="mail" size={18} color={colors.primary} />}
+        <Body color={colors.primary} style={{ fontSize: 14 }}>{sendingDigest ? "Sending..." : "Send weekly digest to my email"}</Body>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stateCard: { alignItems: "center", gap: 8, padding: 20, borderRadius: 16, borderWidth: 1 },
-  stateText: { fontSize: 13, textAlign: "center", lineHeight: 18 },
-  retryText: { fontSize: 13, marginTop: 4 },
-  childCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 10 },
-  childHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  childName: { fontSize: 16 },
-  staleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  staleBadgeText: { fontSize: 11 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { fontSize: 12 },
-  statsRow: { flexDirection: "row", gap: 20 },
+  stateCard: { alignItems: "center", gap: spacing.sm },
+  stateText: { textAlign: "center" },
+  childCard: { gap: spacing.md },
+  deviceList: { gap: spacing.sm },
+  deviceRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  deviceName: { flex: 1 },
+  statsRow: { flexDirection: "row", gap: spacing.xl },
   statItem: { flex: 1, gap: 2 },
-  statValue: { fontSize: 16, marginTop: 2 },
-  statLabel: { fontSize: 11 },
-  digestBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
-  digestBtnText: { fontSize: 14 },
+  statValue: { marginTop: 2 },
+  digestBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+  },
 });

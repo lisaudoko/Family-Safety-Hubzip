@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -15,6 +14,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useCoach, type ChatMessage } from "@/context/CoachContext";
+import { Body, Caption, H1, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { shadow } from "@/constants/elevation";
+import { fontFamily } from "@/constants/typography";
 
 const WELCOME =
   "Hi! I'm your Digital Safety Coach. Ask me anything about screen time, social media, cyberbullying, online privacy, or raising digitally-aware kids. I'm here to help.";
@@ -49,14 +53,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderBottomLeftRadius: 4 },
         ]}
       >
-        <Text
-          style={[
-            styles.bubbleText,
-            { color: isUser ? "#FFFFFF" : colors.foreground, fontFamily: "Inter_400Regular" },
-          ]}
-        >
+        <Body color={isUser ? colors.primaryForeground : colors.foreground} style={styles.bubbleText}>
           {message.content}
-        </Text>
+        </Body>
       </View>
     </View>
   );
@@ -68,9 +67,7 @@ function TypingBubble() {
     <View style={[styles.row, styles.rowCoach]}>
       <CoachAvatar />
       <View style={[styles.bubble, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderBottomLeftRadius: 4 }]}>
-        <Text style={[styles.bubbleText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          Thinking…
-        </Text>
+        <Body color={colors.mutedForeground} style={styles.bubbleText}>Thinking…</Body>
       </View>
     </View>
   );
@@ -112,10 +109,8 @@ export default function CoachScreen() {
     >
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Coach</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            Your digital safety advisor
-          </Text>
+          <H1 style={{ marginBottom: 0 }}>Coach</H1>
+          <Small color={colors.mutedForeground} style={{ marginTop: 2 }}>Your digital safety advisor</Small>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -149,9 +144,7 @@ export default function CoachScreen() {
             <MessageBubble message={{ role: "assistant", content: WELCOME }} />
             {showSuggestions && (
               <View style={styles.suggestions}>
-                <Text style={[styles.suggestionsLabel, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>
-                  Try asking
-                </Text>
+                <Caption color={colors.mutedForeground} style={styles.suggestionsLabel}>TRY ASKING</Caption>
                 {SUGGESTIONS.map((s) => (
                   <TouchableOpacity
                     key={s}
@@ -160,7 +153,7 @@ export default function CoachScreen() {
                     disabled={isPending}
                   >
                     <Feather name="message-circle" size={14} color={colors.primary} />
-                    <Text style={[styles.chipText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>{s}</Text>
+                    <Body color={colors.foreground} style={styles.chipText}>{s}</Body>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -172,13 +165,13 @@ export default function CoachScreen() {
             {isPending && <TypingBubble />}
             {error && (
               <View style={styles.errorRow}>
-                <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>{error}</Text>
+                <Caption color={colors.destructive} style={{ textAlign: "center" }}>{error}</Caption>
                 <TouchableOpacity
                   style={[styles.retryBtn, { backgroundColor: colors.secondary }]}
                   onPress={retry}
                 >
                   <Feather name="refresh-cw" size={14} color={colors.primary} />
-                  <Text style={[styles.retryText, { color: colors.primary, fontFamily: "Inter_600SemiBold" }]}>Retry</Text>
+                  <Small style={{ color: colors.primary, fontFamily: fontFamily.semibold }}>Retry</Small>
                 </TouchableOpacity>
               </View>
             )}
@@ -193,7 +186,7 @@ export default function CoachScreen() {
         ]}
       >
         <TextInput
-          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" }]}
+          style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: fontFamily.regular }]}
           placeholder="Ask your coach…"
           placeholderTextColor={colors.mutedForeground}
           value={input}
@@ -204,11 +197,11 @@ export default function CoachScreen() {
           returnKeyType="send"
         />
         <TouchableOpacity
-          style={[styles.sendBtn, { backgroundColor: input.trim() && !isPending ? colors.primary : colors.muted }]}
+          style={[styles.sendBtn, { backgroundColor: input.trim() && !isPending ? colors.primary : colors.muted }, input.trim() && !isPending ? shadow.sm : null]}
           onPress={() => send(input)}
           disabled={!input.trim() || isPending}
         >
-          <Feather name="send" size={18} color={input.trim() && !isPending ? "#FFFFFF" : colors.mutedForeground} />
+          <Feather name="send" size={18} color={input.trim() && !isPending ? colors.primaryForeground : colors.mutedForeground} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -217,27 +210,23 @@ export default function CoachScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 10 },
-  headerActions: { flexDirection: "row", gap: 8 },
-  headerBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  pageTitle: { fontSize: 28 },
-  subtitle: { fontSize: 13, marginTop: 2 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 12, gap: 12 },
-  row: { flexDirection: "row", alignItems: "flex-end", gap: 8, maxWidth: "100%" },
+  header: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.md, gap: spacing.sm },
+  headerActions: { flexDirection: "row", gap: spacing.sm },
+  headerBtn: { width: 38, height: 38, borderRadius: radius.md, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
+  row: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, maxWidth: "100%" },
   rowUser: { justifyContent: "flex-end" },
   rowCoach: { justifyContent: "flex-start" },
-  avatar: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 2 },
-  bubble: { maxWidth: "82%", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
-  bubbleText: { fontSize: 15, lineHeight: 21 },
-  suggestions: { marginTop: 16, gap: 8 },
-  suggestionsLabel: { fontSize: 12, marginLeft: 4, marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  chipText: { fontSize: 14, flex: 1 },
-  errorRow: { alignItems: "center", gap: 8, paddingVertical: 12 },
-  errorText: { fontSize: 13, textAlign: "center" },
-  retryBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10 },
-  retryText: { fontSize: 13 },
-  inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, borderTopWidth: StyleSheet.hairlineWidth },
-  input: { flex: 1, maxHeight: 120, minHeight: 44, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, fontSize: 15 },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  avatar: { width: 28, height: 28, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", marginBottom: 2 },
+  bubble: { maxWidth: "82%", borderRadius: radius.xl - 2, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  bubbleText: { lineHeight: 21 },
+  suggestions: { marginTop: spacing.lg, gap: spacing.sm },
+  suggestionsLabel: { marginLeft: spacing.xs, marginBottom: 2, letterSpacing: 0.5 },
+  chip: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  chipText: { flex: 1, fontSize: 14 },
+  errorRow: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
+  retryBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.sm },
+  inputBar: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth },
+  input: { flex: 1, maxHeight: 120, minHeight: 44, borderWidth: 1, borderRadius: radius.xl - 2, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md, fontSize: 15 },
+  sendBtn: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 });

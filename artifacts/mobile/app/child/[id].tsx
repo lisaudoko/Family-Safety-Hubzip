@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -12,7 +12,30 @@ import { useChildPolicy } from "@/hooks/useChildPolicy";
 import { useChildDevices } from "@/hooks/useChildDevices";
 import { useDeviceRestrictions } from "@/hooks/useDeviceRestrictions";
 import { useDeviceAppRules } from "@/hooks/useDeviceAppRules";
+import { useEffectivePolicy } from "@/hooks/useEffectivePolicy";
+import { deviceStatusMeta } from "@/lib/deviceStatus";
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
+import { AGE_BAND_COLORS, avatarColorForName } from "@/constants/identityColors";
 import type { ApiDevice } from "@/lib/apiClient";
+import {
+  Avatar,
+  Badge,
+  Body,
+  Button,
+  Card,
+  Caption,
+  H1,
+  H2,
+  H3,
+  Label,
+  SegmentedControl,
+  Small,
+  TextField,
+  ToggleRow,
+} from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { fontFamily } from "@/constants/typography";
 
 type RestrictionToggles = {
   screenTimeLimitMinutes: number | null;
@@ -80,45 +103,8 @@ function RestrictionRows({
     setEditingBedtime(false);
   };
 
-  const toggleRows: {
-    key: string;
-    icon: React.ComponentProps<typeof Feather>["name"];
-    label: string;
-    value: string;
-    onPress: () => void;
-  }[] = [
-    {
-      key: "blockSafari",
-      icon: "globe",
-      label: "Block Search Engines",
-      value: values?.blockSafari ? "On" : "Off",
-      onPress: () => applyChange("blockSafari", { blockSafari: !values?.blockSafari }),
-    },
-    {
-      key: "requireParentApproval",
-      icon: "check-circle",
-      label: "Require Parent Approval",
-      value: values?.requireParentApproval ? "On" : "Off",
-      onPress: () => applyChange("requireParentApproval", { requireParentApproval: !values?.requireParentApproval }),
-    },
-    {
-      key: "blockNewAppInstalls",
-      icon: "download",
-      label: "Block New App Installs",
-      value: values?.blockNewAppInstalls ? "On" : "Off",
-      onPress: () => applyChange("blockNewAppInstalls", { blockNewAppInstalls: !values?.blockNewAppInstalls }),
-    },
-    {
-      key: "blockExplicitContent",
-      icon: "alert-triangle",
-      label: "Block Explicit Content",
-      value: values?.blockExplicitContent ? "On" : "Off",
-      onPress: () => applyChange("blockExplicitContent", { blockExplicitContent: !values?.blockExplicitContent }),
-    },
-  ];
-
   return (
-    <View style={[styles.settingsList, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <Card variant="outline" style={styles.settingsList} padding={0}>
       <TouchableOpacity
         style={styles.settingsRow}
         onPress={() => {
@@ -127,35 +113,32 @@ function RestrictionRows({
         }}
       >
         <Feather name="clock" size={18} color={colors.foreground} />
-        <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-          Screen Time Limit
-        </Text>
-        <Text style={{ color: colors.mutedForeground }}>
+        <Body color={colors.foreground} style={styles.settingsLabel}>Screen Time Limit</Body>
+        <Caption color={colors.mutedForeground}>
           {values?.screenTimeLimitMinutes ? `${values.screenTimeLimitMinutes} min` : "Off"}
-        </Text>
+        </Caption>
       </TouchableOpacity>
       {editingLimit && (
         <View style={styles.editableRow}>
-          <TextInput
-            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
+          <TextField
+            containerStyle={{ flex: 1 }}
             value={limitInput}
             onChangeText={setLimitInput}
             keyboardType="number-pad"
             placeholder="Minutes per day (blank = off)"
-            placeholderTextColor={colors.mutedForeground}
           />
           <TouchableOpacity
             style={[styles.editableSaveBtn, { backgroundColor: colors.primary, opacity: savingKey === "screenTimeLimitMinutes" ? 0.5 : 1 }]}
             onPress={saveLimit}
             disabled={savingKey === "screenTimeLimitMinutes"}
           >
-            <Feather name="check" size={16} color="#FFFFFF" />
+            <Feather name="check" size={16} color={colors.primaryForeground} />
           </TouchableOpacity>
         </View>
       )}
 
       <TouchableOpacity
-        style={styles.settingsRow}
+        style={[styles.settingsRow, styles.rowDivider, { borderTopColor: colors.border }]}
         onPress={() => {
           setBedtimeStartInput(values?.bedtimeStart ?? "21:00");
           setBedtimeEndInput(values?.bedtimeEnd ?? "07:00");
@@ -163,35 +146,21 @@ function RestrictionRows({
         }}
       >
         <Feather name="moon" size={18} color={colors.foreground} />
-        <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-          Bedtime
-        </Text>
-        <Text style={{ color: colors.mutedForeground }}>
+        <Body color={colors.foreground} style={styles.settingsLabel}>Bedtime</Body>
+        <Caption color={colors.mutedForeground}>
           {values?.bedtimeStart && values?.bedtimeEnd ? `${values.bedtimeStart}–${values.bedtimeEnd}` : "Off"}
-        </Text>
+        </Caption>
       </TouchableOpacity>
       {editingBedtime && (
         <View style={styles.editableRow}>
-          <TextInput
-            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
-            value={bedtimeStartInput}
-            onChangeText={setBedtimeStartInput}
-            placeholder="Start (HH:MM)"
-            placeholderTextColor={colors.mutedForeground}
-          />
-          <TextInput
-            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
-            value={bedtimeEndInput}
-            onChangeText={setBedtimeEndInput}
-            placeholder="End (HH:MM)"
-            placeholderTextColor={colors.mutedForeground}
-          />
+          <TextField containerStyle={{ flex: 1 }} value={bedtimeStartInput} onChangeText={setBedtimeStartInput} placeholder="Start (HH:MM)" />
+          <TextField containerStyle={{ flex: 1 }} value={bedtimeEndInput} onChangeText={setBedtimeEndInput} placeholder="End (HH:MM)" />
           <TouchableOpacity
             style={[styles.editableSaveBtn, { backgroundColor: colors.primary, opacity: savingKey === "bedtime" ? 0.5 : 1 }]}
             onPress={saveBedtime}
             disabled={savingKey === "bedtime"}
           >
-            <Feather name="check" size={16} color="#FFFFFF" />
+            <Feather name="check" size={16} color={colors.primaryForeground} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.editableSaveBtn, { backgroundColor: colors.border, opacity: savingKey === "bedtime" ? 0.5 : 1 }]}
@@ -203,21 +172,33 @@ function RestrictionRows({
         </View>
       )}
 
-      {toggleRows.map((row) => (
-        <TouchableOpacity
-          key={row.key}
-          style={[styles.settingsRow, { opacity: savingKey === row.key ? 0.5 : 1 }]}
-          onPress={row.onPress}
-          disabled={savingKey === row.key}
-        >
-          <Feather name={row.icon} size={18} color={colors.foreground} />
-          <Text style={[styles.settingsLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-            {row.label}
-          </Text>
-          <Text style={{ color: colors.mutedForeground }}>{row.value}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+      <View style={[styles.togglesWrap, styles.rowDivider, { borderTopColor: colors.border }]}>
+        <ToggleRow
+          label="Block Search Engines"
+          value={!!values?.blockSafari}
+          onValueChange={(v) => applyChange("blockSafari", { blockSafari: v })}
+          disabled={savingKey === "blockSafari"}
+        />
+        <ToggleRow
+          label="Require Parent Approval"
+          value={!!values?.requireParentApproval}
+          onValueChange={(v) => applyChange("requireParentApproval", { requireParentApproval: v })}
+          disabled={savingKey === "requireParentApproval"}
+        />
+        <ToggleRow
+          label="Block New App Installs"
+          value={!!values?.blockNewAppInstalls}
+          onValueChange={(v) => applyChange("blockNewAppInstalls", { blockNewAppInstalls: v })}
+          disabled={savingKey === "blockNewAppInstalls"}
+        />
+        <ToggleRow
+          label="Block Explicit Content"
+          value={!!values?.blockExplicitContent}
+          onValueChange={(v) => applyChange("blockExplicitContent", { blockExplicitContent: v })}
+          disabled={savingKey === "blockExplicitContent"}
+        />
+      </View>
+    </Card>
   );
 }
 
@@ -244,33 +225,26 @@ function GeneralAppsSection({ deviceId, colors }: { deviceId: string; colors: Re
 
   return (
     <View style={styles.generalApps}>
-      <Text style={[styles.generalAppsTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-        General Apps
-      </Text>
-      <Text style={[styles.restrictionsHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+      <H3 style={{ marginBottom: 0 }}>General Apps</H3>
+      <Caption color={colors.mutedForeground}>
         Set accessible/inaccessible time windows per installed app. Storage only — nothing here blocks the app on
         the device yet; there is no on-device enforcement agent.
-      </Text>
+      </Caption>
       {rules.map((rule) => (
-        <View key={rule.id} style={[styles.appRuleCard, { borderColor: colors.border }]}>
+        <Card key={rule.id} variant="outline" style={styles.appRuleCard}>
           <View style={styles.appRuleHeader}>
-            <Text style={[styles.appRuleName, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
-              {rule.appName}
-            </Text>
+            <Body color={colors.foreground} style={{ fontFamily: fontFamily.medium }}>{rule.appName}</Body>
             <TouchableOpacity onPress={() => removeRule(rule.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Feather name="trash-2" size={14} color={colors.destructive} />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.appRuleRow}
-            onPress={() => updateRule(rule.id, { blocked: !rule.blocked })}
-          >
-            <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>Blocked</Text>
-            <Text style={{ color: colors.foreground, fontSize: 13 }}>{rule.blocked ? "On" : "Off"}</Text>
+          <TouchableOpacity style={styles.appRuleRow} onPress={() => updateRule(rule.id, { blocked: !rule.blocked })}>
+            <Caption color={colors.mutedForeground}>Blocked</Caption>
+            <Caption color={colors.foreground}>{rule.blocked ? "On" : "Off"}</Caption>
           </TouchableOpacity>
           <View style={styles.appRuleRow}>
-            <Text style={{ color: colors.mutedForeground, fontSize: 13 }}>Inaccessible window</Text>
-            <View style={{ flexDirection: "row", gap: 6 }}>
+            <Caption color={colors.mutedForeground}>Inaccessible window</Caption>
+            <View style={{ flexDirection: "row", gap: spacing.xs }}>
               <TextInput
                 style={[styles.appRuleTimeInput, { color: colors.foreground, borderColor: colors.primary }]}
                 value={rule.restrictedStart ?? ""}
@@ -287,39 +261,89 @@ function GeneralAppsSection({ deviceId, colors }: { deviceId: string; colors: Re
               />
             </View>
           </View>
-        </View>
+        </Card>
       ))}
       {adding ? (
         <View style={styles.editableRow}>
-          <TextInput
-            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
-            value={appName}
-            onChangeText={setAppName}
-            placeholder="App name (e.g. YouTube)"
-            placeholderTextColor={colors.mutedForeground}
-          />
-          <TextInput
-            style={[styles.editableInput, { color: colors.foreground, borderColor: colors.primary }]}
-            value={bundleId}
-            onChangeText={setBundleId}
-            placeholder="Bundle/package id"
-            placeholderTextColor={colors.mutedForeground}
-            autoCapitalize="none"
-          />
+          <TextField containerStyle={{ flex: 1 }} value={appName} onChangeText={setAppName} placeholder="App name (e.g. YouTube)" />
+          <TextField containerStyle={{ flex: 1 }} value={bundleId} onChangeText={setBundleId} placeholder="Bundle/package id" autoCapitalize="none" />
           <TouchableOpacity style={[styles.editableSaveBtn, { backgroundColor: colors.primary }]} onPress={handleAdd}>
-            <Feather name="check" size={16} color="#FFFFFF" />
+            <Feather name="check" size={16} color={colors.primaryForeground} />
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity
-          style={[styles.addAppBtn, { borderColor: colors.border }]}
-          onPress={() => setAdding(true)}
-        >
+        <TouchableOpacity style={[styles.addAppBtn, { borderColor: colors.border }]} onPress={() => setAdding(true)}>
           <Feather name="plus" size={14} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontSize: 13, fontFamily: "Inter_500Medium" }}>Add App</Text>
+          <Caption color={colors.primary}>Add App</Caption>
         </TouchableOpacity>
       )}
     </View>
+  );
+}
+
+const POLICY_FIELD_LABELS: Record<string, string> = {
+  family: "family default",
+  child: "child default",
+  device: "device override",
+};
+
+function EffectivePolicySummary({ childId, colors }: { childId: string; colors: ReturnType<typeof useColors> }) {
+  const { policy, loading } = useEffectivePolicy(childId);
+  if (loading || !policy) return null;
+
+  const rows: { icon: React.ComponentProps<typeof Feather>["name"]; label: string; value: string; source?: string }[] = [
+    {
+      icon: "clock",
+      label: "Screen Time Limit",
+      value: policy.screenTimeLimitMinutes.value ? `${policy.screenTimeLimitMinutes.value} min/day` : "No limit",
+      source: policy.screenTimeLimitMinutes.source,
+    },
+    {
+      icon: "moon",
+      label: "Bedtime",
+      value: policy.bedtimeStart.value && policy.bedtimeEnd.value ? `${policy.bedtimeStart.value}–${policy.bedtimeEnd.value}` : "Off",
+      source: policy.bedtimeStart.source,
+    },
+    { icon: "globe", label: "Block Search Engines", value: policy.blockSafari.value ? "On" : "Off", source: policy.blockSafari.sources[0] },
+    {
+      icon: "check-circle",
+      label: "Require Parent Approval",
+      value: policy.requireParentApproval.value ? "On" : "Off",
+      source: policy.requireParentApproval.sources[0],
+    },
+    {
+      icon: "download",
+      label: "Block New App Installs",
+      value: policy.blockNewAppInstalls.value ? "On" : "Off",
+      source: policy.blockNewAppInstalls.sources[0],
+    },
+    {
+      icon: "alert-triangle",
+      label: "Block Explicit Content",
+      value: policy.blockExplicitContent.value ? "On" : "Off",
+      source: policy.blockExplicitContent.sources[0],
+    },
+  ];
+
+  return (
+    <Card variant="outline" style={styles.settingsList} padding={0}>
+      <View style={[styles.effectiveBanner, { backgroundColor: colors.warning + "18" }]}>
+        <Feather name="info" size={13} color={colors.warning} />
+        <Small style={[styles.effectiveBannerText, { color: colors.warning }]}>Defined here — not yet enforced on this device</Small>
+      </View>
+      {rows.map((row) => (
+        <View key={row.label} style={styles.settingsRow}>
+          <Feather name={row.icon} size={18} color={colors.foreground} />
+          <View style={styles.effectiveLabelCol}>
+            <Body color={colors.foreground}>{row.label}</Body>
+            {row.source && POLICY_FIELD_LABELS[row.source] && (
+              <Small color={colors.mutedForeground}>from {POLICY_FIELD_LABELS[row.source]}</Small>
+            )}
+          </View>
+          <Caption color={colors.mutedForeground}>{row.value}</Caption>
+        </View>
+      ))}
+    </Card>
   );
 }
 
@@ -332,6 +356,7 @@ function DeviceRow({ device, colors, onRename }: {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(device.name);
   const { restrictions, updateRestrictions } = useDeviceRestrictions(device.id);
+  const statusMeta = deviceStatusMeta(device);
 
   const handleSaveName = async () => {
     if (!name.trim()) return;
@@ -344,27 +369,26 @@ function DeviceRow({ device, colors, onRename }: {
   };
 
   return (
-    <View style={[styles.deviceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <Card variant="outline" style={styles.deviceCard} padding={0}>
       <TouchableOpacity style={styles.deviceHeader} onPress={() => setExpanded((v) => !v)} activeOpacity={0.8}>
         <Feather name="smartphone" size={18} color={colors.primary} />
-        {renaming ? (
-          <TextInput
-            style={[styles.deviceNameInput, { color: colors.foreground, borderColor: colors.primary }]}
-            value={name}
-            onChangeText={setName}
-            autoFocus
-            onSubmitEditing={handleSaveName}
-          />
-        ) : (
-          <Text style={[styles.deviceName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-            {device.name}
-          </Text>
-        )}
-        {device.isStale && (
-          <View style={[styles.staleBadge, { backgroundColor: colors.destructive + "22" }]}>
-            <Text style={[styles.staleText, { color: colors.destructive }]}>Inactive</Text>
-          </View>
-        )}
+        <View style={styles.deviceNameCol}>
+          {renaming ? (
+            <TextInput
+              style={[styles.deviceNameInput, { color: colors.foreground, borderColor: colors.primary, fontFamily: fontFamily.semibold }]}
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              onSubmitEditing={handleSaveName}
+            />
+          ) : (
+            <Body color={colors.foreground} style={{ fontFamily: fontFamily.semibold }}>{device.name}</Body>
+          )}
+          <Small color={colors.mutedForeground}>
+            {statusMeta.label === "Online now" ? statusMeta.label : `Last seen ${formatRelativeTime(device.lastSyncedAt)}`}
+          </Small>
+        </View>
+        <Badge label={statusMeta.label} tone={colors[statusMeta.tone]} variant="soft" />
         <TouchableOpacity
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={() => (renaming ? handleSaveName() : setRenaming(true))}
@@ -379,11 +403,9 @@ function DeviceRow({ device, colors, onRename }: {
           <GeneralAppsSection deviceId={device.id} colors={colors} />
         </View>
       )}
-    </View>
+    </Card>
   );
 }
-
-const AGE_COLORS: Record<string, string> = { "6-9": "#4CAF7D", "10-13": "#4A90A4", "14-17": "#7B5EA7" };
 
 export default function ChildProfileScreen() {
   const colors = useColors();
@@ -403,8 +425,8 @@ export default function ChildProfileScreen() {
 
   if (!child) { router.back(); return null; }
 
-  const avatarColor = ["#3A7D6B", "#4A90A4", "#E07B39", "#8E44AD", "#E91E8C"][child.name.charCodeAt(0) % 5] ?? "#3A7D6B";
-  const ageBandColor = AGE_COLORS[child.ageBand] ?? colors.primary;
+  const avatarColor = avatarColorForName(child.name);
+  const ageBandColor = AGE_BAND_COLORS[child.ageBand] ?? colors.primary;
 
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert("Name Required", "Please enter a name."); return; }
@@ -450,8 +472,25 @@ export default function ChildProfileScreen() {
     ]);
   };
 
+  const guidance: Record<AgeBand, { title: string; text: string }> = {
+    "6-9": {
+      title: "Ages 6-9: Foundation Building",
+      text: "At this age, focus on basic digital safety: no sharing personal information, always asking permission before downloading, and understanding that not everything online is real or true.\n\nRecommended: Cyberbullying Prevention, Healthy Screen Habits",
+    },
+    "10-13": {
+      title: "Ages 10-13: Social Navigation",
+      text: "This age group begins social media exploration and gaming. Key topics: understanding social media age limits, online friendship safety, recognizing scams, and building digital footprint awareness.\n\nRecommended: Social Media Readiness, Online Scam Awareness, Digital Footprints",
+    },
+    "14-17": {
+      title: "Ages 14-17: Digital Independence",
+      text: "Teens need preparation for greater digital independence. Key topics: understanding online predator tactics, AI literacy, digital reputation management, and privacy in a data-driven world.\n\nRecommended: AI Safety & Literacy, Online Predator Awareness, Digital Footprints",
+    },
+  };
+  const activeGuidance = { ...guidance[child.ageBand], color: AGE_BAND_COLORS[child.ageBand] ?? colors.primary };
+  const ageBandSegments = AGE_BANDS.map(b => ({ key: b, label: `Ages ${b}` }));
+
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
@@ -462,91 +501,53 @@ export default function ChildProfileScreen() {
       </View>
 
       <View style={styles.profile}>
-        <View style={[styles.avatar, { backgroundColor: avatarColor + "22", borderColor: avatarColor + "44" }]}>
-          <Text style={[styles.initial, { color: avatarColor, fontFamily: "Inter_700Bold" }]}>{child.name[0]?.toUpperCase() ?? "?"}</Text>
-        </View>
+        <Avatar initial={child.name[0] ?? "?"} color={avatarColor} size={80} />
         {editing ? (
           <TextInput
-            style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, fontFamily: "Inter_700Bold" }]}
+            style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, fontFamily: fontFamily.bold }]}
             value={name}
             onChangeText={setName}
             autoFocus
             autoCapitalize="words"
           />
         ) : (
-          <Text style={[styles.childName, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{child.name}</Text>
+          <H1 style={{ marginBottom: 0 }}>{child.name}</H1>
         )}
-        <View style={[styles.agePill, { backgroundColor: ageBandColor + "22" }]}>
-          <Text style={[styles.ageText, { color: ageBandColor, fontFamily: "Inter_600SemiBold" }]}>Ages {child.ageBand}</Text>
-        </View>
+        <Badge label={`Ages ${child.ageBand}`} tone={ageBandColor} variant="soft" />
       </View>
 
       {editing && (
         <View style={styles.editSection}>
-          <Text style={[styles.editLabel, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Age Band</Text>
-          <View style={styles.ageBandRow}>
-            {AGE_BANDS.map(band => (
-              <TouchableOpacity
-                key={band}
-                style={[styles.bandBtn, { borderColor: ageBand === band ? colors.primary : colors.border, backgroundColor: ageBand === band ? colors.secondary : "transparent" }]}
-                onPress={() => setAgeBand(band)}
-              >
-                <Text style={[styles.bandText, { color: ageBand === band ? colors.primary : colors.mutedForeground, fontFamily: ageBand === band ? "Inter_600SemiBold" : "Inter_400Regular" }]}>
-                  Ages {band}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSave} activeOpacity={0.85}>
-            <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Save Changes</Text>
-          </TouchableOpacity>
+          <Label>Age Band</Label>
+          <SegmentedControl segments={ageBandSegments} value={ageBand} onChange={setAgeBand} />
+          <Button title="Save Changes" onPress={handleSave} />
         </View>
       )}
 
       <View style={styles.infoSection}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Age-Appropriate Guidance</Text>
-        {child.ageBand === "6-9" && (
-          <View style={[styles.guidanceCard, { backgroundColor: "#4CAF7D" + "18", borderColor: "#4CAF7D44" }]}>
-            <Text style={[styles.guidanceTitle, { color: "#4CAF7D", fontFamily: "Inter_600SemiBold" }]}>Ages 6-9: Foundation Building</Text>
-            <Text style={[styles.guidanceText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-              At this age, focus on basic digital safety: no sharing personal information, always asking permission before downloading, and understanding that not everything online is real or true.{"\n\n"}Recommended: Cyberbullying Prevention, Healthy Screen Habits
-            </Text>
-          </View>
-        )}
-        {child.ageBand === "10-13" && (
-          <View style={[styles.guidanceCard, { backgroundColor: "#4A90A4" + "18", borderColor: "#4A90A444" }]}>
-            <Text style={[styles.guidanceTitle, { color: "#4A90A4", fontFamily: "Inter_600SemiBold" }]}>Ages 10-13: Social Navigation</Text>
-            <Text style={[styles.guidanceText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-              This age group begins social media exploration and gaming. Key topics: understanding social media age limits, online friendship safety, recognizing scams, and building digital footprint awareness.{"\n\n"}Recommended: Social Media Readiness, Online Scam Awareness, Digital Footprints
-            </Text>
-          </View>
-        )}
-        {child.ageBand === "14-17" && (
-          <View style={[styles.guidanceCard, { backgroundColor: "#7B5EA7" + "18", borderColor: "#7B5EA744" }]}>
-            <Text style={[styles.guidanceTitle, { color: "#7B5EA7", fontFamily: "Inter_600SemiBold" }]}>Ages 14-17: Digital Independence</Text>
-            <Text style={[styles.guidanceText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
-              Teens need preparation for greater digital independence. Key topics: understanding online predator tactics, AI literacy, digital reputation management, and privacy in a data-driven world.{"\n\n"}Recommended: AI Safety & Literacy, Online Predator Awareness, Digital Footprints
-            </Text>
-          </View>
-        )}
+        <H2 style={{ marginBottom: 0 }}>Age-Appropriate Guidance</H2>
+        <Card variant="outline" style={[styles.guidanceCard, { backgroundColor: activeGuidance.color + "18", borderColor: activeGuidance.color + "44" }]}>
+          <Body style={{ color: activeGuidance.color, fontFamily: fontFamily.semibold }}>{activeGuidance.title}</Body>
+          <Body color={colors.foreground}>{activeGuidance.text}</Body>
+        </Card>
       </View>
 
       <View style={styles.infoSection}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-          {child.name}'s Default Restrictions
-        </Text>
-        <Text style={[styles.restrictionsHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-          Applies to {child.name} generally. Individual devices below can be adjusted separately.
-        </Text>
+        <H2 style={{ marginBottom: 0 }}>{child.name}&apos;s Default Restrictions</H2>
+        <Caption color={colors.mutedForeground}>Applies to {child.name} generally. Individual devices below can be adjusted separately.</Caption>
         <RestrictionRows values={policy} onChange={updatePolicy} colors={colors} />
       </View>
 
       <View style={styles.infoSection}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Devices</Text>
+        <H2 style={{ marginBottom: 0 }}>What Currently Applies</H2>
+        <Caption color={colors.mutedForeground}>The resolved result of family defaults, {child.name}&apos;s overrides, and any device-specific settings below.</Caption>
+        <EffectivePolicySummary childId={child.id} colors={colors} />
+      </View>
+
+      <View style={styles.infoSection}>
+        <H2 style={{ marginBottom: 0 }}>Devices</H2>
         {devices.length === 0 ? (
-          <Text style={[styles.restrictionsHint, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            No devices registered for {child.name} yet.
-          </Text>
+          <Caption color={colors.mutedForeground}>No devices registered for {child.name} yet.</Caption>
         ) : (
           devices.map((device) => (
             <DeviceRow
@@ -560,26 +561,26 @@ export default function ChildProfileScreen() {
       </View>
 
       <View style={styles.conversationSection}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Conversation Starters</Text>
+        <H2 style={{ marginBottom: 0 }}>Conversation Starters</H2>
         {[
           "What's your favorite thing to do online right now?",
           "Has anything ever made you feel uncomfortable online?",
           "Do you know what to do if someone asks for personal information?",
           "How do you decide who you want to be friends with online?",
         ].map(starter => (
-          <View key={starter} style={[styles.starterRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Card key={starter} variant="outline" style={styles.starterRow}>
             <View style={[styles.starterDot, { backgroundColor: colors.primary }]} />
-            <Text style={[styles.starterText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{starter}</Text>
-          </View>
+            <Body color={colors.foreground} style={styles.starterText}>{starter}</Body>
+          </Card>
         ))}
       </View>
 
       <View style={styles.infoSection}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Login PIN</Text>
+        <H2 style={{ marginBottom: 0 }}>Login PIN</H2>
         {settingPin ? (
           <View style={styles.editSection}>
             <TextInput
-              style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: 4 }]}
+              style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, fontFamily: fontFamily.bold, textAlign: "center", letterSpacing: 4 }]}
               value={newPin}
               onChangeText={setNewPin}
               placeholder="••••"
@@ -589,79 +590,54 @@ export default function ChildProfileScreen() {
               maxLength={6}
               autoFocus
             />
-            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSetPin} activeOpacity={0.85}>
-              <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Save PIN</Text>
-            </TouchableOpacity>
+            <Button title="Save PIN" onPress={handleSetPin} />
           </View>
         ) : (
-          <TouchableOpacity
-            style={[styles.starterRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => setSettingPin(true)}
-          >
+          <Card variant="outline" pressable onPress={() => setSettingPin(true)} style={styles.starterRow}>
             <Feather name="lock" size={16} color={colors.primary} />
-            <Text style={[styles.starterText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+            <Body color={colors.foreground} style={styles.starterText}>
               {child.name} uses this PIN with the family code to log in as themselves. Tap to change it.
-            </Text>
-          </TouchableOpacity>
+            </Body>
+          </Card>
         )}
       </View>
 
-      <TouchableOpacity style={[styles.deleteBtn, { borderColor: colors.destructive + "44" }]} onPress={handleDelete}>
-        <Feather name="trash-2" size={16} color={colors.destructive} />
-        <Text style={[styles.deleteText, { color: colors.destructive, fontFamily: "Inter_500Medium" }]}>Remove from Profile</Text>
-      </TouchableOpacity>
+      <Button title="Remove from Profile" icon="trash-2" variant="outline" style={{ borderColor: colors.destructive + "44" }} onPress={handleDelete} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 24 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  profile: { alignItems: "center", gap: 12 },
-  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", borderWidth: 2 },
-  initial: { fontSize: 36 },
-  nameInput: { fontSize: 26, borderBottomWidth: 2, paddingBottom: 4, textAlign: "center", minWidth: 150 },
-  childName: { fontSize: 26 },
-  agePill: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  ageText: { fontSize: 14 },
-  editSection: { gap: 12 },
-  editLabel: { fontSize: 14 },
-  ageBandRow: { flexDirection: "row", gap: 8 },
-  bandBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, alignItems: "center" },
-  bandText: { fontSize: 13 },
-  saveBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center" },
-  saveBtnText: { color: "#FFFFFF", fontSize: 15 },
-  restrictionsHint: { fontSize: 13, marginTop: -6 },
-  settingsList: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  settingsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, gap: 12 },
-  settingsLabel: { flex: 1, fontSize: 15 },
-  editableRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, gap: 8 },
-  editableInput: { flex: 1, fontSize: 14, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
-  editableSaveBtn: { width: 36, height: 36, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  deviceCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  deviceHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
-  deviceName: { flex: 1, fontSize: 15 },
-  deviceNameInput: { flex: 1, fontSize: 15, borderBottomWidth: 1.5, paddingBottom: 2 },
-  staleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  staleText: { fontSize: 11 },
-  deviceRestrictions: { paddingHorizontal: 8, paddingBottom: 8 },
-  generalApps: { marginTop: 12, gap: 8 },
-  generalAppsTitle: { fontSize: 14 },
-  appRuleCard: { borderWidth: 1, borderRadius: 12, padding: 10, gap: 6 },
+  profile: { alignItems: "center", gap: spacing.md },
+  nameInput: { fontSize: 26, borderBottomWidth: 2, paddingBottom: spacing.xs, textAlign: "center", minWidth: 150 },
+  editSection: { gap: spacing.md },
+  settingsList: { overflow: "hidden" },
+  settingsRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 1, gap: spacing.md },
+  settingsLabel: { flex: 1 },
+  rowDivider: { borderTopWidth: 1 },
+  togglesWrap: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
+  effectiveBanner: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  effectiveBannerText: { flexShrink: 1 },
+  effectiveLabelCol: { flex: 1, gap: 2 },
+  editableRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.sm },
+  editableSaveBtn: { width: 36, height: 36, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  deviceCard: { overflow: "hidden" },
+  deviceHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
+  deviceNameCol: { flex: 1, gap: 2 },
+  deviceNameInput: { fontSize: 15, borderBottomWidth: 1.5, paddingBottom: 2 },
+  deviceRestrictions: { paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
+  generalApps: { marginTop: spacing.md, gap: spacing.sm },
+  appRuleCard: { gap: spacing.xs },
   appRuleHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  appRuleName: { fontSize: 14 },
   appRuleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  appRuleTimeInput: { width: 64, fontSize: 12, borderWidth: 1, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4, textAlign: "center" },
-  addAppBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderStyle: "dashed", borderRadius: 10, paddingVertical: 10 },
-  infoSection: { gap: 10 },
-  sectionTitle: { fontSize: 18 },
-  guidanceCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },
-  guidanceTitle: { fontSize: 15 },
-  guidanceText: { fontSize: 14, lineHeight: 21 },
-  conversationSection: { gap: 8 },
-  starterRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 12, borderRadius: 12, borderWidth: 1 },
+  appRuleTimeInput: { width: 64, fontSize: 12, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.xs, paddingVertical: 4, textAlign: "center" },
+  addAppBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.xs, borderWidth: 1, borderStyle: "dashed", borderRadius: radius.md, paddingVertical: spacing.sm },
+  infoSection: { gap: spacing.sm },
+  guidanceCard: { gap: spacing.sm },
+  conversationSection: { gap: spacing.sm },
+  starterRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   starterDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6, flexShrink: 0 },
-  starterText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  deleteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, borderWidth: 1, paddingVertical: 14 },
-  deleteText: { fontSize: 15 },
+  starterText: { flex: 1, lineHeight: 20 },
 });

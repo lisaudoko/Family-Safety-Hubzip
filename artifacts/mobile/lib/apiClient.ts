@@ -530,6 +530,7 @@ export interface ApiDevice {
   permissionStatus: Record<string, string>;
   status: string;
   isStale: boolean;
+  syncStatus: "online" | "recent" | "stale";
   lastSyncedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -591,6 +592,7 @@ export interface ApiDashboardDevice {
   name: string;
   platform: string;
   isStale: boolean;
+  syncStatus: "online" | "recent" | "stale";
   lastSyncedAt: string | null;
 }
 
@@ -781,6 +783,76 @@ export async function apiUpdateChildPolicy(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+// ── Family Policy ───────────────────────────────────────────────────
+
+export interface FamilyPolicy {
+  id: string;
+  familyId: string;
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiGetFamilyPolicy(): Promise<{ policy: FamilyPolicy | null }> {
+  return apiFetch("/family/policy");
+}
+
+export async function apiUpdateFamilyPolicy(
+  data: Partial<{
+    screenTimeLimitMinutes: number | null;
+    bedtimeStart: string | null;
+    bedtimeEnd: string | null;
+    blockNewAppInstalls: boolean;
+    blockSafari: boolean;
+    blockExplicitContent: boolean;
+    requireParentApproval: boolean;
+  }>
+): Promise<{ policy: FamilyPolicy }> {
+  return apiFetch("/family/policy", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Effective Policy (resolved family -> child -> device, read-only) ──
+//
+// Resolution only - nothing on-device reads or applies these values yet.
+// See docs/POLICY_ENGINE.md.
+
+export interface EffectivePolicyValue<T> {
+  value: T;
+  source: "family" | "child" | "device" | "default";
+}
+
+export interface EffectiveFlag {
+  value: boolean;
+  sources: ("family" | "child" | "device")[];
+}
+
+export interface EffectivePolicy {
+  screenTimeLimitMinutes: EffectivePolicyValue<number | null>;
+  bedtimeStart: EffectivePolicyValue<string | null>;
+  bedtimeEnd: EffectivePolicyValue<string | null>;
+  blockNewAppInstalls: EffectiveFlag;
+  blockSafari: EffectiveFlag;
+  blockExplicitContent: EffectiveFlag;
+  requireParentApproval: EffectiveFlag;
+}
+
+export async function apiGetEffectivePolicy(
+  childId: string,
+  deviceId?: string,
+): Promise<{ policy: EffectivePolicy }> {
+  const query = deviceId ? `?deviceId=${encodeURIComponent(deviceId)}` : "";
+  return apiFetch(`/family/children/${childId}/effective-policy${query}`);
 }
 
 // ── Device App Rules (General Apps — per-app accessible/inaccessible windows) ─

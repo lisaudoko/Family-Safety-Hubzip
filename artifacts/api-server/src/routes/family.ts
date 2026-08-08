@@ -25,6 +25,7 @@ import {
   updateChildPolicy,
   type ChildPolicyInput,
 } from '../services/childPolicy.js';
+import { getEffectivePolicy } from '../services/effectivePolicy.js';
 import { familyPoliciesTable, childPoliciesTable } from '@workspace/db';
 
 const router = Router();
@@ -551,6 +552,32 @@ router.patch(
       }
 
       res.json({ policy: safeChildPolicy(policy) });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /api/family/children/:childId/effective-policy
+// Resolves what actually applies to this child right now, merging family ->
+// child -> (optionally) device-level policy per the precedence documented in
+// docs/POLICY_ENGINE.md. This is resolution only - nothing on-device reads
+// or applies these values yet (see docs/POLICY_ENGINE.md).
+router.get(
+  '/family/children/:childId/effective-policy',
+  requireParent,
+  async (req: AuthRequest, res, next) => {
+    try {
+      const childId = String(req.params.childId);
+      const deviceId = typeof req.query.deviceId === 'string' ? req.query.deviceId : undefined;
+
+      const policy = await getEffectivePolicy(childId, req.familyId!, deviceId);
+      if (!policy) {
+        res.status(404).json({ error: deviceId ? 'Child or device not found' : 'Child not found' });
+        return;
+      }
+
+      res.json({ policy });
     } catch (err) {
       next(err);
     }

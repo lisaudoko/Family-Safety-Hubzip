@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { getScreenTimeSummary, getActivitySummary, type DateRange } from '../lib/analytics.js';
 import { sendWeeklyDigestEmail, type WeeklyDigestData } from '../lib/email.js';
+import { isDeviceStale } from '../lib/deviceStatus.js';
 
 const router = Router();
 router.use(requireAuth as any);
@@ -22,20 +23,13 @@ const digestSendLimiter = rateLimit({
 
 const DIGEST_RANGE_DAYS = 7;
 
-// Same "no background job infra" pattern as devices.ts staleness and
-// analytics.ts summaries: there is no scheduler in this app, so the weekly
-// digest is computed and sent on demand rather than on a recurring timer.
-// A real "weekly" cadence would need either a job scheduler (e.g. node-cron)
-// running inside the process, or an external trigger (cron-like Replit
-// scheduled deployment / GitHub Action / third-party cron service) calling
-// this endpoint once a week - out of scope for this phase, flagged as a
-// followup recommendation.
-const STALE_AFTER_MS = 15 * 60 * 1000 * 3;
-
-function isDeviceStale(d: typeof devicesTable.$inferSelect): boolean {
-  if (!d.last_synced_at) return true;
-  return Date.now() - d.last_synced_at.getTime() > STALE_AFTER_MS;
-}
+// Same "no background job infra" pattern as analytics.ts summaries: there is
+// no scheduler in this app, so the weekly digest is computed and sent on
+// demand rather than on a recurring timer. A real "weekly" cadence would need
+// either a job scheduler (e.g. node-cron) running inside the process, or an
+// external trigger (cron-like Replit scheduled deployment / GitHub Action /
+// third-party cron service) calling this endpoint once a week - out of scope
+// for this phase, flagged as a followup recommendation.
 
 async function buildWeeklyDigestData(
   familyId: string,
@@ -84,7 +78,7 @@ async function buildWeeklyDigestData(
     devices: devices.map((d) => ({
       name: d.name,
       platform: d.platform,
-      stale: isDeviceStale(d),
+      stale: isDeviceStale(d.last_synced_at),
       lastSyncedAt: d.last_synced_at?.toISOString() ?? null,
     })),
   };

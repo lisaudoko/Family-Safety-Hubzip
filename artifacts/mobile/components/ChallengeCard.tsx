@@ -1,10 +1,12 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+
 import { Challenge } from "@/data/seed";
-import { PremiumBadge } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
-import { AppText as Text } from "@/components/AppText";
+import { Badge, Body, Card, H3, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 
 interface Props {
   challenge: Challenge;
@@ -16,58 +18,43 @@ export default function ChallengeCard({ challenge, status, onPress }: Props) {
   const colors = useColors();
 
   const statusConfig = {
-    available: { label: "Start", bg: colors.primary, color: "#fff" },
-    active: { label: "In Progress", bg: colors.accent, color: "#fff" },
-    completed: { label: "Completed", bg: colors.success, color: "#fff" },
+    available: { label: "Start", tone: colors.primary },
+    active: { label: "In Progress", tone: colors.accent },
+    completed: { label: "Completed", tone: colors.success },
   }[status];
 
   return (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={onPress}
-      activeOpacity={0.75}
-      accessibilityRole="button"
-      accessibilityLabel={`${challenge.title}, ${statusConfig.label}`}
-    >
+    <Card variant="outline" pressable onPress={onPress} style={styles.card}>
       <View style={[styles.iconWrap, { backgroundColor: challenge.color + "22" }]}>
         <Feather name={challenge.iconName as never} size={22} color={challenge.color} />
       </View>
       <View style={styles.content}>
         <View style={styles.row}>
-          <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]} numberOfLines={1}>{challenge.title}</Text>
-          {challenge.isPremium && status === "available" && <PremiumBadge />}
+          <H3 style={{ flex: 1 }} numberOfLines={1}>{challenge.title}</H3>
+          {challenge.isPremium && status === "available" && (
+            <Badge label="PRO" tone={colors.warning} variant="solid" icon="lock" />
+          )}
         </View>
-        <Text style={[styles.desc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>{challenge.description}</Text>
+        <Body color={colors.mutedForeground} numberOfLines={2} style={styles.desc}>{challenge.description}</Body>
         <View style={styles.footer}>
           <View style={styles.metaRow}>
             <Feather name="clock" size={12} color={colors.mutedForeground} />
-            <Text style={[styles.meta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{challenge.duration}</Text>
-            <View style={[styles.catPill, { backgroundColor: challenge.color + "22" }]}>
-              <Text style={[styles.catText, { color: challenge.color, fontFamily: "Inter_500Medium" }]}>{challenge.category}</Text>
-            </View>
+            <Small color={colors.mutedForeground}>{challenge.duration}</Small>
+            <Badge label={challenge.category} tone={challenge.color} variant="soft" />
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-            {status === "completed" && <Feather name="check" size={11} color="#fff" />}
-            <Text style={[styles.statusText, { color: statusConfig.color, fontFamily: "Inter_600SemiBold" }]}>{statusConfig.label}</Text>
-          </View>
+          <Badge label={statusConfig.label} tone={statusConfig.tone} variant="solid" icon={status === "completed" ? "check" : undefined} />
         </View>
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 16, borderWidth: 1, marginBottom: 10, alignItems: "flex-start" },
-  iconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 2 },
-  content: { flex: 1, gap: 6 },
-  row: { flexDirection: "row", alignItems: "center", gap: 8 },
-  title: { fontSize: 15, flex: 1 },
+  card: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
+  iconWrap: { width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center", marginTop: 2 },
+  content: { flex: 1, gap: spacing.xs },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   desc: { fontSize: 13, lineHeight: 18 },
-  footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  meta: { fontSize: 12 },
-  catPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
-  catText: { fontSize: 11 },
-  statusBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  statusText: { fontSize: 12 },
+  footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.xs },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
 });

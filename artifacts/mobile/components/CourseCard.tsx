@@ -1,10 +1,12 @@
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+
 import { Course } from "@/data/seed";
-import { PremiumBadge, ProgressBar } from "@/components/UI";
+import { Badge, Body, Card, Caption, H3, ProgressBar, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 import { useColors } from "@/hooks/useColors";
-import { AppText as Text } from "@/components/AppText";
 
 interface Props {
   course: Course;
@@ -19,92 +21,71 @@ export default function CourseCard({ course, progress, onPress, compact }: Props
 
   if (compact) {
     return (
-      <TouchableOpacity
-        style={[styles.compact, { backgroundColor: colors.card, borderColor: colors.border }]}
+      <Card
+        variant="outline"
+        pressable
         onPress={onPress}
-        activeOpacity={0.75}
-        accessibilityRole="button"
-        accessibilityLabel={`${course.title}, ${progress}% complete`}
+        style={styles.compact}
+        testID={`course-card-${course.id}`}
       >
         <View style={[styles.compactIcon, { backgroundColor: course.color + "22" }]}>
           <Feather name={course.iconName as never} size={20} color={course.color} />
         </View>
         <View style={styles.compactContent}>
-          <Text style={[styles.compactTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>{course.title}</Text>
-          <Text style={[styles.compactMeta, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{course.duration} · {course.lessons.length} lessons</Text>
+          <Body color={colors.foreground} numberOfLines={1}>{course.title}</Body>
+          <Small color={colors.mutedForeground}>{course.duration} · {course.lessons.length} lessons</Small>
           <ProgressBar value={progress} total={100} color={course.color} />
         </View>
-        {course.isPremium && !isComplete && <PremiumBadge />}
+        {course.isPremium && !isComplete && <Badge label="PRO" tone={colors.warning} variant="solid" icon="lock" />}
         {isComplete && <Feather name="check-circle" size={20} color={colors.success} />}
-      </TouchableOpacity>
+      </Card>
     );
   }
 
   return (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={onPress}
-      activeOpacity={0.75}
-      accessibilityRole="button"
-      accessibilityLabel={`${course.title}, ${isComplete ? "complete" : `${progress}% complete`}`}
-    >
+    <Card variant="outline" pressable onPress={onPress} style={styles.card}>
       <View style={styles.header}>
         <View style={[styles.iconBg, { backgroundColor: course.color + "22" }]}>
           <Feather name={course.iconName as never} size={24} color={course.color} />
         </View>
         <View style={styles.meta}>
-          <Text style={[styles.category, { color: course.color, fontFamily: "Inter_500Medium" }]}>{course.category}</Text>
+          <Caption color={course.color}>{course.category}</Caption>
           <View style={styles.badges}>
-            <View style={[styles.levelBadge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.levelText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>{course.level}</Text>
-            </View>
-            {course.isPremium && <PremiumBadge />}
+            <Badge label={course.level} tone={colors.mutedForeground} variant="soft" />
+            {course.isPremium && <Badge label="PRO" tone={colors.warning} variant="solid" icon="lock" />}
           </View>
         </View>
       </View>
-      <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{course.title}</Text>
-      <Text style={[styles.description, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>{course.description}</Text>
+      <H3>{course.title}</H3>
+      <Body color={colors.mutedForeground} numberOfLines={2}>{course.description}</Body>
       <View style={styles.footer}>
         <View style={styles.stats}>
           <Feather name="clock" size={13} color={colors.mutedForeground} />
-          <Text style={[styles.statText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{course.duration}</Text>
+          <Small color={colors.mutedForeground}>{course.duration}</Small>
           <Feather name="book-open" size={13} color={colors.mutedForeground} />
-          <Text style={[styles.statText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{course.lessons.length} lessons</Text>
+          <Small color={colors.mutedForeground}>{course.lessons.length} lessons</Small>
         </View>
         {isComplete ? (
-          <View style={[styles.completePill, { backgroundColor: colors.success + "22" }]}>
-            <Feather name="check" size={12} color={colors.success} />
-            <Text style={[styles.completeText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>Complete</Text>
-          </View>
+          <Badge label="Complete" tone={colors.success} variant="soft" icon="check" />
         ) : (
-          <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={{ flex: 1, marginLeft: spacing.md }}>
             <ProgressBar value={progress} total={100} color={course.color} />
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, gap: 10 },
-  header: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  iconBg: { width: 44, height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  meta: { flex: 1, gap: 4 },
-  category: { fontSize: 12 },
-  badges: { flexDirection: "row", gap: 6, alignItems: "center" },
-  levelBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  levelText: { fontSize: 11 },
-  title: { fontSize: 17 },
-  description: { fontSize: 13, lineHeight: 19 },
-  footer: { flexDirection: "row", alignItems: "center", gap: 8 },
+  card: { gap: spacing.sm },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  iconBg: { width: 44, height: 44, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  meta: { flex: 1, gap: spacing.xs },
+  badges: { flexDirection: "row", gap: spacing.xs, alignItems: "center" },
+  footer: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   stats: { flexDirection: "row", alignItems: "center", gap: 5 },
-  statText: { fontSize: 12 },
-  completePill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  completeText: { fontSize: 12 },
-  compact: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
-  compactIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  compactContent: { flex: 1, gap: 4 },
-  compactTitle: { fontSize: 14 },
-  compactMeta: { fontSize: 12 },
+  compact: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  compactIcon: { width: 40, height: 40, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  compactContent: { flex: 1, gap: spacing.xs },
 });

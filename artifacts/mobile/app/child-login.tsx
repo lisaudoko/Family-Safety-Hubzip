@@ -1,14 +1,19 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, Platform } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { apiGetFamilyByCode, type ApiFamilyByCodeChild } from "@/lib/apiClient";
+import { Body, Button, Card, Display, TextField } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { shadow } from "@/constants/elevation";
 
 type Step = "code" | "child" | "pin";
 
@@ -90,130 +95,77 @@ export default function ChildLoginScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <LinearGradient
         colors={[colors.primary, colors.teal]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.hero, { paddingTop: insets.top + 16 }]}
+        style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
       >
-        <TouchableOpacity
-          onPress={goBack}
-          style={styles.back}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="arrow-left" size={22} color="#FFFFFF" />
+        <TouchableOpacity onPress={goBack} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
         </TouchableOpacity>
 
-        <View style={styles.badge}>
-          <Feather name="smile" size={30} color="#FFFFFF" />
+        <View style={[styles.badge, { backgroundColor: colors.primaryForeground + "40" }]}>
+          <Feather name="smile" size={30} color={colors.primaryForeground} />
         </View>
 
-        <Text style={[styles.title, { fontFamily: "Inter_700Bold" }]}>
+        <Display style={[styles.title, { color: colors.primaryForeground }]}>
           {step === "code" && "Kid Login"}
           {step === "child" && (familyName || "Your Family")}
           {step === "pin" && (selectedChild?.name ?? "Enter PIN")}
-        </Text>
-        <Text style={[styles.subtitle, { fontFamily: "Inter_400Regular" }]}>
+        </Display>
+        <Body style={[styles.subtitle, { color: colors.primaryForeground + "E6" }]}>
           {step === "code" && "Enter the code your parent gave you"}
           {step === "child" && "Tap your name"}
           {step === "pin" && "Enter your PIN to sign in"}
-        </Text>
+        </Body>
       </LinearGradient>
 
       <View style={styles.middle}>
         {step === "code" && (
           <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
-                Family Code
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.codeInput,
-                  { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_700Bold" },
-                ]}
-                placeholder="ABC123"
-                placeholderTextColor={colors.mutedForeground}
-                value={familyCode}
-                onChangeText={setFamilyCode}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={8}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]}
-              onPress={handleFindFamily}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>
-                {loading ? "Looking…" : "Continue"}
-              </Text>
-            </TouchableOpacity>
+            <TextField
+              label="Family Code"
+              placeholder="ABC123"
+              value={familyCode}
+              onChangeText={setFamilyCode}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={8}
+              style={styles.codeInput}
+            />
+            <Button title={loading ? "Looking…" : "Continue"} onPress={handleFindFamily} loading={loading} disabled={loading} style={styles.btn} />
           </View>
         )}
 
         {step === "child" && (
           <View style={styles.form}>
             {children.map(child => (
-              <TouchableOpacity
-                key={child.id}
-                style={[styles.childRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => handlePickChild(child)}
-                activeOpacity={0.8}
-              >
+              <Card key={child.id} variant="outline" pressable onPress={() => handlePickChild(child)} style={styles.childRow}>
                 <View style={[styles.childAvatar, { backgroundColor: colors.secondary }]}>
                   <Feather name="user" size={20} color={colors.primary} />
                 </View>
-                <Text style={[styles.childName, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>
-                  {child.name}
-                </Text>
+                <Body color={colors.foreground} style={{ flex: 1 }}>{child.name}</Body>
                 <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-              </TouchableOpacity>
+              </Card>
             ))}
           </View>
         )}
 
         {step === "pin" && (
           <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>
-                PIN
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.codeInput,
-                  { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_700Bold" },
-                ]}
-                placeholder="••••"
-                placeholderTextColor={colors.mutedForeground}
-                value={pin}
-                onChangeText={setPin}
-                keyboardType="number-pad"
-                secureTextEntry
-                maxLength={6}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]}
-              onPress={handleChildLogin}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>
-                {loading ? "Signing in…" : "Sign In"}
-              </Text>
-            </TouchableOpacity>
+            <TextField
+              label="PIN"
+              placeholder="••••"
+              value={pin}
+              onChangeText={setPin}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+              style={styles.codeInput}
+            />
+            <Button title={loading ? "Signing in…" : "Sign In"} onPress={handleChildLogin} loading={loading} disabled={loading} style={styles.btn} />
           </View>
         )}
       </View>
@@ -222,80 +174,29 @@ export default function ChildLoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    paddingBottom: 24,
-  },
+  container: { flexGrow: 1, paddingBottom: spacing.xxl },
   hero: {
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    gap: 10,
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: spacing.xxxl + 4,
+    borderBottomLeftRadius: radius.xl + 8,
+    borderBottomRightRadius: radius.xl + 8,
+    gap: spacing.sm,
   },
-  back: { alignSelf: "flex-start", marginBottom: 8 },
+  back: { alignSelf: "flex-start", marginBottom: spacing.sm },
   badge: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
-  title: { fontSize: 30, lineHeight: 36, color: "#FFFFFF" },
-  subtitle: { fontSize: 15, lineHeight: 23, color: "rgba(255,255,255,0.9)" },
-  middle: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 32,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-  },
-  form: { gap: 16 },
-  field: { gap: 8 },
-  label: { fontSize: 14 },
-  input: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-      android: { elevation: 1 },
-    }),
-  },
-  codeInput: {
-    textAlign: "center",
-    fontSize: 24,
-    letterSpacing: 4,
-  },
-  childRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  childAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  childName: { flex: 1, fontSize: 16 },
-  btn: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 8,
-    ...Platform.select({
-      ios: { shadowColor: "#F97316", shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
-      android: { elevation: 4 },
-    }),
-  },
-  btnText: { color: "#FFFFFF", fontSize: 16 },
+  title: {},
+  subtitle: {},
+  middle: { flex: 1, justifyContent: "center", gap: spacing.xxxl, paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl },
+  form: { gap: spacing.lg },
+  codeInput: { textAlign: "center", fontSize: 24, letterSpacing: 4 },
+  childRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  childAvatar: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  btn: { marginTop: spacing.xs, ...shadow.md },
 });

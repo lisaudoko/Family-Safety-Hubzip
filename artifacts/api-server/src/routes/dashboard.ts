@@ -4,22 +4,11 @@ import { childrenTable, devicesTable, deviceEventsTable, userProgressTable, badg
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { getScreenTimeSummary, getActivitySummary, getEducationActivitySummary } from '../lib/analytics.js';
+import { isDeviceStale, deviceStatusLabel } from '../lib/deviceStatus.js';
 
 const router = Router();
 router.use(requireAuth as any);
 router.use(requireParent as any);
-
-// How often a device is expected to check in, mirrored from devices.ts so we
-// can compute the same isStale flag here without importing an Express router
-// module (this file only needs the pure staleness check, not devices.ts's
-// route handlers).
-const SYNC_INTERVAL_SECONDS = 15 * 60;
-const STALE_AFTER_MS = SYNC_INTERVAL_SECONDS * 1000 * 3;
-
-function isDeviceStale(lastSyncedAt: Date | null): boolean {
-  if (!lastSyncedAt) return true;
-  return Date.now() - lastSyncedAt.getTime() > STALE_AFTER_MS;
-}
 
 function safeDeviceSummary(d: typeof devicesTable.$inferSelect) {
   return {
@@ -27,6 +16,7 @@ function safeDeviceSummary(d: typeof devicesTable.$inferSelect) {
     name: d.name,
     platform: d.platform,
     isStale: isDeviceStale(d.last_synced_at),
+    syncStatus: deviceStatusLabel(d.last_synced_at),
     lastSyncedAt: d.last_synced_at?.toISOString() ?? null,
   };
 }

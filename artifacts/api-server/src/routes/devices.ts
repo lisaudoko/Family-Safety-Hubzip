@@ -21,6 +21,7 @@ import {
   deleteDeviceAppRule,
 } from "../services/deviceAppRules.js";
 import { deviceRestrictionsTable, deviceAppRulesTable } from "@workspace/db";
+import { isDeviceStale, deviceStatusLabel, SYNC_INTERVAL_SECONDS } from "../lib/deviceStatus.js";
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -115,18 +116,6 @@ function safeDeviceEvent(e: typeof deviceEventsTable.$inferSelect) {
   };
 }
 
-// How often a device is expected to check in. Devices that haven't synced
-// within this window are reported as stale to the parent, even though we
-// don't run a background job to flip their stored `status` - staleness is
-// computed on read instead.
-const SYNC_INTERVAL_SECONDS = 15 * 60;
-const STALE_AFTER_MS = SYNC_INTERVAL_SECONDS * 1000 * 3;
-
-function isDeviceStale(d: typeof devicesTable.$inferSelect): boolean {
-  if (!d.last_synced_at) return true;
-  return Date.now() - d.last_synced_at.getTime() > STALE_AFTER_MS;
-}
-
 function safeDevice(d: typeof devicesTable.$inferSelect) {
   return {
     id: d.id,
@@ -139,7 +128,8 @@ function safeDevice(d: typeof devicesTable.$inferSelect) {
     capabilities: d.capabilities,
     permissionStatus: d.permission_status,
     status: d.status,
-    isStale: isDeviceStale(d),
+    isStale: isDeviceStale(d.last_synced_at),
+    syncStatus: deviceStatusLabel(d.last_synced_at),
     lastSyncedAt: d.last_synced_at?.toISOString() ?? null,
     createdAt: d.created_at.toISOString(),
     updatedAt: d.updated_at.toISOString(),
