@@ -1,7 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { Image, StatusBar, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
@@ -22,7 +23,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar style="light" />
       <LinearGradient colors={[colors.primary, colors.teal]} style={[styles.hero, { paddingTop: insets.top + 40 }]}>
         <View style={[styles.logoWrap, { backgroundColor: colors.primaryForeground + "26" }]}>
           <Image source={require("../assets/images/icon.png")} style={styles.logo} resizeMode="contain" />

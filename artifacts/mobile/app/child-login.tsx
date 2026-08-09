@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -95,6 +95,11 @@ export default function ChildLoginScreen() {
   };
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+    >
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <LinearGradient
         colors={[colors.primary, colors.teal]}
@@ -170,6 +175,7 @@ export default function ChildLoginScreen() {
         )}
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

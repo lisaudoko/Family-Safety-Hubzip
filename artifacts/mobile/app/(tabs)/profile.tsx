@@ -121,9 +121,9 @@ export default function ProfileScreen() {
   const handleHelp = () => {
     Alert.alert(
       "Help & Support",
-      "Need help? Reach out at:\n\nhello@digitalvillage.app\n\nWe respond within 1 business day.",
+      "Need help? Reach out at:\n\nadmin@nexgenoptimize.com\n\nWe respond within 1 business day.",
       [
-        { text: "Send Email", onPress: () => Linking.openURL("mailto:hello@digitalvillage.app") },
+        { text: "Send Email", onPress: () => Linking.openURL("mailto:admin@nexgenoptimize.com") },
         { text: "Close", style: "cancel" },
       ]
     );
@@ -196,14 +196,14 @@ export default function ProfileScreen() {
 
       {user?.role === "parent" && user?.emailVerified === false && (
         <Card variant="outline" style={styles.verifyCard}>
-          <View style={styles.upgradeContent}>
+          <View style={[styles.upgradeContent, { flex: 1 }]}>
             <Feather name="mail" size={20} color={colors.primary} />
-            <View>
+            <View style={{ flex: 1 }}>
               <Body color={colors.foreground}>Verify your email</Body>
               <Caption color={colors.mutedForeground}>We sent you a code when you signed up.</Caption>
             </View>
           </View>
-          <TouchableOpacity onPress={() => setVerifyModal(true)} activeOpacity={0.8}>
+          <TouchableOpacity onPress={() => setVerifyModal(true)} activeOpacity={0.8} style={{ flexShrink: 0 }}>
             <Small style={{ color: colors.primary, fontSize: 13 }}>Enter code</Small>
           </TouchableOpacity>
         </Card>
@@ -348,6 +348,7 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <Caption color={colors.mutedForeground} style={styles.version}>Digital Village v1.0.0</Caption>
+      <Small color={colors.mutedForeground} style={styles.version}>Powered by nexgenoptimize.com</Small>
 
       <Modal visible={editModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditModal(false)}>
         <View style={[styles.modalContainer, { backgroundColor: colors.background, paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxl }]}>

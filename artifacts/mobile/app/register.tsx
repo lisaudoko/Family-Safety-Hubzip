@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -40,62 +40,68 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}
-      keyboardShouldPersistTaps="handled"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
-      <TouchableOpacity onPress={() => router.back()} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Feather name="arrow-left" size={22} color={colors.foreground} />
-      </TouchableOpacity>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
+        </TouchableOpacity>
 
-      <View style={styles.middle}>
-        <View style={styles.header}>
-          <H1>Create your account</H1>
-          <Body color={colors.mutedForeground}>Start your family&apos;s digital safety journey today — free forever</Body>
+        <View style={styles.middle}>
+          <View style={styles.header}>
+            <H1>Create your account</H1>
+            <Body color={colors.mutedForeground}>Start your family&apos;s digital safety journey today — free forever</Body>
+          </View>
+
+          <View style={styles.form}>
+            <TextField label="Your Name" placeholder="First name or full name" value={name} onChangeText={setName} autoCapitalize="words" autoComplete="name" />
+
+            <TextField
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+            />
+
+            <TextField
+              label="Password"
+              placeholder="Minimum 6 characters"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPw}
+              autoComplete="new-password"
+              rightElement={
+                <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+                </TouchableOpacity>
+              }
+            />
+
+            <Button title={loading ? "Creating account…" : "Create Free Account"} onPress={handleRegister} loading={loading} disabled={loading} style={styles.btn} />
+
+            <Caption color={colors.mutedForeground} style={styles.disclaimer}>
+              Digital Village does not monitor, track, or surveil children&apos;s devices. Privacy is a family value.
+            </Caption>
+          </View>
         </View>
 
-        <View style={styles.form}>
-          <TextField label="Your Name" placeholder="First name or full name" value={name} onChangeText={setName} autoCapitalize="words" autoComplete="name" />
-
-          <TextField
-            label="Email"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-
-          <TextField
-            label="Password"
-            placeholder="Minimum 6 characters"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPw}
-            autoComplete="new-password"
-            rightElement={
-              <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            }
-          />
-
-          <Button title={loading ? "Creating account…" : "Create Free Account"} onPress={handleRegister} loading={loading} disabled={loading} style={styles.btn} />
-
-          <Caption color={colors.mutedForeground} style={styles.disclaimer}>
-            Digital Village does not monitor, track, or surveil children&apos;s devices. Privacy is a family value.
-          </Caption>
-        </View>
-      </View>
-
-      <TouchableOpacity onPress={() => router.push("/login")} style={styles.switchRow}>
-        <Body color={colors.mutedForeground}>
-          Already have an account? <Body color={colors.primary}>Sign in</Body>
-        </Body>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity onPress={() => router.push("/login")} style={styles.switchRow}>
+          <Body color={colors.mutedForeground}>
+            Already have an account? <Body color={colors.primary}>Sign in</Body>
+          </Body>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -68,62 +68,68 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}
-      keyboardShouldPersistTaps="handled"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
-      <TouchableOpacity
-        onPress={() => (step === "reset" ? setStep("email") : router.back())}
-        style={styles.back}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}
+        keyboardShouldPersistTaps="handled"
       >
-        <Feather name="arrow-left" size={22} color={colors.foreground} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => (step === "reset" ? setStep("email") : router.back())}
+          style={styles.back}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
+        </TouchableOpacity>
 
-      <View style={styles.middle}>
-        <View style={styles.header}>
-          <Display style={styles.title}>{step === "email" ? "Forgot password" : "Reset password"}</Display>
-          <Body color={colors.mutedForeground}>
-            {step === "email"
-              ? "Enter your email and we'll send you a code to reset your password."
-              : "Enter the code we sent you and choose a new password."}
-          </Body>
+        <View style={styles.middle}>
+          <View style={styles.header}>
+            <Display style={styles.title}>{step === "email" ? "Forgot password" : "Reset password"}</Display>
+            <Body color={colors.mutedForeground}>
+              {step === "email"
+                ? "Enter your email and we'll send you a code to reset your password."
+                : "Enter the code we sent you and choose a new password."}
+            </Body>
+          </View>
+
+          {step === "email" ? (
+            <View style={styles.form}>
+              <TextField
+                label="Email"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+              <Button title={loading ? "Sending…" : "Send Reset Code"} onPress={handleSendCode} loading={loading} disabled={loading} style={styles.btn} />
+            </View>
+          ) : (
+            <View style={styles.form}>
+              <TextField label="Reset Code" placeholder="6-digit code" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} />
+              <TextField label="New Password" placeholder="New password" value={newPassword} onChangeText={setNewPassword} secureTextEntry autoComplete="new-password" />
+              <TextField
+                label="Confirm Password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="new-password"
+              />
+              <Button title={loading ? "Resetting…" : "Reset Password"} onPress={handleResetPassword} loading={loading} disabled={loading} style={styles.btn} />
+              <TouchableOpacity onPress={handleSendCode} disabled={loading} style={styles.resendRow}>
+                <Body color={colors.primary} style={{ fontSize: 14 }}>Resend code</Body>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-
-        {step === "email" ? (
-          <View style={styles.form}>
-            <TextField
-              label="Email"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-            <Button title={loading ? "Sending…" : "Send Reset Code"} onPress={handleSendCode} loading={loading} disabled={loading} style={styles.btn} />
-          </View>
-        ) : (
-          <View style={styles.form}>
-            <TextField label="Reset Code" placeholder="6-digit code" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} />
-            <TextField label="New Password" placeholder="New password" value={newPassword} onChangeText={setNewPassword} secureTextEntry autoComplete="new-password" />
-            <TextField
-              label="Confirm Password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoComplete="new-password"
-            />
-            <Button title={loading ? "Resetting…" : "Reset Password"} onPress={handleResetPassword} loading={loading} disabled={loading} style={styles.btn} />
-            <TouchableOpacity onPress={handleSendCode} disabled={loading} style={styles.resendRow}>
-              <Body color={colors.primary} style={{ fontSize: 14 }}>Resend code</Body>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

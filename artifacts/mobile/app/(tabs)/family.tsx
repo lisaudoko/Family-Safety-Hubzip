@@ -203,7 +203,7 @@ export default function FamilyScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   section: { gap: spacing.md },
-  codeCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: -spacing.md },
+  codeCard: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   codeIcon: { width: 36, height: 36, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   codeLabel: { letterSpacing: 0.5 },
   codeValue: { letterSpacing: 2 },

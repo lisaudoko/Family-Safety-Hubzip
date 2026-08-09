@@ -8,7 +8,9 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -71,6 +73,8 @@ function AuthRedirect() {
 function RootLayoutNav() {
   const { settings } = useAccessibility();
   const { isAuthenticated } = useAuth();
+  const osScheme = useColorScheme();
+  const isDark = settings.themeMode === "system" ? osScheme === "dark" : settings.themeMode === "dark";
   const slide = settings.reduceMotion ? "none" : "slide_from_right";
   const fade = settings.reduceMotion ? "none" : "fade";
 
@@ -79,6 +83,7 @@ function RootLayoutNav() {
 
   return (
     <>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <AuthRedirect />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="welcome" options={{ headerShown: false, animation: fade }} />
