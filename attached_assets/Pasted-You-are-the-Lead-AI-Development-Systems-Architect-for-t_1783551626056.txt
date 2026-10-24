@@ -1,0 +1,532 @@
+You are the Lead AI Development Systems Architect for this project.
+
+Your task is to create a permanent AI-assisted development framework inside this repository so Claude Code can work efficiently with minimal repeated context.
+
+The goal is to reduce token usage by moving:
+
+- Project knowledge
+- Architecture information
+- Development rules
+- Workflow requirements
+- Documentation processes
+- Reusable behaviors
+
+into files that Claude Code can automatically reference.
+
+You are NOT redesigning the application.
+
+You are NOT rebuilding features.
+
+You are NOT changing production functionality.
+
+You are ONLY creating the AI development infrastructure.
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+Before creating anything:
+
+1. Inspect the existing codebase.
+2. Understand the current architecture.
+3. Identify existing:
+   - Frontend structure
+   - Backend structure
+   - Database structure
+   - APIs
+   - Services
+   - Authentication system
+   - Current development phase
+
+4. Document only what exists.
+
+Never:
+
+- Invent APIs.
+- Invent database tables.
+- Invent completed features.
+- Duplicate existing services.
+- Duplicate existing business logic.
+- Modify production code unless absolutely required.
+
+==================================================
+CREATE CLAUDE CODE PROJECT INSTRUCTIONS
+==================================================
+
+Create:
+
+CLAUDE.md
+
+This file is the permanent instruction manual Claude Code reads automatically.
+
+It must contain:
+
+# Project Overview
+
+Include:
+
+- Application purpose
+- Current technology stack
+- Frontend architecture
+- Backend architecture
+- Database architecture
+- Deployment setup
+- Package manager
+- Development workflow
+
+==================================================
+CLAUDE DEVELOPMENT RULES
+==================================================
+
+Claude must:
+
+- Analyze existing code before modifying anything.
+- Review relevant documentation before implementation.
+- Create a plan before major changes.
+- Implement one subsystem at a time.
+- Ask questions when requirements are unclear.
+- Reuse existing architecture.
+- Avoid duplicate functionality.
+- Avoid duplicate APIs.
+- Avoid duplicate database tables.
+- Preserve existing business logic.
+- Follow existing coding patterns.
+
+==================================================
+AI DEVELOPMENT CONTEXT MANAGEMENT
+==================================================
+
+Add a permanent section called:
+
+AI DEVELOPMENT CONTEXT MANAGEMENT
+
+
+Before beginning any major development task Claude must review:
+
+AI_CONTEXT/CURRENT_STATE.md
+
+AI_CONTEXT/CURRENT_PHASE.md
+
+AI_CONTEXT/NEXT_TASK.md
+
+AI_CONTEXT/PROJECT_MAP.md
+
+Relevant files inside:
+
+docs/
+
+
+Claude must understand existing architecture before making changes.
+
+
+Claude must not duplicate:
+
+- Existing services
+- Existing APIs
+- Existing database tables
+- Existing business logic
+
+
+Claude must follow existing project patterns and conventions.
+
+
+==================================================
+AFTER COMPLETING ANY SUBSYSTEM
+==================================================
+
+A development task is not complete until the AI project knowledge system is updated.
+
+
+Update only files affected by the change.
+
+
+Required updates:
+
+
+AI_CONTEXT/CURRENT_STATE.md
+
+Update:
+
+- Current system status
+- Completed functionality
+- Active development areas
+- Current risks
+
+
+--------------------------------
+
+
+AI_CONTEXT/COMPLETED_WORK.md
+
+Record:
+
+- Feature completed
+- Date completed
+- Files modified
+- APIs added or changed
+- Database changes
+- Architectural impact
+
+
+--------------------------------
+
+
+AI_CONTEXT/NEXT_TASK.md
+
+Update:
+
+- Remaining work
+- Recommended next development step
+- Pending decisions
+
+
+--------------------------------
+
+
+AI_CONTEXT/AI_CHANGELOG.md
+
+Record:
+
+- What changed
+- Why it changed
+- Technical impact
+- Files affected
+
+
+==================================================
+DOCUMENTATION UPDATE RULES
+==================================================
+
+When architecture changes, update relevant documentation:
+
+
+docs/ARCHITECTURE.md
+
+docs/DATABASE.md
+
+docs/API.md
+
+docs/SECURITY.md
+
+docs/DEVICE_ARCHITECTURE.md
+
+docs/ACCOUNT_MODEL.md
+
+docs/EDUCATION_SYSTEM.md
+
+docs/POLICY_ENGINE.md
+
+
+Documentation must:
+
+- Reflect actual implementation.
+- Clearly separate completed features from planned features.
+- Never document functionality that does not exist.
+- Keep AI_CONTEXT concise.
+- Keep docs detailed.
+
+
+==================================================
+SECURITY REQUIREMENTS
+==================================================
+
+Preserve existing security architecture.
+
+Document and maintain:
+
+- JWT Authentication
+- Role Based Access Control
+- Parent permissions
+- Child permissions
+- Admin permissions
+- Audit Logging
+- Rate Limiting
+- Input Validation
+- SQL Injection Protection
+- CSRF Protection where applicable
+
+
+==================================================
+QUALITY REQUIREMENTS
+==================================================
+
+The project already uses linting.
+
+Claude must:
+
+- Use existing linting workflow.
+- Run linting after completing subsystems.
+- Resolve lint issues before marking work complete.
+
+
+==================================================
+CREATE CLAUDE CODE SKILLS
+==================================================
+
+Create:
+
+.claude/
+
+skills/
+
+update-project-context/
+
+SKILL.md
+
+
+This skill is a reusable Claude Code workflow.
+
+Purpose:
+
+Maintain the Digital Village AI knowledge system after development work.
+
+
+==================================================
+SKILL CONTENT
+==================================================
+
+The skill should instruct Claude:
+
+# When To Use
+
+Use this workflow after completing:
+
+- A feature
+- A backend subsystem
+- A database change
+- A new API
+- A major architectural change
+
+
+# Process
+
+1. Review changed files.
+
+2. Identify affected systems.
+
+3. Update AI_CONTEXT documentation.
+
+4. Update relevant docs files.
+
+5. Record changes in:
+
+AI_CONTEXT/AI_CHANGELOG.md
+
+
+6. Update:
+
+AI_CONTEXT/NEXT_TASK.md
+
+
+7. Confirm documentation matches implementation.
+
+
+# Rules
+
+Never:
+
+- Invent information.
+- Document incomplete features as complete.
+- Overwrite historical decisions.
+- Remove important architectural context.
+
+Always:
+
+- Preserve architectural consistency.
+- Keep AI_CONTEXT concise.
+- Keep human documentation detailed.
+
+
+==================================================
+CREATE AI_CONTEXT DIRECTORY
+==================================================
+
+Create:
+
+AI_CONTEXT/
+
+
+Create:
+
+
+CURRENT_STATE.md
+
+Purpose:
+A quick snapshot of the current project.
+
+
+Include:
+
+- Current status
+- Completed systems
+- Active development
+- Risks
+
+
+--------------------------------
+
+
+CURRENT_PHASE.md
+
+Include:
+
+- Current development phase
+- Goals
+- Completed objectives
+- Remaining objectives
+
+
+--------------------------------
+
+
+NEXT_TASK.md
+
+Create the AI task queue.
+
+Include:
+
+- Current priority
+- Approved next task
+- Pending decisions
+
+
+--------------------------------
+
+
+COMPLETED_WORK.md
+
+Track:
+
+- Completed features
+- Dates
+- Files
+- APIs
+- Database changes
+
+
+--------------------------------
+
+
+AI_CHANGELOG.md
+
+Track AI development history.
+
+
+--------------------------------
+
+
+PROJECT_MAP.md
+
+Create a fast navigation map for Claude.
+
+Include:
+
+- Major folders
+- Important files
+- Frontend locations
+- Backend locations
+- Database locations
+- Authentication locations
+- API locations
+- Configuration files
+
+The purpose is to help Claude navigate the codebase without scanning everything.
+
+
+--------------------------------
+
+
+KNOWN_PATTERNS.md
+
+Document:
+
+- Reusable coding patterns
+- Service patterns
+- API patterns
+- Database patterns
+- Component patterns
+
+
+--------------------------------
+
+
+DECISIONS.md
+
+Document:
+
+- Architecture decisions
+- Why decisions were made
+- Long-term impact
+
+
+--------------------------------
+
+
+COMMON_COMMANDS.md
+
+Document:
+
+- Install commands
+- Development commands
+- Build commands
+- Lint commands
+- Testing commands
+
+
+==================================================
+CREATE HUMAN DOCUMENTATION
+==================================================
+
+Create:
+
+docs/
+
+
+ARCHITECTURE.md
+
+DATABASE.md
+
+API.md
+
+SECURITY.md
+
+DEVICE_ARCHITECTURE.md
+
+ACCOUNT_MODEL.md
+
+EDUCATION_SYSTEM.md
+
+POLICY_ENGINE.md
+
+CODING_STANDARDS.md
+
+ROADMAP.md
+
+STATUS.md
+
+DECISIONS.md
+
+
+These documents should contain detailed human-readable explanations.
+
+==================================================
+FINAL VALIDATION
+==================================================
+
+After creating everything:
+
+1. Verify documentation matches the actual codebase.
+2. Remove duplicate information.
+3. Ensure AI_CONTEXT files are concise.
+4. Ensure documentation files are detailed.
+5. Ensure no production code was changed.
+6. Ensure Claude Code can begin future tasks by reading CLAUDE.md and AI_CONTEXT.
+
+Provide a final report:
+
+- Files created
+- Files updated
+- Current architecture summary
+- Current development phase
+- How Claude Code should use this system
+- Recommended future workflow

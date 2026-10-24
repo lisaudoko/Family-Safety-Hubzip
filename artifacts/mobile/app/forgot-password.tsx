@@ -1,12 +1,15 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { apiForgotPassword, apiResetPassword } from "@/lib/apiClient";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
+import { Body, Button, Display, TextField } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
@@ -65,169 +68,78 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
-      ]}
-      keyboardShouldPersistTaps="handled"
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
     >
-      <TouchableOpacity
-        onPress={() => (step === "reset" ? setStep("email") : router.back())}
-        style={styles.back}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}
+        keyboardShouldPersistTaps="handled"
       >
-        <Feather name="arrow-left" size={22} color={colors.foreground} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => (step === "reset" ? setStep("email") : router.back())}
+          style={styles.back}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
+        </TouchableOpacity>
 
-      <View style={styles.middle}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-            {step === "email" ? "Forgot password" : "Reset password"}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-            {step === "email"
-              ? "Enter your email and we'll send you a code to reset your password."
-              : "Enter the code we sent you and choose a new password."}
-          </Text>
-        </View>
+        <View style={styles.middle}>
+          <View style={styles.header}>
+            <Display style={styles.title}>{step === "email" ? "Forgot password" : "Reset password"}</Display>
+            <Body color={colors.mutedForeground}>
+              {step === "email"
+                ? "Enter your email and we'll send you a code to reset your password."
+                : "Enter the code we sent you and choose a new password."}
+            </Body>
+          </View>
 
-        {step === "email" ? (
-          <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Email</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" },
-                ]}
+          {step === "email" ? (
+            <View style={styles.form}>
+              <TextField
+                label="Email"
                 placeholder="you@example.com"
-                placeholderTextColor={colors.mutedForeground}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
               />
+              <Button title={loading ? "Sending…" : "Send Reset Code"} onPress={handleSendCode} loading={loading} disabled={loading} style={styles.btn} />
             </View>
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]}
-              onPress={handleSendCode}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>
-                {loading ? "Sending…" : "Send Reset Code"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Reset Code</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" },
-                ]}
-                placeholder="6-digit code"
-                placeholderTextColor={colors.mutedForeground}
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>New Password</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" },
-                ]}
-                placeholder="New password"
-                placeholderTextColor={colors.mutedForeground}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoComplete="new-password"
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Confirm Password</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, fontFamily: "Inter_400Regular" },
-                ]}
+          ) : (
+            <View style={styles.form}>
+              <TextField label="Reset Code" placeholder="6-digit code" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} />
+              <TextField label="New Password" placeholder="New password" value={newPassword} onChangeText={setNewPassword} secureTextEntry autoComplete="new-password" />
+              <TextField
+                label="Confirm Password"
                 placeholder="Confirm new password"
-                placeholderTextColor={colors.mutedForeground}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 autoComplete="new-password"
               />
+              <Button title={loading ? "Resetting…" : "Reset Password"} onPress={handleResetPassword} loading={loading} disabled={loading} style={styles.btn} />
+              <TouchableOpacity onPress={handleSendCode} disabled={loading} style={styles.resendRow}>
+                <Body color={colors.primary} style={{ fontSize: 14 }}>Resend code</Body>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: loading ? colors.muted : colors.primary }]}
-              onPress={handleResetPassword}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.btnText, { fontFamily: "Inter_700Bold" }]}>
-                {loading ? "Resetting…" : "Reset Password"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleSendCode} disabled={loading} style={styles.resendRow}>
-              <Text style={[styles.resendText, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>
-                Resend code
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-  },
+  container: { flexGrow: 1, paddingHorizontal: spacing.xxl },
   back: { alignSelf: "flex-start" },
-  middle: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 32,
-    paddingVertical: 32,
-  },
-  header: { gap: 10 },
-  title: { fontSize: 30, lineHeight: 36 },
-  subtitle: { fontSize: 15, lineHeight: 23 },
-  form: { gap: 16 },
-  field: { gap: 8 },
-  label: { fontSize: 14 },
-  input: {
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-  },
-  btn: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  btnText: { color: "#FFFFFF", fontSize: 16 },
-  resendRow: { alignItems: "center", paddingTop: 8 },
-  resendText: { fontSize: 14 },
+  middle: { flex: 1, justifyContent: "center", gap: spacing.xxxl, paddingVertical: spacing.xxxl },
+  header: { gap: spacing.sm },
+  title: {},
+  form: { gap: spacing.lg },
+  btn: { marginTop: spacing.xs },
+  resendRow: { alignItems: "center", paddingTop: spacing.sm },
 });

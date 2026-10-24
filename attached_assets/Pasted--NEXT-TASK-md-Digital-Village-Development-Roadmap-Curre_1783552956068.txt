@@ -1,0 +1,243 @@
+# NEXT_TASK.md
+
+# Digital Village Development Roadmap
+
+## Current Phase
+
+Phase 2 — Mobile-Side Device Sync Wiring + Parent Safety Platform Backend
+
+The goal of this phase is to complete the foundation required for the parent/child safety ecosystem while maintaining privacy, security, and cross-platform compatibility.
+
+---
+
+# Priority 1 — Complete Backend Device Sync Infrastructure
+
+## Status: In Progress
+
+### Tasks
+
+- [ ] Complete device registration system
+    - Child device association
+    - Family association
+    - Device ownership validation
+    - Device status tracking
+
+- [ ] Complete device synchronization APIs
+    - Device sync events
+    - Sync timestamps
+    - Last active status
+    - Device connection status
+
+- [ ] Implement event ingestion system
+    - Screen time events
+    - App activity events
+    - Device activity events
+    - Educational activity events
+
+- [ ] Create event processing architecture
+    - Validate incoming events
+    - Store events securely
+    - Generate analytics
+    - Maintain audit records
+
+---
+
+# Priority 2 — Device Capability System
+
+## Goal
+
+Create a platform-neutral capability system that only includes functionality supported across iOS and Android.
+
+### Tasks
+
+- [ ] Create device capability model
+
+Capabilities should include only cross-platform supported features.
+
+Examples:
+
+- Screen time tracking
+- Device activity summaries
+- App usage summaries
+- Educational activity tracking
+- Device health status
+
+Do not implement platform-specific unsupported capabilities.
+
+---
+
+# Priority 3 — Parent Dashboard Backend
+
+## Status: Partially Implemented
+
+### Tasks
+
+Create or complete backend endpoints for:
+
+- [ ] Family overview dashboard
+- [ ] Child activity summaries
+- [ ] Device status
+- [ ] Usage analytics
+- [ ] Educational progress
+- [ ] Policy status
+
+Ensure:
+
+- Parent can only access their own family data.
+- Child accounts cannot access parent functionality.
+
+---
+
+# Priority 4 — Child Account System
+
+## Goal
+
+Children use the same application as parents but with child permissions.
+
+### Tasks
+
+- [ ] Complete child account model
+
+Rules:
+
+- Child cannot independently create an account.
+- Parent creates child profile.
+- Child joins existing family account.
+- Child authentication uses family relationship.
+
+Implement:
+
+- [ ] Child onboarding flow
+- [ ] Child authentication flow
+- [ ] Child permissions
+- [ ] Parent-child relationship validation
+
+---
+
+# Priority 5 — Policy Engine
+
+## Status: Architecture Approved
+
+### Tasks
+
+Implement:
+
+- [ ] Family policies
+- [ ] Child policies
+- [ ] Device policies
+- [ ] Rule evaluation system
+- [ ] Permission enforcement
+
+Requirements:
+
+- Policies must be stored securely.
+- Parent controls must be enforced server-side.
+- Child restrictions must follow defined permissions.
+
+---
+
+# Priority 6 — Security Implementation Review
+
+## Status: Required Before Production
+
+Verify:
+
+- [ ] JWT Authentication
+- [ ] Role Based Access Control
+- [ ] Parent permissions
+- [ ] Child permissions
+- [ ] Admin permissions
+- [ ] Audit Logging
+- [ ] Rate Limiting
+- [ ] Input Validation
+- [ ] SQL Injection Protection
+- [ ] CSRF Protection where applicable
+
+Complete security review after each major subsystem.
+
+---
+
+# Priority 7 — Education System Expansion
+
+## Goal
+
+Ensure the education component has enough structured content.
+
+Tasks:
+
+- [ ] Review existing education modules
+- [ ] Identify missing lessons
+- [ ] Create additional lessons where needed
+- [ ] Ensure lesson progression works
+- [ ] Track child learning progress
+- [ ] Connect education progress to parent dashboard
+
+---
+
+# Priority 8 — AI Documentation System
+
+## Status: Required
+
+Implement:
+
+- [ ] CLAUDE.md
+- [ ] AGENTS.md
+- [ ] AI_CONTEXT folder
+- [ ] docs folder
+- [ ] Claude skills
+
+Required AI files:
+
+- [ ] CURRENT_STATE.md
+- [ ] CURRENT_PHASE.md
+- [ ] NEXT_TASK.md
+- [ ] COMPLETED_WORK.md
+- [ ] AI_CHANGELOG.md
+- [ ] PROJECT_MAP.md
+- [ ] KNOWN_PATTERNS.md
+- [ ] DECISIONS.md
+
+---
+
+# Priority 9 — Testing and Quality Assurance
+
+Before production:
+
+## Environment
+
+- [ ] Verify Node environment
+- [ ] Verify pnpm environment
+- [ ] Verify database connection
+- [ ] Verify build process
+
+## Application Testing
+
+- [ ] Parent registration
+- [ ] Parent login
+- [ ] Family creation
+- [ ] Child creation
+- [ ] Child login
+- [ ] Permission testing
+- [ ] Dashboard testing
+- [ ] Device sync testing
+- [ ] Analytics testing
+
+## Security Testing
+
+- [ ] Unauthorized access testing
+- [ ] Family data isolation testing
+- [ ] Role permission testing
+
+---
+
+# Priority 10 — Production Readiness
+
+Before launch:
+
+- [ ] Complete error handling
+- [ ] Complete logging
+- [ ] Review database indexes
+- [ ] Review API performance
+- [ ] Review security
+- [ ] Complete documentation
+- [ ] Complete deployment checklist

@@ -8,7 +8,9 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -19,12 +21,20 @@ import { AccessibilityProvider, useAccessibility } from "@/context/Accessibility
 import { FamilyProvider } from "@/context/FamilyContext";
 import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
-import { useDeviceSync } from "@/lib/deviceSync";
+import { configureApi } from "@/lib/api";
+import { useDeviceSync, useForegroundScreenTime } from "@/lib/deviceSync";
+import { initializeRevenueCat } from "@/lib/revenuecat";
+import { SubscriptionProvider } from "@/lib/revenuecat";
 
 SplashScreen.preventAutoHideAsync();
 
 configureApiBase();
-
+configureApi();
+try {
+  initializeRevenueCat();
+} catch (err: any) {
+  console.warn("RevenueCat init failed:", err?.message);
+}
 const queryClient = new QueryClient();
 
 function AuthRedirect() {
@@ -62,11 +72,18 @@ function AuthRedirect() {
 
 function RootLayoutNav() {
   const { settings } = useAccessibility();
+  const { isAuthenticated } = useAuth();
+  const osScheme = useColorScheme();
+  const isDark = settings.themeMode === "system" ? osScheme === "dark" : settings.themeMode === "dark";
   const slide = settings.reduceMotion ? "none" : "slide_from_right";
   const fade = settings.reduceMotion ? "none" : "fade";
 
+  useDeviceSync(isAuthenticated);
+  useForegroundScreenTime(isAuthenticated);
+
   return (
     <>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <AuthRedirect />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="welcome" options={{ headerShown: false, animation: fade }} />
@@ -81,6 +98,7 @@ function RootLayoutNav() {
         <Stack.Screen name="quiz/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="child/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="agreement" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="family-policy" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="subscription" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="challenge/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="coach/history" options={{ headerShown: false, animation: slide }} />
@@ -113,13 +131,15 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AuthProvider>
-                <AccessibilityProvider>
-                  <FamilyProvider>
-                    <CoachProvider>
-                      <RootLayoutNav />
-                    </CoachProvider>
-                  </FamilyProvider>
-                </AccessibilityProvider>
+                <SubscriptionProvider>
+                  <AccessibilityProvider>
+                    <FamilyProvider>
+                      <CoachProvider>
+                        <RootLayoutNav />
+                      </CoachProvider>
+                    </FamilyProvider>
+                  </AccessibilityProvider>
+                </SubscriptionProvider>
               </AuthProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

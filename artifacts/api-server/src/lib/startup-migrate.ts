@@ -85,6 +85,110 @@ export async function runStartupMigrations(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS device_events_owner_id_occurred_at_idx ON device_events(owner_id, occurred_at)`,
       `CREATE INDEX IF NOT EXISTS device_events_family_id_event_type_idx ON device_events(family_id, event_type)`,
 
+      // ── device_restrictions ───────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS device_restrictions (
+         id TEXT PRIMARY KEY,
+         device_id TEXT NOT NULL UNIQUE REFERENCES devices(id) ON DELETE CASCADE,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         screen_time_limit_minutes INTEGER,
+         bedtime_start TEXT,
+         bedtime_end TEXT,
+         block_new_app_installs BOOLEAN NOT NULL DEFAULT FALSE,
+         block_safari BOOLEAN NOT NULL DEFAULT FALSE,
+         block_explicit_content BOOLEAN NOT NULL DEFAULT FALSE,
+         require_parent_approval BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS device_restrictions_family_idx ON device_restrictions(family_id)`,
+
+      // ── device_app_rules ──────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS device_app_rules (
+         id TEXT PRIMARY KEY,
+         restriction_id TEXT NOT NULL REFERENCES device_restrictions(id) ON DELETE CASCADE,
+         app_bundle_id TEXT NOT NULL,
+         app_name TEXT NOT NULL,
+         blocked BOOLEAN NOT NULL DEFAULT FALSE,
+         bedtime_locked BOOLEAN NOT NULL DEFAULT FALSE,
+         daily_limit_minutes INTEGER,
+         restricted_start TEXT,
+         restricted_end TEXT,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS device_app_rules_restriction_idx ON device_app_rules(restriction_id)`,
+      `ALTER TABLE device_app_rules ADD COLUMN IF NOT EXISTS restricted_start TEXT`,
+      `ALTER TABLE device_app_rules ADD COLUMN IF NOT EXISTS restricted_end TEXT`,
+      `ALTER TABLE device_app_rules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()`,
+      // Drizzle's schema push can create the backing unique index for this
+      // constraint under a name Postgres treats as a distinct relation, so
+      // ADD CONSTRAINT can fail with duplicate_table (42P07) rather than
+      // duplicate_object (42710) depending on which path created it first —
+      // catch both so this stays idempotent across dev (push) and prod
+      // (startup migration) paths.
+      `DO $$ BEGIN
+         ALTER TABLE device_app_rules ADD CONSTRAINT device_app_rules_restriction_bundle_unique UNIQUE (restriction_id, app_bundle_id);
+       EXCEPTION WHEN duplicate_object OR duplicate_table THEN NULL;
+       END $$`,
+
+      // ── blocked_app_events ─────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS blocked_app_events (
+         id TEXT PRIMARY KEY,
+         device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         app_name TEXT NOT NULL,
+         blocked_reason TEXT NOT NULL,
+         attempted_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS blocked_app_events_device_idx ON blocked_app_events(device_id)`,
+      `CREATE INDEX IF NOT EXISTS blocked_app_events_family_idx ON blocked_app_events(family_id)`,
+
+      // ── support_codes ─────────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS support_codes (
+         id TEXT PRIMARY KEY,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         created_by TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+         code_hash TEXT NOT NULL,
+         expires_at TIMESTAMP NOT NULL,
+         used_at TIMESTAMP,
+         used_by TEXT REFERENCES profiles(id),
+         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS support_codes_family_id_idx ON support_codes(family_id)`,
+
+      // ── support_sessions ──────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS support_sessions (
+         id TEXT PRIMARY KEY,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         admin_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+         code_id TEXT NOT NULL REFERENCES support_codes(id) ON DELETE CASCADE,
+         started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         expires_at TIMESTAMP NOT NULL,
+         ended_at TIMESTAMP
+       )`,
+      `CREATE INDEX IF NOT EXISTS support_sessions_family_id_idx ON support_sessions(family_id)`,
+      `CREATE INDEX IF NOT EXISTS support_sessions_admin_id_idx ON support_sessions(admin_id)`,
+
+      // ── sessions.support_session_id (added after support_sessions exists) ──────
+      `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS support_session_id TEXT REFERENCES support_sessions(id) ON DELETE CASCADE`,
+
+      // ── audit_log ─────────────────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS audit_log (
+         id TEXT PRIMARY KEY,
+         actor_id TEXT REFERENCES profiles(id) ON DELETE CASCADE,
+         actor_role TEXT NOT NULL,
+         family_id TEXT REFERENCES families(id) ON DELETE CASCADE,
+         action TEXT NOT NULL,
+         target_type TEXT,
+         target_id TEXT,
+         metadata JSONB NOT NULL DEFAULT '{}',
+         ip TEXT,
+         is_support_session BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS audit_log_family_id_created_at_idx ON audit_log(family_id, created_at)`,
+      `CREATE INDEX IF NOT EXISTS audit_log_actor_id_created_at_idx ON audit_log(actor_id, created_at)`,
+
       // ── badges ────────────────────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS badges (
          id TEXT PRIMARY KEY,

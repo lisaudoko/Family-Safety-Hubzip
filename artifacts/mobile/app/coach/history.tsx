@@ -1,24 +1,15 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Alert, FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, FlatList, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { EmptyState } from "@/components/UI";
+import { Body, Card, EmptyState, H2, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 import { useColors } from "@/hooks/useColors";
 import { useCoach, type CoachConversation } from "@/context/CoachContext";
-
-function timeAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
 
 export default function CoachHistoryScreen() {
   const colors = useColors();
@@ -52,7 +43,7 @@ export default function CoachHistoryScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Coach History</Text>
+        <H2 style={{ marginBottom: 0 }}>Coach History</H2>
         <View style={{ width: 22 }} />
       </View>
 
@@ -66,35 +57,23 @@ export default function CoachHistoryScreen() {
         renderItem={({ item }) => {
           const lastMessage = item.messages[item.messages.length - 1];
           return (
-            <TouchableOpacity
-              style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => openConversation(item.id)}
-              activeOpacity={0.75}
-            >
+            <Card variant="outline" style={styles.row} padding={spacing.md} pressable onPress={() => openConversation(item.id)}>
               <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
                 <Feather name="message-circle" size={18} color={colors.primary} />
               </View>
               <View style={styles.content}>
-                <Text style={[styles.rowTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]} numberOfLines={1}>
-                  {item.title}
-                </Text>
+                <Body color={colors.foreground} numberOfLines={1}>{item.title}</Body>
                 {lastMessage && (
-                  <Text style={[styles.preview, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={1}>
+                  <Small color={colors.mutedForeground} numberOfLines={1} style={{ fontSize: 13 }}>
                     {lastMessage.content}
-                  </Text>
+                  </Small>
                 )}
-                <Text style={[styles.timestamp, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-                  {timeAgo(item.updatedAt)}
-                </Text>
+                <Small color={colors.mutedForeground}>{formatRelativeTime(item.updatedAt)}</Small>
               </View>
-              <TouchableOpacity
-                onPress={() => confirmDelete(item)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.deleteBtn}
-              >
+              <TouchableOpacity onPress={() => confirmDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.deleteBtn}>
                 <Feather name="trash-2" size={16} color={colors.destructive} />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </Card>
           );
         }}
       />
@@ -103,14 +82,10 @@ export default function CoachHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 12 },
-  title: { fontSize: 18 },
-  listContent: { paddingHorizontal: 20, paddingBottom: 32, gap: 10, flexGrow: 1 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, borderWidth: 1 },
-  iconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+  listContent: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl, gap: spacing.md, flexGrow: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  iconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   content: { flex: 1, gap: 2 },
-  rowTitle: { fontSize: 15 },
-  preview: { fontSize: 13 },
-  timestamp: { fontSize: 11, marginTop: 2 },
-  deleteBtn: { padding: 6 },
+  deleteBtn: { padding: spacing.xs },
 });

@@ -1,17 +1,29 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
+import { useSubscription } from "@/lib/revenuecat";
+import { Badge, Body, Button, Card, Caption, H1, H2, H3, LoadingSpinner, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
 
-const PLANS = [
-  { id: "monthly", label: "Monthly", price: "$4.99", period: "/month", saving: null },
-  { id: "annual", label: "Annual", price: "$39.99", period: "/year", saving: "Save 33%" },
-];
+function formatPeriod(period: string): string {
+  const map: Record<string, string> = {
+    P1W: "week",
+    P1M: "month",
+    P2M: "2 months",
+    P3M: "3 months",
+    P6M: "6 months",
+    P1Y: "year",
+  };
+  return map[period] || period;
+}
 
 const FEATURES = [
   { icon: "book-open" as const, label: "All 8 courses (including premium)", free: false, premium: true },
@@ -32,37 +44,59 @@ const FEATURES = [
 export default function SubscriptionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, startCheckout } = useAuth();
+  const { user } = useAuth();
   const haptics = useHaptics();
-  const [selectedPlan, setSelectedPlan] = useState("annual");
-  const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const { offerings, isSubscribed, isLoading, purchase, isPurchasing, restore, isRestoring } = useSubscription();
+  const [confirmModal, setConfirmModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const handleUpgrade = async () => {
-    if (user?.isPremium) { Alert.alert("Already Premium", "You're already a Premium member!"); return; }
+  const currentOffering = offerings?.current;
+  const availablePackages = currentOffering?.availablePackages || [];
+
+  const handleSelectPackage = (pkg: any) => {
+    setSelectedPackage(pkg);
+    setConfirmModal(true);
+  };
+
+  const handleConfirmPurchase = async () => {
+    setConfirmModal(false);
+    if (!selectedPackage) return;
     try {
-      setLoading(true);
-      await startCheckout(selectedPlan as "monthly" | "annual");
-      setLoading(false);
-      setVerifying(true);
-      // The subscription tier is set asynchronously by a Stripe webhook, so
-      // there can be a short lag after checkout before /auth/me reflects it.
-      await new Promise(r => setTimeout(r, 1500));
-      setVerifying(false);
+      await purchase(selectedPackage);
       await haptics.notify(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Thanks!", "If your payment succeeded, Premium will unlock within a few seconds.", [{ text: "Let's go!", onPress: () => router.back() }]);
-    } catch {
-      Alert.alert("Error", "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-      setVerifying(false);
+      Alert.alert("Welcome to Premium!", "Your subscription is active.");
+    } catch (err: any) {
+      if (err.userCancelled) {
+        // User cancelled — no alert needed
+        return;
+      }
+      Alert.alert("Purchase Failed", err?.message || "Something went wrong. Please try again.");
     }
   };
 
+  const handleRestore = async () => {
+    try {
+      await restore();
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Restored", "Your purchases have been restored.");
+    } catch (err: any) {
+      Alert.alert("Restore Failed", err?.message || "Could not restore purchases.");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loader, { backgroundColor: colors.background, paddingTop: topPad + spacing.lg }]}>
+        <LoadingSpinner />
+        <Body color={colors.mutedForeground} style={{ marginTop: spacing.md }}>Loading subscription options...</Body>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: insets.bottom + 32 }]}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: topPad + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="x" size={22} color={colors.foreground} />
@@ -73,106 +107,122 @@ export default function SubscriptionScreen() {
         <View style={[styles.starIcon, { backgroundColor: colors.accent + "22" }]}>
           <Feather name="star" size={32} color={colors.accent} />
         </View>
-        <Text style={[styles.heroTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Digital Village Premium</Text>
-        <Text style={[styles.heroDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Unlock everything to give your family the complete digital safety toolkit.</Text>
+        <H1 style={styles.heroTitle}>Digital Village Premium</H1>
+        <Body color={colors.mutedForeground} style={styles.heroDesc}>
+          Unlock everything to give your family the complete digital safety toolkit.
+        </Body>
       </View>
 
       <View style={styles.plans}>
-        {PLANS.map(plan => (
-          <TouchableOpacity
-            key={plan.id}
-            style={[styles.planCard, { backgroundColor: colors.card, borderColor: selectedPlan === plan.id ? colors.primary : colors.border, borderWidth: selectedPlan === plan.id ? 2 : 1 }]}
-            onPress={() => setSelectedPlan(plan.id)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.planLeft}>
-              <View style={[styles.planDot, { borderColor: selectedPlan === plan.id ? colors.primary : colors.border }]}>
-                {selectedPlan === plan.id && <View style={[styles.planDotFill, { backgroundColor: colors.primary }]} />}
+        {availablePackages.length === 0 ? (
+          <Card variant="outline" style={styles.planCard}>
+            <Body color={colors.mutedForeground}>No subscription options available right now.</Body>
+          </Card>
+        ) : (
+          availablePackages.map((pkg) => (
+            <Card key={pkg.identifier} variant="outline" pressable onPress={() => handleSelectPackage(pkg)} style={styles.planCardRow}>
+              <View style={styles.planLeft}>
+                <Body color={colors.foreground}>{pkg.product.title || pkg.packageType}</Body>
+                {pkg.product.introPrice && <Badge label="Intro offer" tone={colors.success} variant="soft" />}
               </View>
-              <Text style={[styles.planLabel, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{plan.label}</Text>
-              {plan.saving && (
-                <View style={[styles.savingTag, { backgroundColor: colors.success + "22" }]}>
-                  <Text style={[styles.savingText, { color: colors.success, fontFamily: "Inter_700Bold" }]}>{plan.saving}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.planRight}>
-              <Text style={[styles.planPrice, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{plan.price}</Text>
-              <Text style={[styles.planPeriod, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{plan.period}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.planRight}>
+                <H3 style={{ marginBottom: 0 }}>{pkg.product.priceString}</H3>
+                <Caption color={colors.mutedForeground}>
+                  {pkg.product.subscriptionPeriod ? `/${formatPeriod(pkg.product.subscriptionPeriod)}` : ""}
+                </Caption>
+              </View>
+            </Card>
+          ))
+        )}
       </View>
 
-      <View style={[styles.featuresCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Card variant="outline" style={styles.featuresCard} padding={0}>
         <View style={styles.featuresHeader}>
-          <Text style={[styles.featuresTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>What's included</Text>
+          <H2 style={{ marginBottom: 0 }}>What&apos;s included</H2>
           <View style={styles.planLabels}>
-            <Text style={[styles.planLabelText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Free</Text>
-            <Text style={[styles.planLabelText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>Pro</Text>
+            <Small color={colors.mutedForeground} style={styles.planLabelText}>Free</Small>
+            <Small color={colors.accent} style={styles.planLabelText}>Pro</Small>
           </View>
         </View>
-        {FEATURES.map(feature => (
+        {FEATURES.map((feature) => (
           <View key={feature.label} style={[styles.featureRow, { borderTopWidth: 1, borderTopColor: colors.border }]}>
             <Feather name={feature.icon} size={15} color={colors.mutedForeground} style={{ flexShrink: 0 }} />
-            <Text style={[styles.featureLabel, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{feature.label}</Text>
+            <Caption color={colors.foreground} style={styles.featureLabel}>{feature.label}</Caption>
             <View style={styles.featureChecks}>
               {feature.free ? <Feather name="check" size={16} color={colors.success} /> : <Feather name="minus" size={16} color={colors.mutedForeground} />}
               <Feather name="check" size={16} color={colors.success} />
             </View>
           </View>
         ))}
-      </View>
+      </Card>
 
-      {user?.isPremium ? (
-        <View style={[styles.alreadyPremium, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
+      {isSubscribed || user?.isPremium ? (
+        <Card variant="outline" style={[styles.alreadyPremium, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
           <Feather name="check-circle" size={20} color={colors.success} />
-          <Text style={[styles.alreadyText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>You're already a Premium member!</Text>
-        </View>
+          <Body color={colors.success}>You&apos;re already a Premium member!</Body>
+        </Card>
       ) : (
-        <TouchableOpacity style={[styles.upgradeBtn, { backgroundColor: (loading || verifying) ? colors.muted : colors.accent }]} onPress={handleUpgrade} disabled={loading || verifying} activeOpacity={0.85}>
-          <Text style={[styles.upgradeBtnText, { fontFamily: "Inter_700Bold" }]}>
-            {verifying ? "Verifying your subscription..." : loading ? "Opening checkout..." : `Start ${PLANS.find(p => p.id === selectedPlan)?.label} Plan`}
-          </Text>
-        </TouchableOpacity>
+        <>
+          <Button
+            title={isPurchasing ? "Processing..." : availablePackages.length > 0 ? "Start Premium Plan" : "Subscription unavailable"}
+            loading={isPurchasing}
+            disabled={isPurchasing || availablePackages.length === 0}
+            style={{ backgroundColor: colors.accent }}
+            onPress={() => availablePackages[0] && handleSelectPackage(availablePackages[0])}
+          />
+
+          <TouchableOpacity onPress={handleRestore} disabled={isRestoring} style={{ alignItems: "center", marginTop: spacing.sm }}>
+            <Body color={colors.primary} style={{ fontSize: 14 }}>{isRestoring ? "Restoring..." : "Restore Purchases"}</Body>
+          </TouchableOpacity>
+        </>
       )}
 
-      <Text style={[styles.legal, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-        Cancel anytime. No commitments. Subscriptions renew automatically unless cancelled at least 24 hours before renewal. Payment processed securely through Stripe.
-      </Text>
+      <Caption color={colors.mutedForeground} style={styles.legal}>
+        Cancel anytime. No commitments. Subscriptions renew automatically unless cancelled at least 24 hours before renewal.
+      </Caption>
+
+      <Modal visible={confirmModal} transparent animationType="fade">
+        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
+          <Card variant="elevated" style={styles.modalCard}>
+            <H2 style={{ textAlign: "center", marginBottom: 0 }}>Confirm Purchase</H2>
+            <Body color={colors.mutedForeground} style={styles.modalDesc}>
+              Subscribe to {selectedPackage?.product?.title || "Premium"} for {selectedPackage?.product?.priceString || ""}?
+            </Body>
+            <View style={styles.modalButtons}>
+              <Button title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmModal(false)} />
+              <Button title="Subscribe" style={{ flex: 1, backgroundColor: colors.accent }} onPress={handleConfirmPurchase} />
+            </View>
+          </Card>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 24 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   header: { alignItems: "flex-end" },
-  heroSection: { alignItems: "center", gap: 12 },
-  starIcon: { width: 72, height: 72, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  heroTitle: { fontSize: 26, textAlign: "center" },
-  heroDesc: { fontSize: 14, textAlign: "center", lineHeight: 21 },
-  plans: { gap: 10 },
-  planCard: { borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  planLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  planDot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  planDotFill: { width: 10, height: 10, borderRadius: 5 },
-  planLabel: { fontSize: 15 },
-  savingTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  savingText: { fontSize: 12 },
+  heroSection: { alignItems: "center", gap: spacing.md },
+  starIcon: { width: 72, height: 72, borderRadius: radius.xl, alignItems: "center", justifyContent: "center" },
+  heroTitle: { textAlign: "center" },
+  heroDesc: { textAlign: "center" },
+  plans: { gap: spacing.sm },
+  planCard: { alignItems: "center" },
+  planCardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  planLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   planRight: { alignItems: "flex-end" },
-  planPrice: { fontSize: 18 },
-  planPeriod: { fontSize: 12 },
-  featuresCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  featuresHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 14 },
-  featuresTitle: { fontSize: 16 },
-  planLabels: { flexDirection: "row", gap: 16 },
-  planLabelText: { fontSize: 13, width: 32, textAlign: "center" },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  featureLabel: { flex: 1, fontSize: 13, lineHeight: 18 },
-  featureChecks: { flexDirection: "row", gap: 16 },
-  alreadyPremium: { borderRadius: 14, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "center", gap: 10 },
-  alreadyText: { fontSize: 15 },
-  upgradeBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  upgradeBtnText: { color: "#FFFFFF", fontSize: 17 },
-  legal: { fontSize: 11, textAlign: "center", lineHeight: 16 },
+  featuresCard: { overflow: "hidden" },
+  featuresHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.md },
+  planLabels: { flexDirection: "row", gap: spacing.lg },
+  planLabelText: { width: 32, textAlign: "center" },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  featureLabel: { flex: 1, lineHeight: 18 },
+  featureChecks: { flexDirection: "row", gap: spacing.lg },
+  alreadyPremium: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  legal: { textAlign: "center", lineHeight: 16 },
+  loader: { flex: 1, alignItems: "center", justifyContent: "center" },
+  modalOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
+  modalCard: { width: "100%", maxWidth: 340, gap: spacing.lg },
+  modalDesc: { textAlign: "center" },
+  modalButtons: { flexDirection: "row", gap: spacing.md },
 });

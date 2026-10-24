@@ -1,13 +1,16 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFamily } from "@/context/FamilyContext";
 import { ASSESSMENTS } from "@/data/seed";
-import { ProgressBar, ScoreRing } from "@/components/UI";
+import { Badge, Body, Button, Card, Caption, H1, H2, H3, ProgressBar, ScoreRing, Small } from "@/components/primitives";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { fontFamily } from "@/constants/typography";
 
 const CATEGORY_ICONS: Record<string, "shield" | "users" | "eye" | "trending-up" | "globe" | "alert-triangle"> = {
   Privacy: "shield",
@@ -114,45 +117,36 @@ export function AssessmentsPanel() {
   if (!selectedId) {
     return (
       <View style={[styles.content, { paddingTop: 4, paddingBottom: bottomPad + 100 }]}>
-        <View style={{ gap: 6 }}>
-          <Text style={[styles.introDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular", textAlign: "left" }]}>
-            Quick, honest check-ins to understand your family's digital readiness and get personalized recommendations.
-          </Text>
-        </View>
+        <Body color={colors.mutedForeground}>
+          Quick, honest check-ins to understand your family's digital readiness and get personalized recommendations.
+        </Body>
 
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: spacing.md }}>
           {ASSESSMENTS.map(a => {
             const r = progress.assessmentResults[a.id];
             const max = a.questions.length * 3;
             const pct = r ? Math.round((r.score / max) * 100) : null;
             return (
-              <TouchableOpacity
-                key={a.id}
-                style={[styles.assessCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => openAssessment(a.id)}
-                activeOpacity={0.85}
-              >
+              <Card key={a.id} variant="outline" pressable onPress={() => openAssessment(a.id)} style={styles.assessCard}>
                 <View style={[styles.assessIcon, { backgroundColor: a.color + "18" }]}>
                   <Feather name={a.iconName as never} size={24} color={a.color} />
                 </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[styles.assessTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{a.title}</Text>
-                  <Text style={[styles.assessDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]} numberOfLines={2}>{a.description}</Text>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <H3 style={{ marginBottom: 0 }}>{a.title}</H3>
+                  <Caption color={colors.mutedForeground} numberOfLines={2}>{a.description}</Caption>
                   <View style={styles.assessMeta}>
                     <Feather name="help-circle" size={12} color={colors.mutedForeground} />
-                    <Text style={[styles.assessMetaText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>{a.questions.length} questions · {a.duration}</Text>
+                    <Small color={colors.mutedForeground}>{a.questions.length} questions · {a.duration}</Small>
                   </View>
                 </View>
                 <View style={styles.assessRight}>
                   {pct !== null ? (
-                    <View style={[styles.scorePill, { backgroundColor: a.color + "18" }]}>
-                      <Text style={[styles.scorePillText, { color: a.color, fontFamily: "Inter_700Bold" }]}>{pct}%</Text>
-                    </View>
+                    <Badge label={`${pct}%`} tone={a.color} variant="soft" />
                   ) : (
                     <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
                   )}
                 </View>
-              </TouchableOpacity>
+              </Card>
             );
           })}
         </View>
@@ -166,20 +160,18 @@ export function AssessmentsPanel() {
       <View style={[styles.content, { paddingTop: 4, paddingBottom: bottomPad + 100 }]}>
         <TouchableOpacity style={styles.backRow} onPress={backToList}>
           <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
-          <Text style={[styles.backText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>All assessments</Text>
+          <Body color={colors.mutedForeground} style={{ fontSize: 14 }}>All assessments</Body>
         </TouchableOpacity>
         <View style={styles.introHeader}>
           <View style={[styles.introIcon, { backgroundColor: assessment.color + "18" }]}>
             <Feather name={assessment.iconName as never} size={36} color={assessment.color} />
           </View>
-          <Text style={[styles.introTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{assessment.title}</Text>
-          <Text style={[styles.introDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+          <H1 style={styles.introTitle}>{assessment.title}</H1>
+          <Body color={colors.mutedForeground} style={styles.introDesc}>
             {assessment.questions.length} questions · {assessment.duration}{"\n\n"}{assessment.description} No wrong answers — be honest for the most useful results.
-          </Text>
+          </Body>
         </View>
-        <TouchableOpacity style={[styles.startBtn, { backgroundColor: colors.primary }]} onPress={() => setStarted(true)} activeOpacity={0.85}>
-          <Text style={[styles.startBtnText, { fontFamily: "Inter_700Bold" }]}>Start Assessment</Text>
-        </TouchableOpacity>
+        <Button title="Start Assessment" onPress={() => setStarted(true)} />
       </View>
     );
   }
@@ -195,75 +187,73 @@ export function AssessmentsPanel() {
       <View style={[styles.content, { paddingTop: 4, paddingBottom: bottomPad + 100 }]}>
         <TouchableOpacity style={styles.backRow} onPress={backToList}>
           <Feather name="arrow-left" size={20} color={colors.mutedForeground} />
-          <Text style={[styles.backText, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>All assessments</Text>
+          <Body color={colors.mutedForeground} style={{ fontSize: 14 }}>All assessments</Body>
         </TouchableOpacity>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{assessment.title}</Text>
+        <H1>{assessment.title}</H1>
 
-        <View style={[styles.scoreCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Card variant="outline" style={styles.scoreCard}>
           <ScoreRing score={result.score} max={maxScore} size={110} />
-          <View style={[styles.levelBadge, { backgroundColor: level.color + "22" }]}>
-            <Feather name={level.icon} size={16} color={level.color} />
-            <Text style={[styles.levelLabel, { color: level.color, fontFamily: "Inter_700Bold" }]}>{level.label}</Text>
-          </View>
-          <Text style={[styles.scoreDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{level.desc}</Text>
-        </View>
+          <Badge label={level.label} tone={level.color} variant="soft" icon={level.icon} />
+          <Body color={colors.mutedForeground} style={styles.scoreDesc}>{level.desc}</Body>
+        </Card>
 
         <View>
-          <Text style={[styles.catTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Category Breakdown</Text>
+          <H2 style={styles.catTitle}>Category Breakdown</H2>
           {Object.entries(catScores).map(([cat, { score, max }]) => {
             const catPct = max > 0 ? Math.round((score / max) * 100) : 0;
             const catColor = catPct >= 75 ? colors.success : catPct >= 50 ? colors.accent : colors.destructive;
             return (
-              <View key={cat} style={[styles.catRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Card key={cat} variant="outline" style={styles.catRow}>
                 <View style={[styles.catIconWrap, { backgroundColor: catColor + "18" }]}>
                   <Feather name={CATEGORY_ICONS[cat] ?? "circle"} size={16} color={catColor} />
                 </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[styles.catName, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>{cat}</Text>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Body color={colors.foreground} style={{ fontFamily: fontFamily.medium }}>{cat}</Body>
                   <ProgressBar value={catPct} total={100} color={catColor} />
                 </View>
-                <Text style={[styles.catPct, { color: catColor, fontFamily: "Inter_700Bold" }]}>{catPct}%</Text>
-              </View>
+                <H3 style={{ color: catColor, marginBottom: 0, width: 44, textAlign: "right" }}>{catPct}%</H3>
+              </Card>
             );
           })}
         </View>
 
         <View>
-          <Text style={[styles.catTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Personalized Recommendations</Text>
+          <H2 style={styles.catTitle}>Personalized Recommendations</H2>
           {pct < 75 && (
-            <View style={[styles.recoCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+            <Card variant="flat" style={[styles.recoCard, { backgroundColor: colors.secondary }]}>
               <Feather name="book-open" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.recoTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Start with a course</Text>
-                <Text style={[styles.recoDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>The courses in Learn are great starting points for building this skill as a family.</Text>
+                <Body color={colors.foreground} style={{ fontFamily: fontFamily.semibold, marginBottom: 3 }}>Start with a course</Body>
+                <Caption color={colors.mutedForeground}>The courses in Learn are great starting points for building this skill as a family.</Caption>
               </View>
-            </View>
+            </Card>
           )}
           {(weakCategories.length > 0 ? weakCategories.slice(0, 2) : Object.keys(catScores).slice(0, 1)).map(cat => (
-            <View key={cat} style={[styles.recoCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+            <Card key={cat} variant="flat" style={[styles.recoCard, { backgroundColor: colors.secondary }]}>
               <Feather name={CATEGORY_ICONS[cat] ?? "info"} size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.recoTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>{cat}</Text>
-                <Text style={[styles.recoDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{CATEGORY_RECOMMENDATIONS[cat] ?? "Keep building your family's digital safety knowledge."}</Text>
+                <Body color={colors.foreground} style={{ fontFamily: fontFamily.semibold, marginBottom: 3 }}>{cat}</Body>
+                <Caption color={colors.mutedForeground}>{CATEGORY_RECOMMENDATIONS[cat] ?? "Keep building your family's digital safety knowledge."}</Caption>
               </View>
-            </View>
+            </Card>
           ))}
-          <View style={[styles.recoCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Card variant="flat" style={[styles.recoCard, { backgroundColor: colors.secondary }]}>
             <Feather name="file-text" size={18} color={colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.recoTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Create a Family Agreement</Text>
-              <Text style={[styles.recoDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>A shared technology agreement sets expectations and opens dialogue for everyone.</Text>
+              <Body color={colors.foreground} style={{ fontFamily: fontFamily.semibold, marginBottom: 3 }}>Create a Family Agreement</Body>
+              <Caption color={colors.mutedForeground}>A shared technology agreement sets expectations and opens dialogue for everyone.</Caption>
             </View>
-          </View>
+          </Card>
         </View>
 
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.retakeBtn, { borderColor: colors.border, flex: 1 }]} onPress={() => { setStarted(true); setCurrentQ(0); setAnswers([]); setSelected(null); }}>
-            <Text style={[styles.retakeText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Retake</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.startBtn, { backgroundColor: colors.primary, flex: 2 }]} onPress={() => router.push("/(tabs)/learn")} activeOpacity={0.85}>
-            <Text style={[styles.startBtnText, { fontFamily: "Inter_700Bold" }]}>Explore Courses</Text>
-          </TouchableOpacity>
+          <Button
+            title="Retake"
+            variant="outline"
+            style={{ flex: 1 }}
+            onPress={() => { setStarted(true); setCurrentQ(0); setAnswers([]); setSelected(null); }}
+          />
+          <Button title="Explore Courses" style={{ flex: 2 }} onPress={() => router.push("/(tabs)/learn")} />
         </View>
       </View>
     );
@@ -276,7 +266,7 @@ export function AssessmentsPanel() {
     <View style={[styles.content, { paddingTop: 4, paddingBottom: bottomPad + 100 }]}>
       <View style={styles.qProgress}>
         <View style={styles.qProgressRow}>
-          <Text style={[styles.qCount, { color: colors.mutedForeground, fontFamily: "Inter_500Medium" }]}>Question {currentQ + 1} of {assessment?.questions.length ?? 0}</Text>
+          <Small color={colors.mutedForeground}>Question {currentQ + 1} of {assessment?.questions.length ?? 0}</Small>
           <TouchableOpacity onPress={() => Alert.alert("Quit Assessment", "Your progress won't be saved.", [{ text: "Cancel", style: "cancel" }, { text: "Quit", style: "destructive", onPress: result ? () => setStarted(false) : backToList }])}>
             <Feather name="x" size={20} color={colors.mutedForeground} />
           </TouchableOpacity>
@@ -286,11 +276,8 @@ export function AssessmentsPanel() {
 
       {q && (
         <>
-          <View style={[styles.categoryTag, { backgroundColor: colors.secondary }]}>
-            <Feather name={CATEGORY_ICONS[q.category] ?? "circle"} size={13} color={colors.primary} />
-            <Text style={[styles.categoryTagText, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>{q.category}</Text>
-          </View>
-          <Text style={[styles.question, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{q.question}</Text>
+          <Badge label={q.category} tone={colors.primary} variant="soft" icon={CATEGORY_ICONS[q.category] ?? "circle"} />
+          <H1>{q.question}</H1>
           <View style={styles.options}>
             {q.options.map((opt, idx) => (
               <TouchableOpacity
@@ -307,23 +294,18 @@ export function AssessmentsPanel() {
                   borderColor: selected === idx ? colors.primary : colors.border,
                   backgroundColor: selected === idx ? colors.primary : "transparent",
                 }]}>
-                  {selected === idx && <Feather name="check" size={12} color="#FFFFFF" />}
+                  {selected === idx && <Feather name="check" size={12} color={colors.primaryForeground} />}
                 </View>
-                <Text style={[styles.optionText, { color: colors.foreground, fontFamily: selected === idx ? "Inter_600SemiBold" : "Inter_400Regular" }]}>{opt.label}</Text>
+                <Body color={colors.foreground} style={[styles.optionText, selected === idx && { fontFamily: fontFamily.semibold }]}>{opt.label}</Body>
               </TouchableOpacity>
             ))}
           </View>
-          <TouchableOpacity
-            style={[styles.nextBtn, { backgroundColor: selected !== null ? colors.primary : colors.muted }]}
+          <Button
+            title={currentQ === (assessment?.questions.length ?? 1) - 1 ? "See Results" : "Next"}
+            icon={currentQ === (assessment?.questions.length ?? 1) - 1 ? "check" : "arrow-right"}
             onPress={handleNext}
             disabled={selected === null}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.nextBtnText, { fontFamily: "Inter_700Bold" }]}>
-              {currentQ === (assessment?.questions.length ?? 1) - 1 ? "See Results" : "Next"}
-            </Text>
-            <Feather name={currentQ === (assessment?.questions.length ?? 1) - 1 ? "check" : "arrow-right"} size={18} color="#FFFFFF" />
-          </TouchableOpacity>
+          />
         </>
       )}
     </View>
@@ -331,50 +313,27 @@ export function AssessmentsPanel() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 20 },
-  pageTitle: { fontSize: 28 },
-  backRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  backText: { fontSize: 14 },
-  assessCard: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 18, borderWidth: 1 },
-  assessIcon: { width: 52, height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  assessTitle: { fontSize: 16 },
-  assessDesc: { fontSize: 13, lineHeight: 18 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
+  backRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  assessCard: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  assessIcon: { width: 52, height: 52, borderRadius: radius.md, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   assessMeta: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
-  assessMetaText: { fontSize: 12 },
-  assessRight: { marginLeft: 4, alignItems: "center", justifyContent: "center" },
-  scorePill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  scorePillText: { fontSize: 14 },
-  introHeader: { alignItems: "center", gap: 14 },
-  introIcon: { width: 80, height: 80, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  introTitle: { fontSize: 22, textAlign: "center" },
-  introDesc: { fontSize: 14, textAlign: "center", lineHeight: 22 },
-  startBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
-  startBtnText: { color: "#FFFFFF", fontSize: 16 },
-  scoreCard: { borderRadius: 20, padding: 24, alignItems: "center", borderWidth: 1, gap: 14 },
-  levelBadge: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  levelLabel: { fontSize: 15 },
-  scoreDesc: { fontSize: 14, textAlign: "center", lineHeight: 20 },
-  catTitle: { fontSize: 18, marginBottom: 10 },
-  catRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 14, borderWidth: 1, marginBottom: 8 },
-  catIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  catName: { fontSize: 13, marginBottom: 2 },
-  catPct: { fontSize: 14, width: 38, textAlign: "right" },
-  recoCard: { flexDirection: "row", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8, alignItems: "flex-start" },
-  recoTitle: { fontSize: 15, marginBottom: 3 },
-  recoDesc: { fontSize: 13, lineHeight: 18 },
-  actionRow: { flexDirection: "row", gap: 10 },
-  retakeBtn: { borderRadius: 14, borderWidth: 1, paddingVertical: 14, alignItems: "center" },
-  retakeText: { fontSize: 15 },
-  qProgress: { gap: 8 },
+  assessRight: { marginLeft: spacing.xs, alignItems: "center", justifyContent: "center" },
+  introHeader: { alignItems: "center", gap: spacing.md },
+  introIcon: { width: 80, height: 80, borderRadius: radius.xl, alignItems: "center", justifyContent: "center" },
+  introTitle: { textAlign: "center" },
+  introDesc: { textAlign: "center" },
+  scoreCard: { alignItems: "center", gap: spacing.md },
+  scoreDesc: { textAlign: "center" },
+  catTitle: { marginBottom: spacing.sm },
+  catRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.sm },
+  catIconWrap: { width: 34, height: 34, borderRadius: radius.sm, alignItems: "center", justifyContent: "center" },
+  recoCard: { flexDirection: "row", gap: spacing.md, marginBottom: spacing.sm, alignItems: "flex-start" },
+  actionRow: { flexDirection: "row", gap: spacing.sm },
+  qProgress: { gap: spacing.sm },
   qProgressRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  qCount: { fontSize: 13 },
-  categoryTag: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
-  categoryTagText: { fontSize: 13 },
-  question: { fontSize: 20, lineHeight: 28 },
-  options: { gap: 10 },
-  option: { flexDirection: "row", alignItems: "flex-start", padding: 14, borderRadius: 14, gap: 12 },
-  optionDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 },
-  optionText: { flex: 1, fontSize: 15, lineHeight: 21 },
-  nextBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
-  nextBtnText: { color: "#FFFFFF", fontSize: 16 },
+  options: { gap: spacing.sm },
+  option: { flexDirection: "row", alignItems: "flex-start", padding: spacing.md, borderRadius: radius.lg, gap: spacing.md },
+  optionDot: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 },
+  optionText: { flex: 1, lineHeight: 21 },
 });

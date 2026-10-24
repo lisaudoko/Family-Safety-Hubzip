@@ -79,6 +79,7 @@ export interface ApiUser {
   isPremium: boolean;
   familyId: string;
   hasCompletedOnboarding: boolean;
+  emailVerified?: boolean;
   createdAt: string;
 }
 
@@ -121,6 +122,17 @@ export async function apiResetPassword(
   });
 }
 
+export async function apiVerifyEmail(code: string): Promise<{ user: ApiUser }> {
+  return apiFetch("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function apiResendVerification(): Promise<void> {
+  await apiFetch("/auth/resend-verification", { method: "POST" });
+}
+
 export async function apiLogout(): Promise<void> {
   try {
     await apiFetch("/auth/logout", { method: "POST" });
@@ -161,6 +173,10 @@ export async function apiCreatePortalSession(): Promise<{ url: string }> {
 }
 
 // ── Family ──────────────────────────────────────────────────────────────────
+export interface ApiParent {
+  id: string;
+  name: string;
+}
 
 export interface ApiFamily {
   id: string;
@@ -168,7 +184,9 @@ export interface ApiFamily {
   parentId: string;
   familyCode: string;
   createdAt: string;
+  parents: ApiParent[];
   children: ApiChild[];
+  siblings: ApiChild[];
 }
 
 export interface ApiChild {
@@ -218,6 +236,13 @@ export async function apiUpdateChild(
 
 export async function apiDeleteChild(childId: string): Promise<void> {
   await apiFetch(`/family/children/${childId}`, { method: "DELETE" });
+}
+
+export async function apiCreateSupportCode(): Promise<{
+  code: string;
+  expiresAt: string;
+}> {
+  return apiFetch("/family/support-code", { method: "POST" });
 }
 
 // ── Child login ─────────────────────────────────────────────────────────────
@@ -505,6 +530,7 @@ export interface ApiDevice {
   permissionStatus: Record<string, string>;
   status: string;
   isStale: boolean;
+  syncStatus: "online" | "recent" | "stale";
   lastSyncedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -557,4 +583,344 @@ export async function apiPostDeviceEvent(
     method: "POST",
     body: JSON.stringify(event),
   });
+}
+
+// ── Dashboard ───────────────────────────────────────────────────────────────
+
+export interface ApiDashboardDevice {
+  id: string;
+  name: string;
+  platform: string;
+  isStale: boolean;
+  syncStatus: "online" | "recent" | "stale";
+  lastSyncedAt: string | null;
+}
+
+export interface ApiDashboardChild {
+  id: string;
+  name: string;
+  ageBand: string;
+  devices: ApiDashboardDevice[];
+  recentActivity: {
+    windowDays: number;
+    screenTimeSeconds: number;
+    activityCount: number;
+    educationCount: number;
+  };
+}
+
+export async function apiGetDashboardOverview(): Promise<{ children: ApiDashboardChild[] }> {
+  return apiFetch("/dashboard/overview");
+}
+
+export interface ApiChildDashboard {
+  child: { id: string; name: string; ageBand: string };
+  devices: ApiDashboardDevice[];
+  screenTime: {
+    windowDays: number;
+    byDay: { date: string; seconds: number }[];
+  };
+  activity: {
+    windowDays: number;
+    byType: { type: string; count: number }[];
+  };
+  education: {
+    windowDays: number;
+    byType: { type: string; count: number }[];
+  };
+}
+
+export async function apiGetChildDashboard(childId: string): Promise<ApiChildDashboard> {
+  return apiFetch(`/dashboard/children/${childId}`);
+}
+
+export interface ApiChildProgress {
+  child: { id: string; name: string; ageBand: string };
+  progress: {
+    completedLessonsCount: number;
+    completedQuizzesCount: number;
+    courseProgress: { courseId: string; title: string; percent: number }[];
+    earnedBadges: { id: string; title: string; iconName: string; color: string }[];
+    assessmentScore: number | null;
+    assessmentCompletedAt: string | null;
+    updatedAt: string;
+  } | null;
+}
+
+export async function apiGetChildProgress(childId: string): Promise<ApiChildProgress> {
+  return apiFetch(`/dashboard/children/${childId}/progress`);
+}
+
+// ── Analytics ───────────────────────────────────────────────────────────────
+
+export interface ApiScreenTimeSummary {
+  from: string;
+  to: string;
+  familyTotalDurationSeconds: number;
+  familyEventCount: number;
+  byDevice: { deviceId: string; totalDurationSeconds: number; eventCount: number }[];
+  byDay: { day: string; totalDurationSeconds: number; eventCount: number }[];
+  byCategory: { category: string; totalDurationSeconds: number; eventCount: number }[];
+}
+
+export interface ApiActivitySummary {
+  from: string;
+  to: string;
+  familyEventCount: number;
+  byActivityType: { activityType: string; eventCount: number }[];
+  byDevice: { deviceId: string; eventCount: number }[];
+}
+
+export async function apiGetAnalyticsSummary(params?: {
+  from?: string;
+  to?: string;
+  deviceId?: string;
+}): Promise<{ screenTime: ApiScreenTimeSummary; activity: ApiActivitySummary }> {
+  const query = new URLSearchParams();
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  if (params?.deviceId) query.set("deviceId", params.deviceId);
+  const qs = query.toString();
+  return apiFetch(`/analytics/summary${qs ? `?${qs}` : ""}`);
+}
+
+// ── Notifications ───────────────────────────────────────────────────────────
+
+export interface ApiWeeklyDigest {
+  from: string;
+  to: string;
+  familyTotalDurationSeconds: number;
+  familyEventCount: number;
+  byChild: { childName: string; totalDurationSeconds: number; eventCount: number }[];
+  activityHighlights: { activityType: string; eventCount: number }[];
+  devices: { name: string; platform: string; stale: boolean; lastSyncedAt: string | null }[];
+}
+
+export async function apiSendWeeklyDigest(): Promise<{
+  sent: boolean;
+  to: string;
+  digest: ApiWeeklyDigest;
+}> {
+  return apiFetch("/notifications/weekly-digest/send", { method: "POST" });
+}
+// ── Device Restrictions ─────────────────────────────────────────────
+
+export interface DeviceRestrictions {
+  id: string;
+  deviceId: string;
+  familyId: string;
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiGetDeviceRestrictions(
+  deviceId: string
+): Promise<{ restrictions: DeviceRestrictions | null }> {
+  return apiFetch(`/devices/${deviceId}/restrictions`);
+}
+
+export async function apiUpdateDeviceRestrictions(
+  deviceId: string,
+  data: Partial<{
+    screenTimeLimitMinutes: number | null;
+    bedtimeStart: string | null;
+    bedtimeEnd: string | null;
+    blockNewAppInstalls: boolean;
+    blockSafari: boolean;
+    blockExplicitContent: boolean;
+    requireParentApproval: boolean;
+  }>
+): Promise<{ restrictions: DeviceRestrictions }> {
+  return apiFetch(`/devices/${deviceId}/restrictions`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Child Policy ────────────────────────────────────────────────────
+
+export interface ChildPolicy {
+  id: string;
+  childId: string;
+  familyId: string;
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiGetChildPolicy(
+  childId: string
+): Promise<{ policy: ChildPolicy | null }> {
+  return apiFetch(`/family/children/${childId}/policy`);
+}
+
+export async function apiUpdateChildPolicy(
+  childId: string,
+  data: Partial<{
+    screenTimeLimitMinutes: number | null;
+    bedtimeStart: string | null;
+    bedtimeEnd: string | null;
+    blockNewAppInstalls: boolean;
+    blockSafari: boolean;
+    blockExplicitContent: boolean;
+    requireParentApproval: boolean;
+  }>
+): Promise<{ policy: ChildPolicy }> {
+  return apiFetch(`/family/children/${childId}/policy`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Family Policy ───────────────────────────────────────────────────
+
+export interface FamilyPolicy {
+  id: string;
+  familyId: string;
+  screenTimeLimitMinutes: number | null;
+  bedtimeStart: string | null;
+  bedtimeEnd: string | null;
+  blockNewAppInstalls: boolean;
+  blockSafari: boolean;
+  blockExplicitContent: boolean;
+  requireParentApproval: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiGetFamilyPolicy(): Promise<{ policy: FamilyPolicy | null }> {
+  return apiFetch("/family/policy");
+}
+
+export async function apiUpdateFamilyPolicy(
+  data: Partial<{
+    screenTimeLimitMinutes: number | null;
+    bedtimeStart: string | null;
+    bedtimeEnd: string | null;
+    blockNewAppInstalls: boolean;
+    blockSafari: boolean;
+    blockExplicitContent: boolean;
+    requireParentApproval: boolean;
+  }>
+): Promise<{ policy: FamilyPolicy }> {
+  return apiFetch("/family/policy", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ── Effective Policy (resolved family -> child -> device, read-only) ──
+//
+// Resolution only - nothing on-device reads or applies these values yet.
+// See docs/POLICY_ENGINE.md.
+
+export interface EffectivePolicyValue<T> {
+  value: T;
+  source: "family" | "child" | "device" | "default";
+}
+
+export interface EffectiveFlag {
+  value: boolean;
+  sources: ("family" | "child" | "device")[];
+}
+
+export interface EffectivePolicy {
+  screenTimeLimitMinutes: EffectivePolicyValue<number | null>;
+  bedtimeStart: EffectivePolicyValue<string | null>;
+  bedtimeEnd: EffectivePolicyValue<string | null>;
+  blockNewAppInstalls: EffectiveFlag;
+  blockSafari: EffectiveFlag;
+  blockExplicitContent: EffectiveFlag;
+  requireParentApproval: EffectiveFlag;
+}
+
+export async function apiGetEffectivePolicy(
+  childId: string,
+  deviceId?: string,
+): Promise<{ policy: EffectivePolicy }> {
+  const query = deviceId ? `?deviceId=${encodeURIComponent(deviceId)}` : "";
+  return apiFetch(`/family/children/${childId}/effective-policy${query}`);
+}
+
+// ── Device App Rules (General Apps — per-app accessible/inaccessible windows) ─
+//
+// Storage/definition only: nothing here enforces app access on-device. There
+// is no on-device enforcement agent, and no OS API in this Expo-managed app
+// to enumerate installed apps, so the parent adds each app manually by
+// bundle id + display name.
+
+export interface ApiDeviceAppRule {
+  id: string;
+  restrictionId: string;
+  appBundleId: string;
+  appName: string;
+  blocked: boolean;
+  bedtimeLocked: boolean;
+  dailyLimitMinutes: number | null;
+  restrictedStart: string | null;
+  restrictedEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiListDeviceAppRules(
+  deviceId: string
+): Promise<{ rules: ApiDeviceAppRule[] }> {
+  return apiFetch(`/devices/${deviceId}/app-rules`);
+}
+
+export async function apiCreateDeviceAppRule(
+  deviceId: string,
+  data: {
+    appBundleId: string;
+    appName: string;
+    blocked?: boolean;
+    bedtimeLocked?: boolean;
+    dailyLimitMinutes?: number | null;
+    restrictedStart?: string | null;
+    restrictedEnd?: string | null;
+  }
+): Promise<{ rule: ApiDeviceAppRule }> {
+  return apiFetch(`/devices/${deviceId}/app-rules`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiUpdateDeviceAppRule(
+  deviceId: string,
+  ruleId: string,
+  data: Partial<{
+    appName: string;
+    blocked: boolean;
+    bedtimeLocked: boolean;
+    dailyLimitMinutes: number | null;
+    restrictedStart: string | null;
+    restrictedEnd: string | null;
+  }>
+): Promise<{ rule: ApiDeviceAppRule }> {
+  return apiFetch(`/devices/${deviceId}/app-rules/${ruleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiDeleteDeviceAppRule(
+  deviceId: string,
+  ruleId: string
+): Promise<void> {
+  await apiFetch(`/devices/${deviceId}/app-rules/${ruleId}`, { method: "DELETE" });
 }

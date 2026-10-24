@@ -1,16 +1,19 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useFamily } from "@/context/FamilyContext";
 import { AGREEMENT_RULES } from "@/data/seed";
 import { AgreementRule } from "@/context/FamilyContext";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
-
-const CATEGORY_COLORS: Record<string, string> = { Time: "#F5A623", Safety: "#4A90A4", Privacy: "#7B5EA7", Respect: "#4CAF7D", Devices: "#E07B39" };
+import { Badge, Body, Button, Card, Caption, H2, H3, TextField } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { AGREEMENT_CATEGORY_COLORS } from "@/constants/agreementColors";
 
 export default function AgreementScreen() {
   const colors = useColors();
@@ -69,29 +72,29 @@ export default function AgreementScreen() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.pageTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Family Agreement</Text>
+        <H3 style={{ marginBottom: 0 }}>Family Agreement</H3>
         <View style={{ width: 22 }} />
       </View>
 
       {step === "edit" && (
         <>
-          <View style={[styles.intro, { backgroundColor: colors.secondary }]}>
+          <Card variant="flat" style={[styles.intro, { backgroundColor: colors.secondary }]}>
             <Feather name="info" size={16} color={colors.primary} />
-            <Text style={[styles.introText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+            <Body color={colors.foreground} style={styles.introText}>
               Select the rules that apply to your family. You can also add your own. Build this together — kids are more likely to follow rules they helped create.
-            </Text>
-          </View>
+            </Body>
+          </Card>
 
           {categories.map(category => (
             <View key={category}>
               <View style={styles.categoryHeader}>
-                <View style={[styles.categoryDot, { backgroundColor: CATEGORY_COLORS[category] ?? colors.primary }]} />
-                <Text style={[styles.categoryTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{category}</Text>
+                <View style={[styles.categoryDot, { backgroundColor: AGREEMENT_CATEGORY_COLORS[category] ?? colors.primary }]} />
+                <H3 style={{ marginBottom: 0 }}>{category}</H3>
               </View>
               {rules.filter(r => r.category === category).map(rule => (
                 <TouchableOpacity
@@ -101,98 +104,82 @@ export default function AgreementScreen() {
                   activeOpacity={0.8}
                 >
                   <View style={[styles.checkbox, { borderColor: rule.enabled ? colors.primary : colors.border, backgroundColor: rule.enabled ? colors.primary : "transparent" }]}>
-                    {rule.enabled && <Feather name="check" size={12} color="#FFFFFF" />}
+                    {rule.enabled && <Feather name="check" size={12} color={colors.primaryForeground} />}
                   </View>
-                  <Text style={[styles.ruleText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{rule.rule}</Text>
+                  <Body color={colors.foreground} style={styles.ruleText}>{rule.rule}</Body>
                 </TouchableOpacity>
               ))}
             </View>
           ))}
 
           <View>
-            <Text style={[styles.categoryTitle, { color: colors.foreground, fontFamily: "Inter_700Bold", marginBottom: 8 }]}>Custom Rules</Text>
+            <H3 style={{ marginBottom: spacing.sm }}>Custom Rules</H3>
             {customRules.map((r, idx) => (
               <View key={idx} style={[styles.ruleRow, { backgroundColor: colors.card, borderColor: colors.primary + "44" }]}>
                 <View style={[styles.checkbox, { borderColor: colors.primary, backgroundColor: colors.primary }]}>
-                  <Feather name="check" size={12} color="#FFFFFF" />
+                  <Feather name="check" size={12} color={colors.primaryForeground} />
                 </View>
-                <Text style={[styles.ruleText, { color: colors.foreground, fontFamily: "Inter_400Regular", flex: 1 }]}>{r}</Text>
+                <Body color={colors.foreground} style={[styles.ruleText, { flex: 1 }]}>{r}</Body>
                 <TouchableOpacity onPress={() => removeCustomRule(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Feather name="x" size={16} color={colors.mutedForeground} />
                 </TouchableOpacity>
               </View>
             ))}
-            <View style={[styles.customInputRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.customInput, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}
-                placeholder="Add your own rule..."
-                placeholderTextColor={colors.mutedForeground}
-                value={newRule}
-                onChangeText={setNewRule}
-                onSubmitEditing={addCustomRule}
-              />
-              <TouchableOpacity onPress={addCustomRule} disabled={!newRule.trim()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Feather name="plus-circle" size={22} color={newRule.trim() ? colors.primary : colors.mutedForeground} />
-              </TouchableOpacity>
-            </View>
+            <TextField
+              placeholder="Add your own rule..."
+              value={newRule}
+              onChangeText={setNewRule}
+              onSubmitEditing={addCustomRule}
+              rightElement={
+                <TouchableOpacity onPress={addCustomRule} disabled={!newRule.trim()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Feather name="plus-circle" size={22} color={newRule.trim() ? colors.primary : colors.mutedForeground} />
+                </TouchableOpacity>
+              }
+            />
           </View>
 
-          <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSave} activeOpacity={0.85}>
-            <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Save & Preview Agreement</Text>
-          </TouchableOpacity>
+          <Button title="Save & Preview Agreement" onPress={handleSave} />
         </>
       )}
 
       {step === "sign" && (
         <>
-          <View style={[styles.agreementDoc, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.docTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{family?.name ?? "Our Family"} Technology Agreement</Text>
-            <Text style={[styles.docDate, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Created {new Date().toLocaleDateString()}</Text>
+          <Card variant="outline" style={styles.agreementDoc}>
+            <H2 style={{ textAlign: "center", marginBottom: 0 }}>{family?.name ?? "Our Family"} Technology Agreement</H2>
+            <Caption color={colors.mutedForeground} style={{ textAlign: "center" }}>Created {new Date().toLocaleDateString()}</Caption>
             <View style={[styles.docSeparator, { backgroundColor: colors.border }]} />
-            <Text style={[styles.docIntro, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+            <Body color={colors.foreground} style={styles.docIntro}>
               We, as a family, agree to follow these rules when using technology. These rules help keep everyone safe, respectful, and connected to each other.
-            </Text>
+            </Body>
             {rules.filter(r => r.enabled).map(rule => (
               <View key={rule.id} style={styles.docRule}>
-                <Feather name="check" size={14} color={CATEGORY_COLORS[rule.category] ?? colors.primary} />
-                <Text style={[styles.docRuleText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{rule.rule}</Text>
+                <Feather name="check" size={14} color={AGREEMENT_CATEGORY_COLORS[rule.category] ?? colors.primary} />
+                <Body color={colors.foreground} style={styles.docRuleText}>{rule.rule}</Body>
               </View>
             ))}
             {customRules.map((r, idx) => (
               <View key={`c${idx}`} style={styles.docRule}>
                 <Feather name="check" size={14} color={colors.primary} />
-                <Text style={[styles.docRuleText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{r}</Text>
+                <Body color={colors.foreground} style={styles.docRuleText}>{r}</Body>
               </View>
             ))}
             <View style={[styles.docSeparator, { backgroundColor: colors.border }]} />
             {signed ? (
-              <View style={[styles.signedBanner, { backgroundColor: colors.success + "22" }]}>
-                <Feather name="check-circle" size={18} color={colors.success} />
-                <Text style={[styles.signedText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>Signed by {family?.name ?? "Family"} · {agreement?.signedAt ? new Date(agreement.signedAt).toLocaleDateString() : "Today"}</Text>
-              </View>
+              <Badge label={`Signed by ${family?.name ?? "Family"} · ${agreement?.signedAt ? new Date(agreement.signedAt).toLocaleDateString() : "Today"}`} tone={colors.success} variant="soft" icon="check-circle" />
             ) : (
-              <Text style={[styles.signPrompt, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+              <Caption color={colors.mutedForeground}>
                 Review the agreement with your family, then sign below to make it official.
-              </Text>
+              </Caption>
             )}
-          </View>
+          </Card>
 
           {!signed && (
-            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.success }]} onPress={handleSign} activeOpacity={0.85}>
-              <Feather name="edit-3" size={18} color="#FFFFFF" />
-              <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Sign Agreement</Text>
-            </TouchableOpacity>
+            <Button title="Sign Agreement" icon="edit-3" style={{ backgroundColor: colors.success }} onPress={handleSign} />
           )}
 
-          <TouchableOpacity style={[styles.editBtn, { borderColor: colors.border }]} onPress={() => setStep("edit")}>
-            <Text style={[styles.editBtnText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Edit Rules</Text>
-          </TouchableOpacity>
+          <Button title="Edit Rules" variant="outline" onPress={() => setStep("edit")} />
 
-          {signed && (
-            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={() => router.back()} activeOpacity={0.85}>
-              <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Done</Text>
-            </TouchableOpacity>
-          )}
+          {signed && <Button title="Done" onPress={() => router.back()} />}
         </>
       )}
     </ScrollView>
@@ -200,31 +187,18 @@ export default function AgreementScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 20 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xl },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  pageTitle: { fontSize: 20 },
-  intro: { flexDirection: "row", gap: 10, padding: 14, borderRadius: 14, alignItems: "flex-start" },
-  introText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  categoryHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  intro: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
+  introText: { flex: 1, lineHeight: 19 },
+  categoryHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
   categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryTitle: { fontSize: 16 },
-  ruleRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 6 },
+  ruleRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, marginBottom: spacing.xs },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 },
-  ruleText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  customInputRow: { flexDirection: "row", alignItems: "center", borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12 },
-  customInput: { flex: 1, fontSize: 14 },
-  saveBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
-  saveBtnText: { color: "#FFFFFF", fontSize: 16 },
-  agreementDoc: { borderRadius: 16, borderWidth: 1, padding: 20, gap: 12 },
-  docTitle: { fontSize: 18, textAlign: "center" },
-  docDate: { fontSize: 12, textAlign: "center" },
+  ruleText: { lineHeight: 20 },
+  agreementDoc: { gap: spacing.md },
   docSeparator: { height: 1 },
-  docIntro: { fontSize: 14, lineHeight: 21, fontStyle: "italic" },
-  docRule: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  docRuleText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  signedBanner: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 10 },
-  signedText: { fontSize: 14 },
-  signPrompt: { fontSize: 13, lineHeight: 19 },
-  editBtn: { borderRadius: 14, borderWidth: 1, paddingVertical: 14, alignItems: "center" },
-  editBtnText: { fontSize: 15 },
+  docIntro: { lineHeight: 21, fontStyle: "italic" },
+  docRule: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  docRuleText: { flex: 1, lineHeight: 20 },
 });

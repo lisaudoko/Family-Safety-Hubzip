@@ -1,18 +1,32 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef } from "react";
-import { AppState, Platform } from "react-native";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import Constants from "expo-constants";
-import { apiDeviceHeartbeat, apiRegisterDevice } from "@/lib/apiClient";
+import { apiDeviceHeartbeat, apiPostDeviceEvent, apiRegisterDevice } from "@/lib/apiClient";
 
 const DEVICE_ID_KEY = "@dv_device_id";
 const LAST_SYNC_KEY = "@dv_device_last_sync";
 const DEFAULT_SYNC_INTERVAL_SECONDS = 15 * 60;
 
+// Only submit a screen_time event for a foreground session that lasted at
+// least this long, so brief app switches/backgrounds don't spam the API.
+const MIN_FOREGROUND_SESSION_SECONDS = 20;
+
 // Capabilities this app can genuinely back today, without any native
 // permission APIs beyond what's already in the project. Kept separate from
 // the server's full capability list so we never claim something we can't
 // actually deliver.
-const APP_CAPABILITIES = ["device_sync", "family_participation", "lesson_participation"];
+const APP_CAPABILITIES = [
+  "device_sync",
+  "family_participation",
+  "lesson_participation",
+  "screen_time_reporting",
+  "activity_summary",
+];
+
+function genEventId(): string {
+  return "evt_" + Date.now().toString() + Math.random().toString(36).slice(2, 8);
+}
 
 async function getOrCreateDeviceId(): Promise<string> {
   const existing = await AsyncStorage.getItem(DEVICE_ID_KEY);
@@ -87,4 +101,69 @@ export function useDeviceSync(isAuthenticated: boolean) {
     });
     return () => sub.remove();
   }, [runSync]);
+}
+
+// Submits a single device event best-effort: never throws, never blocks the
+// caller, and silently drops the event on any network/registration failure -
+// matching the offline-friendly pattern used by syncDeviceNow above.
+async function submitDeviceEvent(
+  eventType: "screen_time" | "activity" | "education_activity",
+  payload: Record<string, unknown>,
+): Promise<void> {
+  if (Platform.OS !== "ios" && Platform.OS !== "android") return;
+  try {
+    const deviceId = await getOrCreateDeviceId();
+    await apiPostDeviceEvent(deviceId, { id: genEventId(), eventType, payload });
+  } catch {
+    // best-effort
+  }
+}
+
+// Records an education activity event (lesson/quiz/challenge/assessment
+// completion) alongside wherever that completion is already persisted
+// server-side, so the parent dashboard can report it separately from
+// general app usage. Fire-and-forget - callers should not await this for UI flow.
+export function submitActivityEvent(
+  activityType: string,
+  details?: Record<string, unknown>,
+): void {
+  submitDeviceEvent("education_activity", { activityType, details });
+}
+
+// Tracks how long the app itself has been in the foreground and reports it as
+// a screen_time event when the app backgrounds. This is an app-usage proxy,
+// not device-wide OS screen time - we have no native Screen Time API access.
+export function useForegroundScreenTime(isAuthenticated: boolean) {
+  const sessionStartRef = useRef<number | null>(null);
+
+  const flushSession = useCallback(() => {
+    const start = sessionStartRef.current;
+    sessionStartRef.current = null;
+    if (start === null) return;
+    const durationSeconds = Math.round((Date.now() - start) / 1000);
+    if (durationSeconds < MIN_FOREGROUND_SESSION_SECONDS) return;
+    submitDeviceEvent("screen_time", { durationSeconds, category: "app_usage" });
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      flushSession();
+      return;
+    }
+
+    sessionStartRef.current = Date.now();
+
+    const sub = AppState.addEventListener("change", (next: AppStateStatus) => {
+      if (next === "active") {
+        if (sessionStartRef.current === null) sessionStartRef.current = Date.now();
+      } else {
+        flushSession();
+      }
+    });
+
+    return () => {
+      sub.remove();
+      flushSession();
+    };
+  }, [isAuthenticated, flushSession]);
 }

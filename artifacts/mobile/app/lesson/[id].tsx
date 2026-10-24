@@ -1,9 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useFamily } from "@/context/FamilyContext";
 import { useAuth } from "@/context/AuthContext";
 import { useCurriculum } from "@/hooks/useCurriculum";
@@ -12,6 +13,10 @@ import { BottomTabBar } from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { isLessonAvailable } from "@/lib/lessonAvailability";
+import { Badge, Body, Button, Card, Caption, H1, H2, H3, Small } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { fontFamily } from "@/constants/typography";
 
 const MIN_DURATION_FOR_GATE_MINUTES = 10;
 const MIN_TIME_REQUIRED_SECONDS = 5 * 60;
@@ -44,12 +49,12 @@ function ScenarioBlock({ section, accent }: { section: Extract<LessonSection, { 
   };
 
   return (
-    <View style={[styles.scenarioCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+    <Card variant="outline" style={styles.scenarioCard}>
       <View style={styles.scenarioHeader}>
         <Feather name="help-circle" size={16} color={accent} />
-        <Text style={[styles.scenarioTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{section.title}</Text>
+        <H3 style={{ flex: 1 }}>{section.title}</H3>
       </View>
-      <Text style={[styles.scenarioSituation, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{section.situation}</Text>
+      <Body color={colors.foreground}>{section.situation}</Body>
       <View style={styles.scenarioOptions}>
         {section.options.map((opt, idx) => {
           const isCorrect = idx === section.correct;
@@ -63,7 +68,7 @@ function ScenarioBlock({ section, accent }: { section: Extract<LessonSection, { 
               onPress={() => handlePick(idx)}
               activeOpacity={answered ? 1 : 0.8}
             >
-              <Text style={[styles.scenarioOptionText, { color: colors.foreground, fontFamily: isPicked ? "Inter_600SemiBold" : "Inter_400Regular" }]}>{opt}</Text>
+              <Body color={colors.foreground} style={[styles.scenarioOptionText, isPicked && { fontFamily: fontFamily.semibold }]}>{opt}</Body>
               {answered && isCorrect && <Feather name="check-circle" size={18} color={colors.success} />}
               {answered && isPicked && !isCorrect && <Feather name="x-circle" size={18} color={colors.destructive} />}
             </TouchableOpacity>
@@ -73,10 +78,10 @@ function ScenarioBlock({ section, accent }: { section: Extract<LessonSection, { 
       {answered && (
         <View style={[styles.scenarioExplain, { backgroundColor: colors.secondary }]}>
           <Feather name="info" size={15} color={accent} />
-          <Text style={[styles.scenarioExplainText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{section.explanation}</Text>
+          <Caption color={colors.foreground} style={styles.scenarioExplainText}>{section.explanation}</Caption>
         </View>
       )}
-    </View>
+    </Card>
   );
 }
 
@@ -84,12 +89,10 @@ function TextSection({ section }: { section: Extract<LessonSection, { type: "tex
   const colors = useColors();
   const paragraphs = section.content.split("\n\n");
   return (
-    <View style={styles.textSection}>
-      {section.heading ? (
-        <Text style={[styles.heading, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{section.heading}</Text>
-      ) : null}
+    <View>
+      {section.heading ? <H3 style={{ marginBottom: spacing.sm }}>{section.heading}</H3> : null}
       {paragraphs.map((para, idx) => (
-        <Text key={idx} style={[styles.paragraph, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{para}</Text>
+        <Body key={idx} color={colors.foreground} style={styles.paragraph}>{para}</Body>
       ))}
     </View>
   );
@@ -100,7 +103,7 @@ function TipSection({ section, accent }: { section: Extract<LessonSection, { typ
   return (
     <View style={[styles.tipCard, { backgroundColor: accent + "12", borderColor: accent + "33" }]}>
       <Feather name={section.icon as never} size={18} color={accent} />
-      <Text style={[styles.tipText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{section.content}</Text>
+      <Body color={colors.foreground} style={styles.tipText}>{section.content}</Body>
     </View>
   );
 }
@@ -163,143 +166,118 @@ export default function LessonScreen() {
   const hasSections = !!lesson.sections && lesson.sections.length > 0;
   const paragraphs = lesson.content.split("\n\n");
 
+  const ctaLabel = timeGateActive
+    ? `Available in ${formatCountdown(requiredSeconds - elapsedSeconds)}`
+    : quizPending
+      ? "Take Quiz"
+      : isDone
+        ? (nextLesson ? "Next Lesson" : "Back to Course")
+        : lesson.hasQuiz ? "Complete & Take Quiz" : "Complete Lesson";
+
+  const ctaOnPress = quizPending
+    ? () => router.push({ pathname: "/quiz/[id]", params: { id: lesson.id, courseId: course.id } })
+    : isDone
+      ? () => (nextLesson ? router.push({ pathname: "/lesson/[id]", params: { id: nextLesson.id, courseId: course.id } }) : router.push({ pathname: "/course/[id]", params: { id: course.id } }))
+      : handleComplete;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: 32 }]} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.courseLabel, { color: course.color, fontFamily: "Inter_500Medium" }]}>{course.title}</Text>
-          <Text style={[styles.lessonNum, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Lesson {lessonIdx + 1} of {course.lessons.length}</Text>
+      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxxl }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Caption color={course.color}>{course.title}</Caption>
+            <Small color={colors.mutedForeground}>Lesson {lessonIdx + 1} of {course.lessons.length}</Small>
+          </View>
+          {isDone && <Feather name="check-circle" size={20} color={colors.success} />}
         </View>
-        {isDone && <Feather name="check-circle" size={20} color={colors.success} />}
-      </View>
 
-      <View style={styles.meta}>
-        <Feather name="clock" size={14} color={colors.mutedForeground} />
-        <Text style={[styles.duration, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{lesson.duration}</Text>
-        {lesson.hasQuiz && (
-          <View style={[styles.quizTag, { backgroundColor: colors.primary + "22" }]}>
-            <Feather name="edit-3" size={12} color={colors.primary} />
-            <Text style={[styles.quizTagText, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>Quiz included</Text>
-          </View>
-        )}
-      </View>
+        <View style={styles.meta}>
+          <Feather name="clock" size={14} color={colors.mutedForeground} />
+          <Small color={colors.mutedForeground}>{lesson.duration}</Small>
+          {lesson.hasQuiz && <Badge label="Quiz included" tone={colors.primary} variant="soft" icon="edit-3" />}
+        </View>
 
-      <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{lesson.title}</Text>
+        <H1>{lesson.title}</H1>
 
-      <View style={[styles.separator, { backgroundColor: colors.border }]} />
+        <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
-      <View style={styles.body}>
-        {hasSections
-          ? lesson.sections!.map((section, idx) => {
-              if (section.type === "tip") return <TipSection key={idx} section={section} accent={course.color} />;
-              if (section.type === "scenario") return <ScenarioBlock key={idx} section={section} accent={course.color} />;
-              return <TextSection key={idx} section={section} />;
-            })
-          : paragraphs.map((para, idx) => {
-              if (para.startsWith("##")) {
-                return <Text key={idx} style={[styles.heading, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{para.replace("## ", "")}</Text>;
-              }
-              return (
-                <Text key={idx} style={[styles.paragraph, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{para}</Text>
-              );
-            })}
-      </View>
+        <View style={styles.body}>
+          {hasSections
+            ? lesson.sections!.map((section, idx) => {
+                if (section.type === "tip") return <TipSection key={idx} section={section} accent={course.color} />;
+                if (section.type === "scenario") return <ScenarioBlock key={idx} section={section} accent={course.color} />;
+                return <TextSection key={idx} section={section} />;
+              })
+            : paragraphs.map((para, idx) => {
+                if (para.startsWith("##")) {
+                  return <H3 key={idx}>{para.replace("## ", "")}</H3>;
+                }
+                return <Body key={idx} color={colors.foreground} style={styles.paragraph}>{para}</Body>;
+              })}
+        </View>
 
-      {lesson.keyTakeaways && lesson.keyTakeaways.length > 0 && (
-        <View style={[styles.takeawaysCard, { backgroundColor: course.color + "12", borderColor: course.color + "33" }]}>
-          <View style={styles.takeawaysHeader}>
-            <Feather name="check-circle" size={16} color={course.color} />
-            <Text style={[styles.takeawaysTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Key Takeaways</Text>
-          </View>
-          {lesson.keyTakeaways.map((item, idx) => (
-            <View key={idx} style={styles.takeawayRow}>
-              <View style={[styles.takeawayDot, { backgroundColor: course.color }]} />
-              <Text style={[styles.takeawayText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{item}</Text>
+        {lesson.keyTakeaways && lesson.keyTakeaways.length > 0 && (
+          <Card variant="outline" style={[styles.takeawaysCard, { backgroundColor: course.color + "12", borderColor: course.color + "33" }]}>
+            <View style={styles.takeawaysHeader}>
+              <Feather name="check-circle" size={16} color={course.color} />
+              <H3>Key Takeaways</H3>
             </View>
-          ))}
-        </View>
-      )}
-
-      {lesson.hasQuiz && (
-        <View style={[styles.quizPreview, { backgroundColor: colors.secondary, borderColor: colors.primary + "44" }]}>
-          <Feather name="edit-3" size={18} color={colors.primary} />
-          <View>
-            <Text style={[styles.quizTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Quiz Time!</Text>
-            <Text style={[styles.quizDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Test your understanding of this lesson.</Text>
-          </View>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={[styles.completeBtn, { backgroundColor: timeGateActive ? colors.muted : isDone ? colors.muted : course.color }]}
-        disabled={timeGateActive}
-        onPress={
-          quizPending
-            ? () => router.push({ pathname: "/quiz/[id]", params: { id: lesson.id, courseId: course.id } })
-            : isDone
-              ? () => (nextLesson ? router.push({ pathname: "/lesson/[id]", params: { id: nextLesson.id, courseId: course.id } }) : router.push({ pathname: "/course/[id]", params: { id: course.id } }))
-              : handleComplete
-        }
-        activeOpacity={0.85}
-      >
-        <Text style={[styles.completeBtnText, { fontFamily: "Inter_700Bold", color: isDone ? colors.foreground : timeGateActive ? colors.mutedForeground : "#FFFFFF" }]}>
-          {timeGateActive
-            ? `Available in ${formatCountdown(requiredSeconds - elapsedSeconds)}`
-            : quizPending
-              ? "Take Quiz"
-              : isDone
-                ? (nextLesson ? "Next Lesson" : "Back to Course")
-                : lesson.hasQuiz ? "Complete & Take Quiz" : "Complete Lesson"}
-        </Text>
-        {!timeGateActive && (
-          <Feather name={isDone && !quizPending ? "arrow-right" : "check"} size={18} color={isDone ? colors.foreground : "#FFFFFF"} />
+            {lesson.keyTakeaways.map((item, idx) => (
+              <View key={idx} style={styles.takeawayRow}>
+                <View style={[styles.takeawayDot, { backgroundColor: course.color }]} />
+                <Body color={colors.foreground} style={styles.takeawayText}>{item}</Body>
+              </View>
+            ))}
+          </Card>
         )}
-      </TouchableOpacity>
-    </ScrollView>
-    <BottomTabBar active="learn" />
+
+        {lesson.hasQuiz && (
+          <View style={[styles.quizPreview, { backgroundColor: colors.secondary, borderColor: colors.primary + "44" }]}>
+            <Feather name="edit-3" size={18} color={colors.primary} />
+            <View>
+              <Body color={colors.foreground}>Quiz Time!</Body>
+              <Caption color={colors.mutedForeground}>Test your understanding of this lesson.</Caption>
+            </View>
+          </View>
+        )}
+
+        <Button
+          title={ctaLabel}
+          onPress={ctaOnPress}
+          disabled={timeGateActive}
+          variant={isDone ? "secondary" : "primary"}
+          style={!isDone && !timeGateActive ? { backgroundColor: course.color } : undefined}
+          icon={timeGateActive ? undefined : isDone && !quizPending ? "arrow-right" : "check"}
+        />
+      </ScrollView>
+      <BottomTabBar active="learn" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 16 },
-  header: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  courseLabel: { fontSize: 13 },
-  lessonNum: { fontSize: 13 },
-  meta: { flexDirection: "row", alignItems: "center", gap: 8 },
-  duration: { fontSize: 13 },
-  quizTag: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  quizTagText: { fontSize: 12 },
-  title: { fontSize: 24, lineHeight: 32 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.lg },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  meta: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   separator: { height: 1 },
-  body: { gap: 16 },
-  heading: { fontSize: 18, marginBottom: 8 },
-  paragraph: { fontSize: 15, lineHeight: 24, marginBottom: 8 },
-  textSection: {},
-  tipCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
-  tipText: { flex: 1, fontSize: 14, lineHeight: 21 },
-  scenarioCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
-  scenarioHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  scenarioTitle: { fontSize: 15, flex: 1 },
-  scenarioSituation: { fontSize: 14, lineHeight: 21 },
-  scenarioOptions: { gap: 8 },
-  scenarioOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, padding: 12, borderRadius: 12 },
-  scenarioOptionText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  scenarioExplain: { flexDirection: "row", alignItems: "flex-start", gap: 8, padding: 12, borderRadius: 12 },
-  scenarioExplainText: { flex: 1, fontSize: 13, lineHeight: 20 },
-  takeawaysCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 10 },
-  takeawaysHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  takeawaysTitle: { fontSize: 15 },
-  takeawayRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  body: { gap: spacing.lg },
+  paragraph: { marginBottom: spacing.sm },
+  tipCard: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1 },
+  tipText: { flex: 1, lineHeight: 21 },
+  scenarioCard: { gap: spacing.md },
+  scenarioHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  scenarioOptions: { gap: spacing.sm },
+  scenarioOption: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md },
+  scenarioOptionText: { flex: 1, lineHeight: 20 },
+  scenarioExplain: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, padding: spacing.md, borderRadius: radius.md },
+  scenarioExplainText: { flex: 1, lineHeight: 20 },
+  takeawaysCard: { gap: spacing.sm },
+  takeawaysHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  takeawayRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   takeawayDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
-  takeawayText: { flex: 1, fontSize: 14, lineHeight: 21 },
-  quizPreview: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 14, borderWidth: 1 },
-  quizTitle: { fontSize: 15, marginBottom: 2 },
-  quizDesc: { fontSize: 13 },
-  completeBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
-  completeBtnText: { fontSize: 16 },
+  takeawayText: { flex: 1, lineHeight: 21 },
+  quizPreview: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1 },
 });

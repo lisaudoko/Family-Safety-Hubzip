@@ -32,6 +32,7 @@ export interface User {
   createdAt: string;
   hasCompletedOnboarding: boolean;
   familyId: string;
+  emailVerified: boolean;
 }
 
 interface AuthState {
@@ -150,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     familyId: string;
     hasCompletedOnboarding: boolean;
     createdAt: string;
+    emailVerified?: boolean;
   }): User {
     return {
       id: u.id,
@@ -160,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: u.createdAt,
       hasCompletedOnboarding: u.hasCompletedOnboarding,
       familyId: u.familyId,
+      emailVerified: u.emailVerified ?? false,
     };
   }
 
@@ -320,6 +323,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
       hasCompletedOnboarding: false,
       familyId: "f" + id,
+      // Local-only offline accounts have no server-side verification concept
+      // to gate on, so treat them as verified to avoid showing the banner.
+      emailVerified: true,
     };
     await AsyncStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
     // Stash the password so we can register this account for real once the

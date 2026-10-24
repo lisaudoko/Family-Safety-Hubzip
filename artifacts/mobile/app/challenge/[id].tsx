@@ -1,14 +1,19 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+
 import { useAuth } from "@/context/AuthContext";
 import { useFamily } from "@/context/FamilyContext";
 import { CHALLENGES } from "@/data/seed";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
+import { Badge, Body, Button, Card, Caption, H1, H3 } from "@/components/primitives";
+import { spacing } from "@/constants/spacing";
+import { radius } from "@/constants/radius";
+import { fontFamily } from "@/constants/typography";
 
 function StepRing({ done, total, color, size = 60 }: { done: number; total: number; color: string; size?: number }) {
   const colors = useColors();
@@ -16,7 +21,7 @@ function StepRing({ done, total, color, size = 60 }: { done: number; total: numb
   const ringColor = pct >= 1 ? colors.success : color;
   return (
     <View style={[styles.ring, { width: size, height: size, borderRadius: size / 2, borderColor: ringColor, backgroundColor: ringColor + "14" }]}>
-      <Text style={[styles.ringCount, { color: ringColor, fontFamily: "Inter_700Bold", fontSize: size * 0.3 }]}>{done}/{total}</Text>
+      <Body color={ringColor} style={{ fontFamily: fontFamily.bold, fontSize: size * 0.3 }}>{done}/{total}</Body>
     </View>
   );
 }
@@ -70,182 +75,144 @@ export default function ChallengeDetailScreen() {
 
   const statusColors = { available: colors.primary, active: colors.accent, completed: colors.success };
   const statusColor = statusColors[status];
+  const statusLabel = status === "available" ? "Available" : status === "active" ? "In Progress" : "Complete";
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={[styles.statusPill, { backgroundColor: statusColor + "22" }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusText, { color: statusColor, fontFamily: "Inter_600SemiBold" }]}>{status === "available" ? "Available" : status === "active" ? "In Progress" : "Complete"}</Text>
-        </View>
+        <Badge label={statusLabel} tone={statusColor} variant="soft" />
       </View>
 
-      <View style={[styles.heroCard, { backgroundColor: challenge.color + "18" }]}>
+      <Card variant="flat" style={[styles.heroCard, { backgroundColor: challenge.color + "18" }]}>
         <View style={[styles.heroIcon, { backgroundColor: challenge.color + "33" }]}>
           <Feather name={challenge.iconName as never} size={36} color={challenge.color} />
         </View>
-        <View style={[styles.catPill, { backgroundColor: challenge.color + "33" }]}>
-          <Text style={[styles.catText, { color: challenge.color, fontFamily: "Inter_500Medium" }]}>{challenge.category}</Text>
-        </View>
-        <Text style={[styles.title, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>{challenge.title}</Text>
-        <Text style={[styles.description, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{challenge.description}</Text>
+        <Badge label={challenge.category} tone={challenge.color} variant="solid" />
+        <H1>{challenge.title}</H1>
+        <Body color={colors.mutedForeground}>{challenge.description}</Body>
         <View style={styles.meta}>
           <Feather name="clock" size={14} color={colors.mutedForeground} />
-          <Text style={[styles.metaText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{challenge.duration}</Text>
-          {challenge.isPremium && (
-            <View style={[styles.premiumTag, { backgroundColor: colors.accent + "22" }]}>
-              <Feather name="star" size={12} color={colors.accent} />
-              <Text style={[styles.premiumTagText, { color: colors.accent, fontFamily: "Inter_500Medium" }]}>Premium</Text>
-            </View>
-          )}
+          <Caption color={colors.mutedForeground}>{challenge.duration}</Caption>
+          {challenge.isPremium && <Badge label="Premium" tone={colors.accent} variant="soft" icon="star" />}
         </View>
-      </View>
+      </Card>
 
       {(isActive || isComplete) && (
-        <View style={[styles.progressCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Card variant="outline" style={styles.progressCard}>
           <StepRing done={doneCount} total={totalSteps} color={challenge.color} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={[styles.progressTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+          <View style={{ flex: 1, gap: spacing.xs }}>
+            <Body color={colors.foreground}>
               {isComplete ? "All steps complete!" : `${doneCount} of ${totalSteps} steps done`}
-            </Text>
-            <Text style={[styles.progressSub, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+            </Body>
+            <Caption color={colors.mutedForeground}>
               {isComplete ? "Great job finishing this challenge together." : "Check off each step as your family completes it."}
-            </Text>
+            </Caption>
           </View>
-        </View>
+        </Card>
       )}
 
       <View>
-        <Text style={[styles.stepsTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Challenge Steps</Text>
+        <H3>Challenge Steps</H3>
         {challenge.steps.map((step, idx) => {
           const done = isStepDone(idx);
           const checkable = isActive;
           return (
-            <TouchableOpacity
+            <Card
               key={idx}
-              style={[styles.stepRow, { backgroundColor: colors.card, borderColor: done ? colors.success + "55" : colors.border }]}
+              variant="outline"
+              pressable={checkable}
               onPress={() => handleToggleStep(idx)}
-              activeOpacity={checkable ? 0.7 : 1}
-              disabled={!checkable}
+              style={[styles.stepRow, { borderColor: done ? colors.success + "55" : colors.border }]}
             >
               <View style={[styles.stepNum, {
                 backgroundColor: done ? colors.success : challenge.color + "22",
                 borderWidth: checkable && !done ? 2 : 0,
                 borderColor: challenge.color,
               }]}>
-                {done ? <Feather name="check" size={14} color="#FFFFFF" /> : <Text style={[styles.stepNumText, { color: challenge.color, fontFamily: "Inter_700Bold" }]}>{idx + 1}</Text>}
+                {done ? <Feather name="check" size={14} color={colors.primaryForeground} /> : <Body color={challenge.color}>{idx + 1}</Body>}
               </View>
-              <Text style={[styles.stepText, { color: done ? colors.mutedForeground : colors.foreground, fontFamily: "Inter_400Regular", textDecorationLine: done && !isComplete ? "line-through" : "none" }]}>{step}</Text>
-            </TouchableOpacity>
+              <Body color={done ? colors.mutedForeground : colors.foreground} style={[styles.stepText, done && !isComplete && { textDecorationLine: "line-through" }]}>{step}</Body>
+            </Card>
           );
         })}
       </View>
 
       {challenge.tips && challenge.tips.length > 0 && (
-        <View style={[styles.tipsCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+        <Card variant="flat" style={[styles.tipsCard, { backgroundColor: colors.secondary }]}>
           <View style={styles.tipsHeader}>
             <Feather name="zap" size={16} color={challenge.color} />
-            <Text style={[styles.tipsTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Tips for Success</Text>
+            <H3 style={{ marginBottom: 0 }}>Tips for Success</H3>
           </View>
           {challenge.tips.map((tip, idx) => (
             <View key={idx} style={styles.tipRow}>
               <View style={[styles.tipDot, { backgroundColor: challenge.color }]} />
-              <Text style={[styles.tipText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{tip}</Text>
+              <Caption color={colors.mutedForeground} style={styles.tipText}>{tip}</Caption>
             </View>
           ))}
-        </View>
+        </Card>
       )}
 
       {challenge.successCriteria && (
-        <View style={[styles.criteriaCard, { backgroundColor: colors.success + "12", borderColor: colors.success + "33" }]}>
+        <Card variant="outline" style={[styles.criteriaCard, { backgroundColor: colors.success + "12", borderColor: colors.success + "33" }]}>
           <Feather name="target" size={18} color={colors.success} />
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[styles.criteriaTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>How to Complete It</Text>
-            <Text style={[styles.criteriaText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>{challenge.successCriteria}</Text>
+            <H3 style={{ marginBottom: 0 }}>How to Complete It</H3>
+            <Caption color={colors.mutedForeground}>{challenge.successCriteria}</Caption>
           </View>
-        </View>
+        </Card>
       )}
 
-      <View style={[styles.whyCard, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-        <Text style={[styles.whyTitle, { color: colors.foreground, fontFamily: "Inter_600SemiBold" }]}>Why This Matters</Text>
-        <Text style={[styles.whyText, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
+      <Card variant="flat" style={[styles.whyCard, { backgroundColor: colors.secondary }]}>
+        <H3 style={{ marginBottom: 0 }}>Why This Matters</H3>
+        <Caption color={colors.mutedForeground}>
           Family challenges work because they create shared experiences and memories that strengthen your family culture around technology. Research shows families that actively discuss and practice healthy tech habits build more resilient children.
-        </Text>
-      </View>
+        </Caption>
+      </Card>
 
       {isLocked && (
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.accent }]} onPress={() => router.push("/subscription")} activeOpacity={0.85}>
-          <Feather name="lock" size={18} color="#FFFFFF" />
-          <Text style={[styles.actionBtnText, { fontFamily: "Inter_700Bold" }]}>Unlock with Premium</Text>
-        </TouchableOpacity>
+        <Button title="Unlock with Premium" icon="lock" style={{ backgroundColor: colors.accent }} onPress={() => router.push("/subscription")} />
       )}
       {!isLocked && status === "available" && (
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: challenge.color }]} onPress={handleStart} activeOpacity={0.85}>
-          <Feather name="play" size={18} color="#FFFFFF" />
-          <Text style={[styles.actionBtnText, { fontFamily: "Inter_700Bold" }]}>Start Challenge</Text>
-        </TouchableOpacity>
+        <Button title="Start Challenge" icon="play" style={{ backgroundColor: challenge.color }} onPress={handleStart} />
       )}
       {status === "active" && (
-        <View style={[styles.hintBanner, { backgroundColor: colors.accent + "14", borderColor: colors.accent + "33" }]}>
+        <Card variant="flat" style={[styles.hintBanner, { backgroundColor: colors.accent + "14" }]}>
           <Feather name="check-square" size={18} color={colors.accent} />
-          <Text style={[styles.hintText, { color: colors.foreground, fontFamily: "Inter_500Medium" }]}>Tap each step above to check it off. The challenge completes automatically when all steps are done.</Text>
-        </View>
+          <Body color={colors.foreground} style={styles.hintText}>Tap each step above to check it off. The challenge completes automatically when all steps are done.</Body>
+        </Card>
       )}
       {status === "completed" && (
-        <View style={[styles.completedBanner, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
+        <Card variant="outline" style={[styles.completedBanner, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
           <Feather name="award" size={22} color={colors.success} />
-          <Text style={[styles.completedText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>Challenge Complete! Amazing work.</Text>
-        </View>
+          <Body color={colors.success}>Challenge Complete! Amazing work.</Body>
+        </Card>
       )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 20, gap: 24 },
+  content: { paddingHorizontal: spacing.xl, gap: spacing.xxl },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  statusPill: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 13 },
-  heroCard: { borderRadius: 20, padding: 20, gap: 12 },
-  heroIcon: { width: 64, height: 64, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  catPill: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  catText: { fontSize: 12 },
-  title: { fontSize: 24 },
-  description: { fontSize: 14, lineHeight: 21 },
-  meta: { flexDirection: "row", alignItems: "center", gap: 8 },
-  metaText: { fontSize: 13 },
-  premiumTag: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  premiumTagText: { fontSize: 12 },
-  progressCard: { flexDirection: "row", alignItems: "center", gap: 16, padding: 16, borderRadius: 16, borderWidth: 1 },
-  progressTitle: { fontSize: 16 },
-  progressSub: { fontSize: 13, lineHeight: 18 },
+  heroCard: { gap: spacing.md },
+  heroIcon: { width: 64, height: 64, borderRadius: radius.xl, alignItems: "center", justifyContent: "center" },
+  meta: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  progressCard: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
   ring: { alignItems: "center", justifyContent: "center", borderWidth: 4 },
-  ringCount: {},
-  stepsTitle: { fontSize: 18, marginBottom: 10 },
-  stepRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
-  stepNum: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  stepNumText: { fontSize: 14 },
-  stepText: { flex: 1, fontSize: 14, lineHeight: 20, paddingTop: 3 },
-  tipsCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 10 },
-  tipsHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  tipsTitle: { fontSize: 15 },
-  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  stepRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  stepNum: { width: 28, height: 28, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  stepText: { flex: 1, lineHeight: 20, paddingTop: 3 },
+  tipsCard: { gap: spacing.sm },
+  tipsHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   tipDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
-  tipText: { flex: 1, fontSize: 13, lineHeight: 20 },
-  criteriaCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, borderRadius: 14, borderWidth: 1, padding: 16 },
-  criteriaTitle: { fontSize: 15 },
-  criteriaText: { fontSize: 13, lineHeight: 20 },
-  whyCard: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 8 },
-  whyTitle: { fontSize: 15 },
-  whyText: { fontSize: 13, lineHeight: 20 },
-  actionBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10 },
-  actionBtnText: { color: "#FFFFFF", fontSize: 16 },
-  hintBanner: { borderRadius: 14, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
-  hintText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  completedBanner: { borderRadius: 14, borderWidth: 1, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
-  completedText: { fontSize: 16 },
+  tipText: { flex: 1, lineHeight: 20 },
+  criteriaCard: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
+  whyCard: { gap: spacing.sm },
+  hintBanner: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  hintText: { flex: 1, lineHeight: 19 },
+  completedBanner: { flexDirection: "row", alignItems: "center", gap: spacing.md },
 });

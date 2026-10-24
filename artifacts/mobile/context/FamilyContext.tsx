@@ -15,6 +15,7 @@ import {
   apiUpdateChild,
   type ApiProgress,
 } from "@/lib/apiClient";
+import { submitActivityEvent } from "@/lib/deviceSync";
 
 export interface Child {
   id: string;
@@ -23,13 +24,18 @@ export interface Child {
   familyId: string;
   createdAt: string;
 }
-
+export interface Parent {
+  id: string;
+  name: string;
+}
 export interface FamilyProfile {
   id: string;
   name: string;
   parentId: string;
   familyCode: string;
+  parents: Parent[];
   children: Child[];
+  siblings: Child[];
   createdAt: string;
 }
 
@@ -212,7 +218,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       if (serverFamily) {
         const fam: FamilyProfile = {
           ...serverFamily,
-          children: serverFamily.children.map(c => ({
+          parents: serverFamily.parents ?? [],
+          children: serverFamily.children.map((c) => ({
+            ...c,
+            ageBand: c.ageBand as AgeBand,
+          })),
+          siblings: (serverFamily.siblings ?? []).map((c) => ({
             ...c,
             ageBand: c.ageBand as AgeBand,
           })),
@@ -340,10 +351,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       id: familyId,
       name,
       parentId,
-      familyCode: "",
+     familyCode: "",
+      parents: [],
       children: [],
+      siblings: [],
       createdAt: new Date().toISOString(),
-    };
+    }
     await saveFamily(f);
   }, [user?.id]);
 
@@ -359,11 +372,13 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     const updated = fam
       ? { ...fam, children: [...fam.children, child] }
       : {
-          id: familyId,
+        id: familyId,
           name: "My Family",
           parentId: user?.id ?? "",
           familyCode: "",
+          parents: [],
           children: [child],
+          siblings: [],
           createdAt: new Date().toISOString(),
         };
     await saveFamily(updated);
@@ -444,12 +459,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     };
     updated.earnedBadges = deriveProgressBadges(updated, courses);
     await saveProgress(updated);
+    submitActivityEvent("lesson_completed", { lessonId, courseId });
   }, [progress, user?.id, courses]);
 
   const completeQuiz = useCallback(async (quizId: string) => {
     if (progress.completedQuizzes.includes(quizId)) return;
     const updated = { ...progress, completedQuizzes: [...progress.completedQuizzes, quizId] };
     await saveProgress(updated);
+    submitActivityEvent("quiz_completed", { quizId });
   }, [progress, user?.id]);
 
   const startChallenge = useCallback(async (challengeId: string) => {
@@ -474,6 +491,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     };
     updated.earnedBadges = deriveProgressBadges(updated, courses);
     await saveProgress(updated);
+    submitActivityEvent("challenge_completed", { challengeId });
   }, [progress, user?.id, courses]);
 
   const completeChallengeStep = useCallback(async (
@@ -497,6 +515,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       justCompleted = true;
     }
     await saveProgress(updated);
+    if (justCompleted) submitActivityEvent("challenge_completed", { challengeId });
     return justCompleted;
   }, [progress, user?.id, courses]);
 
@@ -519,6 +538,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
     updated.earnedBadges = mergeBadges(updated.earnedBadges, ["b17"]);
     await saveProgress(updated);
+    submitActivityEvent("assessment_completed", { assessmentId, score });
   }, [progress, user?.id]);
 
   const awardBadge = useCallback(async (badgeId: string) => {

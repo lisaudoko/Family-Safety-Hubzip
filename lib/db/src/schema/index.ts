@@ -30,6 +30,10 @@ export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type Profile = typeof profilesTable.$inferSelect;
 
 // ── sessions ───────────────────────────────────────────────────────────────────
+// support_session_id forward-references supportSessionsTable (declared further
+// down, after familiesTable which it depends on) - safe because drizzle's
+// .references() callback is only invoked lazily, after the whole module has
+// finished evaluating.
 export const sessionsTable = pgTable(
   'sessions',
   {
@@ -38,6 +42,12 @@ export const sessionsTable = pgTable(
       .notNull()
       .references(() => profilesTable.id, { onDelete: 'cascade' }),
     expires_at: timestamp('expires_at').notNull(),
+    // Set only for a token minted by redeeming a support code (see
+    // supportSessionsTable) - when present, requireAuth scopes the request to
+    // that support session's family instead of the admin's own family.
+    support_session_id: text('support_session_id').references(() => supportSessionsTable.id, {
+      onDelete: 'cascade',
+    }),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [index('sessions_user_id_idx').on(t.user_id)],
@@ -126,6 +136,92 @@ export const insertChildSchema = createInsertSchema(childrenTable).omit({
 export type InsertChild = z.infer<typeof insertChildSchema>;
 export type Child = typeof childrenTable.$inferSelect;
 
+// ── support_codes ────────────────────────────────────────────────────────────────
+// A parent-minted, one-time, short-lived code a support/admin account redeems
+// (see supportSessionsTable) to get temporary, fully-logged access to that
+// family. Mirrors the passwordResetCodesTable hashed-code pattern.
+export const supportCodesTable = pgTable(
+  'support_codes',
+  {
+    id: text('id').primaryKey(),
+    family_id: text('family_id')
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: 'cascade' }),
+    created_by: text('created_by')
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    code_hash: text('code_hash').notNull(),
+    expires_at: timestamp('expires_at').notNull(),
+    used_at: timestamp('used_at'),
+    used_by: text('used_by').references(() => profilesTable.id),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('support_codes_family_id_idx').on(t.family_id)],
+);
+
+export type SupportCode = typeof supportCodesTable.$inferSelect;
+
+// ── support_sessions ───────────────────────────────────────────────────────────
+// Created when an admin redeems a support_codes row. The admin's session
+// token (sessionsTable.support_session_id) points here; requireAuth uses this
+// row's family_id/expires_at/ended_at to scope and time-box the admin's access.
+export const supportSessionsTable = pgTable(
+  'support_sessions',
+  {
+    id: text('id').primaryKey(),
+    family_id: text('family_id')
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: 'cascade' }),
+    admin_id: text('admin_id')
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    code_id: text('code_id')
+      .notNull()
+      .references(() => supportCodesTable.id, { onDelete: 'cascade' }),
+    started_at: timestamp('started_at').notNull().defaultNow(),
+    expires_at: timestamp('expires_at').notNull(),
+    ended_at: timestamp('ended_at'),
+  },
+  (t) => [
+    index('support_sessions_family_id_idx').on(t.family_id),
+    index('support_sessions_admin_id_idx').on(t.admin_id),
+  ],
+);
+
+export type SupportSession = typeof supportSessionsTable.$inferSelect;
+
+// ── audit_log ──────────────────────────────────────────────────────────────────
+// Security-relevant event log: auth events, family/agreement changes, billing
+// checkout/portal opens, and every action taken during a support session.
+// Mirrors deviceEventsTable's owner/family/type/payload/occurred_at shape.
+export const auditLogTable = pgTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    // Nullable: a login_failed event for an email with no matching account
+    // has no profile to attribute it to.
+    actor_id: text('actor_id').references(() => profilesTable.id, { onDelete: 'cascade' }),
+    // Snapshot of the actor's role at the time of the action - important
+    // because a support session overrides req.role to 'parent' for
+    // authorization purposes, but the audit trail must still show 'admin'.
+    actor_role: text('actor_role').notNull(),
+    family_id: text('family_id').references(() => familiesTable.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(),
+    target_type: text('target_type'),
+    target_id: text('target_id'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+    ip: text('ip'),
+    is_support_session: boolean('is_support_session').notNull().default(false),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('audit_log_family_id_created_at_idx').on(t.family_id, t.created_at),
+    index('audit_log_actor_id_created_at_idx').on(t.actor_id, t.created_at),
+  ],
+);
+
+export type AuditLog = typeof auditLogTable.$inferSelect;
+
 // ── devices ────────────────────────────────────────────────────────────────────
 export const devicesTable = pgTable(
   'devices',
@@ -165,6 +261,38 @@ export const selectDeviceSchema = createSelectSchema(devicesTable);
 export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 export type Device = typeof devicesTable.$inferSelect;
 
+// ── blocked_app_events ────────────────────────────────────────────────────────
+
+export const blockedAppEventsTable = pgTable(
+  "blocked_app_events",
+  {
+    id: text("id").primaryKey(),
+
+    device_id: text("device_id")
+      .notNull()
+      .references(() => devicesTable.id, { onDelete: "cascade" }),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    app_name: text("app_name").notNull(),
+
+    blocked_reason: text("blocked_reason").notNull(),
+
+    attempted_at: timestamp("attempted_at")
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("blocked_app_events_device_idx").on(t.device_id),
+    index("blocked_app_events_family_idx").on(t.family_id),
+  ]
+);
+
+export type BlockedAppEvent =
+  typeof blockedAppEventsTable.$inferSelect;
+
 // ── device_events ──────────────────────────────────────────────────────────────
 export const deviceEventsTable = pgTable(
   'device_events',
@@ -196,6 +324,209 @@ export const insertDeviceEventSchema = createInsertSchema(deviceEventsTable).omi
 });
 export type InsertDeviceEvent = z.infer<typeof insertDeviceEventSchema>;
 export type DeviceEvent = typeof deviceEventsTable.$inferSelect;
+
+// ── device_restrictions ───────────────────────────────────────────────────────
+export const deviceRestrictionsTable = pgTable(
+  "device_restrictions",
+  {
+    id: text("id").primaryKey(),
+
+    device_id: text("device_id")
+      .notNull()
+      .references(() => devicesTable.id, { onDelete: "cascade" }),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    screen_time_limit_minutes: integer("screen_time_limit_minutes"),
+
+    bedtime_start: text("bedtime_start"),
+
+    bedtime_end: text("bedtime_end"),
+
+    block_new_app_installs: boolean("block_new_app_installs")
+      .notNull()
+      .default(false),
+
+    block_safari: boolean("block_safari")
+      .notNull()
+      .default(false),
+
+    block_explicit_content: boolean("block_explicit_content")
+      .notNull()
+      .default(false),
+
+    require_parent_approval: boolean("require_parent_approval")
+      .notNull()
+      .default(false),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("device_restrictions_device_unique").on(t.device_id),
+    index("device_restrictions_family_idx").on(t.family_id),
+  ],
+);
+
+export type DeviceRestriction =
+  typeof deviceRestrictionsTable.$inferSelect;
+
+// ── device_app_rules ──────────────────────────────────────────────────────────
+export const deviceAppRulesTable = pgTable(
+  "device_app_rules",
+  {
+    id: text("id").primaryKey(),
+
+    restriction_id: text("restriction_id")
+      .notNull()
+      .references(() => deviceRestrictionsTable.id, {
+        onDelete: "cascade",
+      }),
+
+    app_bundle_id: text("app_bundle_id").notNull(),
+
+    app_name: text("app_name").notNull(),
+
+    blocked: boolean("blocked")
+      .notNull()
+      .default(false),
+
+    bedtime_locked: boolean("bedtime_locked")
+      .notNull()
+      .default(false),
+
+    daily_limit_minutes: integer("daily_limit_minutes"),
+
+    // Time-of-day window (HH:MM, 24h) during which this app is INACCESSIBLE,
+    // e.g. "21:00"-"07:00". Mirrors the bedtime_start/bedtime_end pattern
+    // used by device_restrictions/child_policies/family_policies. Only
+    // enforced when restricted_start and restricted_end are both set.
+    restricted_start: text("restricted_start"),
+    restricted_end: text("restricted_end"),
+
+    created_at: timestamp("created_at")
+      .notNull()
+      .defaultNow(),
+
+    updated_at: timestamp("updated_at")
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("device_app_rules_restriction_idx").on(
+      t.restriction_id
+    ),
+    unique("device_app_rules_restriction_bundle_unique").on(
+      t.restriction_id,
+      t.app_bundle_id
+    ),
+  ],
+);
+
+export type DeviceAppRule =
+  typeof deviceAppRulesTable.$inferSelect;
+export const insertDeviceAppRuleSchema = createInsertSchema(deviceAppRulesTable).omit({
+  id: true,
+  restriction_id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+// ── family_policies ────────────────────────────────────────────────────────────
+export const familyPoliciesTable = pgTable(
+  "family_policies",
+  {
+    id: text("id").primaryKey(),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    screen_time_limit_minutes: integer("screen_time_limit_minutes"),
+
+    bedtime_start: text("bedtime_start"),
+
+    bedtime_end: text("bedtime_end"),
+
+    block_new_app_installs: boolean("block_new_app_installs")
+      .notNull()
+      .default(false),
+
+    block_safari: boolean("block_safari")
+      .notNull()
+      .default(false),
+
+    block_explicit_content: boolean("block_explicit_content")
+      .notNull()
+      .default(false),
+
+    require_parent_approval: boolean("require_parent_approval")
+      .notNull()
+      .default(false),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("family_policies_family_unique").on(t.family_id),
+  ],
+);
+
+export type FamilyPolicy =
+  typeof familyPoliciesTable.$inferSelect;
+
+// ── child_policies ─────────────────────────────────────────────────────────────
+export const childPoliciesTable = pgTable(
+  "child_policies",
+  {
+    id: text("id").primaryKey(),
+
+    child_id: text("child_id")
+      .notNull()
+      .references(() => childrenTable.id, { onDelete: "cascade" }),
+
+    family_id: text("family_id")
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: "cascade" }),
+
+    screen_time_limit_minutes: integer("screen_time_limit_minutes"),
+
+    bedtime_start: text("bedtime_start"),
+
+    bedtime_end: text("bedtime_end"),
+
+    block_new_app_installs: boolean("block_new_app_installs")
+      .notNull()
+      .default(false),
+
+    block_safari: boolean("block_safari")
+      .notNull()
+      .default(false),
+
+    block_explicit_content: boolean("block_explicit_content")
+      .notNull()
+      .default(false),
+
+    require_parent_approval: boolean("require_parent_approval")
+      .notNull()
+      .default(false),
+
+    created_at: timestamp("created_at").notNull().defaultNow(),
+
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("child_policies_child_unique").on(t.child_id),
+    index("child_policies_family_idx").on(t.family_id),
+  ],
+);
+
+export type ChildPolicy =
+  typeof childPoliciesTable.$inferSelect;
 
 // ── user_progress ──────────────────────────────────────────────────────────────
 export const userProgressTable = pgTable('user_progress', {
