@@ -50,3 +50,6 @@ Thumbs.db
 
 # Claude
 .claude-user/
+
+# Local archive; was tracked via Git LFS
+zipFile.zip
