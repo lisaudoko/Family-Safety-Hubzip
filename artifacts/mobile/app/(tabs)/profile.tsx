@@ -263,35 +263,6 @@ export default function ProfileScreen() {
         </Card>
       )}
 
-      {user?.isPremium && (
-        <TouchableOpacity
-          style={[styles.upgradeCard, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]}
-          disabled={managingSubscription}
-          activeOpacity={0.85}
-          onPress={async () => {
-            try {
-              setManagingSubscription(true);
-              await manageSubscription();
-            } catch {
-              Alert.alert("Error", "Couldn't open subscription management. Please try again.");
-            } finally {
-              setManagingSubscription(false);
-            }
-          }}
-        >
-          <View style={styles.upgradeContent}>
-            <Feather name="credit-card" size={20} color={colors.foreground} />
-            <View>
-              <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
-                {managingSubscription ? "Opening..." : "Manage Subscription"}
-              </Text>
-              <Text style={[styles.upgradeDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Update payment, change plan, or cancel</Text>
-            </View>
-          </View>
-          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-        </TouchableOpacity>
-      )}
-
       <View>
         <H3 style={styles.sectionTitle}>Your Badges</H3>
         {earnedBadges.length === 0 ? (
