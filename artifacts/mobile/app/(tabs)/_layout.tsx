@@ -20,17 +20,13 @@ function NativeTabLayout() {
         <Icon sf={{ default: "book", selected: "book.fill" }} />
         <Label>Learn</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="assess">
-        <Icon sf={{ default: "checklist", selected: "checklist" }} />
-        <Label>Assess</Label>
+      <NativeTabs.Trigger name="coach">
+        <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
+        <Label>Coach</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="family">
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
         <Label>Family</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="coach">
-        <Icon sf={{ default: "bubble.left.and.bubble.right", selected: "bubble.left.and.bubble.right.fill" }} />
-        <Label>Coach</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
@@ -103,14 +99,14 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="assess"
+        name="coach"
         options={{
-          title: "Assess",
+          title: "Coach",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="checklist" tintColor={color} size={24} />
+              <SymbolView name="bubble.left.and.bubble.right" tintColor={color} size={24} />
             ) : (
-              <Feather name="clipboard" size={22} color={color} />
+              <Feather name="message-circle" size={22} color={color} />
             ),
         }}
       />
@@ -123,18 +119,6 @@ function ClassicTabLayout() {
               <SymbolView name="person.2" tintColor={color} size={24} />
             ) : (
               <Feather name="users" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: "Coach",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="bubble.left.and.bubble.right" tintColor={color} size={24} />
-            ) : (
-              <Feather name="message-circle" size={22} color={color} />
             ),
         }}
       />

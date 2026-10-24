@@ -1,5 +1,7 @@
-{pkgs}: {
+{ pkgs }: {
   deps = [
-    pkgs.unzip
+    pkgs.nodejs_22
+    pkgs.pnpm
+    pkgs.git
   ];
 }

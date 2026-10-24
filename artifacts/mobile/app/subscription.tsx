@@ -20,18 +20,23 @@ const FEATURES = [
   { icon: "eye-off" as const, label: "Online Predator Awareness course", free: false, premium: true },
   { icon: "cpu" as const, label: "AI Safety & Literacy course", free: false, premium: true },
   { icon: "zap" as const, label: "All Family Challenges", free: false, premium: true },
+  { icon: "user" as const, label: "1 child profile", free: true, premium: true },
   { icon: "users" as const, label: "Up to 6 child profiles", free: false, premium: true },
   { icon: "file-text" as const, label: "Family Technology Agreement", free: true, premium: true },
   { icon: "clipboard" as const, label: "Social Media Readiness Assessment", free: true, premium: true },
+  { icon: "message-circle" as const, label: "10 coach messages / month", free: true, premium: true },
+  { icon: "message-circle" as const, label: "Unlimited AI coach access", free: false, premium: true },
+  { icon: "trending-up" as const, label: "Monthly Family Digital-Safety Report", free: false, premium: true },
 ];
 
 export default function SubscriptionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, upgradeToPremium } = useAuth();
+  const { user, startCheckout } = useAuth();
   const haptics = useHaptics();
   const [selectedPlan, setSelectedPlan] = useState("annual");
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -39,14 +44,20 @@ export default function SubscriptionScreen() {
     if (user?.isPremium) { Alert.alert("Already Premium", "You're already a Premium member!"); return; }
     try {
       setLoading(true);
-      await new Promise(r => setTimeout(r, 1200));
-      await upgradeToPremium();
+      await startCheckout(selectedPlan as "monthly" | "annual");
+      setLoading(false);
+      setVerifying(true);
+      // The subscription tier is set asynchronously by a Stripe webhook, so
+      // there can be a short lag after checkout before /auth/me reflects it.
+      await new Promise(r => setTimeout(r, 1500));
+      setVerifying(false);
       await haptics.notify(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("Welcome to Premium!", "You now have full access to all Digital Village content.", [{ text: "Let's go!", onPress: () => router.back() }]);
+      Alert.alert("Thanks!", "If your payment succeeded, Premium will unlock within a few seconds.", [{ text: "Let's go!", onPress: () => router.back() }]);
     } catch {
       Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+      setVerifying(false);
     }
   };
 
@@ -119,15 +130,15 @@ export default function SubscriptionScreen() {
           <Text style={[styles.alreadyText, { color: colors.success, fontFamily: "Inter_600SemiBold" }]}>You're already a Premium member!</Text>
         </View>
       ) : (
-        <TouchableOpacity style={[styles.upgradeBtn, { backgroundColor: loading ? colors.muted : colors.accent }]} onPress={handleUpgrade} disabled={loading} activeOpacity={0.85}>
+        <TouchableOpacity style={[styles.upgradeBtn, { backgroundColor: (loading || verifying) ? colors.muted : colors.accent }]} onPress={handleUpgrade} disabled={loading || verifying} activeOpacity={0.85}>
           <Text style={[styles.upgradeBtnText, { fontFamily: "Inter_700Bold" }]}>
-            {loading ? "Processing..." : `Start ${PLANS.find(p => p.id === selectedPlan)?.label} Plan`}
+            {verifying ? "Verifying your subscription..." : loading ? "Opening checkout..." : `Start ${PLANS.find(p => p.id === selectedPlan)?.label} Plan`}
           </Text>
         </TouchableOpacity>
       )}
 
       <Text style={[styles.legal, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>
-        Cancel anytime. No commitments. Subscriptions renew automatically unless cancelled at least 24 hours before renewal. Payment processed through App Store.
+        Cancel anytime. No commitments. Subscriptions renew automatically unless cancelled at least 24 hours before renewal. Payment processed securely through Stripe.
       </Text>
     </ScrollView>
   );

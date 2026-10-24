@@ -28,6 +28,7 @@ export interface FamilyProfile {
   id: string;
   name: string;
   parentId: string;
+  familyCode: string;
   children: Child[];
   createdAt: string;
 }
@@ -73,9 +74,10 @@ interface FamilyContextType {
   progress: UserProgress;
   isLoading: boolean;
   initFamily: (name: string, familyId: string, parentId: string) => Promise<void>;
-  addChild: (name: string, ageBand: AgeBand, familyId: string) => Promise<void>;
+  addChild: (name: string, ageBand: AgeBand, familyId: string) => Promise<string | undefined>;
   removeChild: (childId: string) => Promise<void>;
-  updateChild: (childId: string, updates: Partial<Child>) => Promise<void>;
+  updateChild: (childId: string, updates: Partial<Child> & { pin?: string }) => Promise<void>;
+  setChildPin: (childId: string, pin: string) => Promise<void>;
   saveAgreement: (rules: AgreementRule[], customRules: string[]) => Promise<void>;
   signAgreement: () => Promise<void>;
   completeLesson: (lessonId: string, courseId: string, totalLessons: number) => Promise<void>;
@@ -167,7 +169,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
   // Load from local cache, then hydrate from server
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || user.role !== "parent") {
+    if (!isAuthenticated || !user?.id) {
       setIsLoading(false);
       return;
     }
@@ -261,16 +263,18 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const isOnlineUser = () => user?.id && !user.id.startsWith("local_");
 
   const saveFamily = async (f: FamilyProfile) => {
-    await AsyncStorage.setItem(cacheKeys().family, JSON.stringify(f));
-    setFamily(f);
-    familyRef.current = f;
+    let toSave = f;
     if (isOnlineUser()) {
       try {
-        await apiUpsertFamily(f.id, f.name);
+        const { familyCode } = await apiUpsertFamily(f.id, f.name);
+        toSave = { ...f, familyCode };
       } catch {
         // best-effort
       }
     }
+    await AsyncStorage.setItem(cacheKeys().family, JSON.stringify(toSave));
+    setFamily(toSave);
+    familyRef.current = toSave;
   };
 
   const saveAgreementData = async (a: FamilyAgreement) => {
@@ -336,6 +340,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       id: familyId,
       name,
       parentId,
+      familyCode: "",
       children: [],
       createdAt: new Date().toISOString(),
     };
@@ -357,18 +362,22 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           id: familyId,
           name: "My Family",
           parentId: user?.id ?? "",
+          familyCode: "",
           children: [child],
           createdAt: new Date().toISOString(),
         };
     await saveFamily(updated);
+    let pin: string | undefined;
     if (isOnlineUser()) {
       try {
-        await apiAddChild(child.id, familyId, child.name, child.ageBand);
+        const res = await apiAddChild(child.id, familyId, child.name, child.ageBand);
+        pin = res.pin;
       } catch {
         // best-effort
       }
     }
     await awardBadgesMerged(["b14"]);
+    return pin;
   }, [user?.id, progress]);
 
   const removeChild = useCallback(async (childId: string) => {
@@ -381,7 +390,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.id]);
 
-  const updateChild = useCallback(async (childId: string, updates: Partial<Child>) => {
+  const updateChild = useCallback(async (childId: string, updates: Partial<Child> & { pin?: string }) => {
     const fam = familyRef.current;
     if (!fam) return;
     const updated = {
@@ -394,9 +403,15 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         await apiUpdateChild(childId, {
           name: updates.name,
           ageBand: updates.ageBand,
+          pin: updates.pin,
         });
       } catch { /* best-effort */ }
     }
+  }, [user?.id]);
+
+  const setChildPin = useCallback(async (childId: string, pin: string) => {
+    if (!isOnlineUser()) return;
+    await apiUpdateChild(childId, { pin });
   }, [user?.id]);
 
   const saveAgreement = useCallback(async (rules: AgreementRule[], customRules: string[]) => {
@@ -523,6 +538,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         addChild,
         removeChild,
         updateChild,
+        setChildPin,
         saveAgreement,
         signAgreement,
         completeLesson,

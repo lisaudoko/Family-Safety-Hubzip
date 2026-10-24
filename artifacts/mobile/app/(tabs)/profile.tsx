@@ -15,7 +15,8 @@ import { AppText as Text } from "@/components/AppText";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, canReturnToParent, returnToParent, manageSubscription } = useAuth();
+  const [managingSubscription, setManagingSubscription] = useState(false);
   const haptics = useHaptics();
   const { progress } = useFamily();
   const { badges: BADGES } = useCurriculum();
@@ -137,6 +138,35 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       )}
 
+      {user?.isPremium && (
+        <TouchableOpacity
+          style={[styles.upgradeCard, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]}
+          disabled={managingSubscription}
+          activeOpacity={0.85}
+          onPress={async () => {
+            try {
+              setManagingSubscription(true);
+              await manageSubscription();
+            } catch {
+              Alert.alert("Error", "Couldn't open subscription management. Please try again.");
+            } finally {
+              setManagingSubscription(false);
+            }
+          }}
+        >
+          <View style={styles.upgradeContent}>
+            <Feather name="credit-card" size={20} color={colors.foreground} />
+            <View>
+              <Text style={[styles.upgradeTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>
+                {managingSubscription ? "Opening..." : "Manage Subscription"}
+              </Text>
+              <Text style={[styles.upgradeDesc, { color: colors.mutedForeground, fontFamily: "Inter_400Regular" }]}>Update payment, change plan, or cancel</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      )}
+
       <View>
         <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Your Badges</Text>
         {earnedBadges.length === 0 ? (
@@ -215,6 +245,20 @@ export default function ProfileScreen() {
           </View>
         ))}
       </View>
+
+      {canReturnToParent && (
+        <TouchableOpacity
+          style={[styles.logoutBtn, { borderColor: colors.primary + "44" }]}
+          onPress={async () => {
+            await returnToParent();
+            await haptics.notify(Haptics.NotificationFeedbackType.Success);
+          }}
+          activeOpacity={0.8}
+        >
+          <Feather name="corner-up-left" size={18} color={colors.primary} />
+          <Text style={[styles.logoutText, { color: colors.primary, fontFamily: "Inter_500Medium" }]}>Switch Back to Parent</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.destructive + "44" }]} onPress={handleLogout} activeOpacity={0.8}>
         <Feather name="log-out" size={18} color={colors.destructive} />

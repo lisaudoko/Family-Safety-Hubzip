@@ -7,10 +7,11 @@ import { CHALLENGES } from "@/data/seed";
 import { useCurriculum } from "@/hooks/useCurriculum";
 import ChallengeCard from "@/components/ChallengeCard";
 import CourseCard from "@/components/CourseCard";
+import { AssessmentsPanel } from "@/components/AssessmentsPanel";
 import { EmptyState, SectionHeader } from "@/components/UI";
 import { useColors } from "@/hooks/useColors";
 
-const TABS = ["Courses", "Challenges"] as const;
+const TABS = ["Courses", "Challenges", "Assessments"] as const;
 const CATEGORIES = ["All", "Safety", "Social", "Privacy", "Technology", "Gaming", "Wellness"] as const;
 
 export default function LearnScreen() {
@@ -18,7 +19,7 @@ export default function LearnScreen() {
   const insets = useSafeAreaInsets();
   const { progress } = useFamily();
   const { courses: COURSES } = useCurriculum();
-  const [activeTab, setActiveTab] = useState<"Courses" | "Challenges">("Courses");
+  const [activeTab, setActiveTab] = useState<"Courses" | "Challenges" | "Assessments">("Courses");
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const scrollRef = useRef<ScrollView>(null);
 
@@ -38,7 +39,7 @@ export default function LearnScreen() {
     cat => cat === "All" || sourceItems.some(i => i.category === cat),
   );
 
-  const handleTabChange = (tab: "Courses" | "Challenges") => {
+  const handleTabChange = (tab: "Courses" | "Challenges" | "Assessments") => {
     setActiveTab(tab);
     const items = tab === "Courses" ? COURSES : CHALLENGES;
     if (activeCategory !== "All" && !items.some(i => i.category === activeCategory)) {
@@ -80,17 +81,21 @@ export default function LearnScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-        {visibleCategories.map(cat => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.catBtn, { backgroundColor: activeCategory === cat ? colors.primary : colors.card, borderColor: activeCategory === cat ? colors.primary : colors.border }]}
-            onPress={() => setActiveCategory(cat)}
-          >
-            <Text style={[styles.catText, { color: activeCategory === cat ? "#FFFFFF" : colors.foreground, fontFamily: "Inter_500Medium" }]}>{cat}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {activeTab !== "Assessments" && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+          {visibleCategories.map(cat => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.catBtn, { backgroundColor: activeCategory === cat ? colors.primary : colors.card, borderColor: activeCategory === cat ? colors.primary : colors.border }]}
+              onPress={() => setActiveCategory(cat)}
+            >
+              <Text style={[styles.catText, { color: activeCategory === cat ? "#FFFFFF" : colors.foreground, fontFamily: "Inter_500Medium" }]}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
+      {activeTab === "Assessments" && <AssessmentsPanel />}
 
       {activeTab === "Courses" && (
         <View style={styles.list}>

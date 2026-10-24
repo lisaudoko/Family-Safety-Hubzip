@@ -10,15 +10,24 @@ import {
 } from "@workspace/db";
 import { and, asc, eq } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth-middleware.js";
+import { isFamilyPremium } from "../lib/subscription.js";
 
 const router = Router();
 router.use(requireAuth as any);
+
+/** Strips full lesson content when its course is premium-only and the requesting family isn't premium, keeping the isPremium flag so client gating UI still works. */
+function lockedContent(locked: boolean) {
+  return locked
+    ? { content: "", sections: null, interactiveActivity: null, scenarios: [], parentDiscussionPrompts: [], actionSteps: [], keyTakeaways: [] }
+    : {};
+}
 
 // ── Full curriculum (aggregate, for client bootstrap) ────────────────────────
 
 // GET /api/curriculum — full nested courses+lessons+quizzes+badges in one call
 router.get("/curriculum", async (req: AuthRequest, res, next) => {
   try {
+    const premium = await isFamilyPremium(req.familyId);
     const [courses, lessons, quizzes, questions, badges] = await Promise.all([
       db
         .select()
@@ -51,6 +60,7 @@ router.get("/curriculum", async (req: AuthRequest, res, next) => {
     res.json({
       courses: courses.map((c) => {
         const courseLessons = lessonsByCourse.get(c.id) ?? [];
+        const locked = c.is_premium && !premium;
         return {
           id: c.id,
           title: c.title,
@@ -83,6 +93,7 @@ router.get("/curriculum", async (req: AuthRequest, res, next) => {
             estimatedMinutes: l.estimated_minutes,
             keyTakeaways: l.key_takeaways,
             hasQuiz: l.has_quiz,
+            ...lockedContent(locked),
           })),
           quizzes: courseLessons
             .filter((l) => quizByLesson.has(l.id))
@@ -252,6 +263,14 @@ router.get("/lessons/:lessonId", async (req: AuthRequest, res, next) => {
       return;
     }
 
+    const [course] = await db
+      .select({ is_premium: coursesTable.is_premium })
+      .from(coursesTable)
+      .where(eq(coursesTable.id, lesson.course_id))
+      .limit(1);
+
+    const locked = !!course?.is_premium && !(await isFamilyPremium(req.familyId));
+
     res.json({
       lesson: {
         id: lesson.id,
@@ -273,6 +292,7 @@ router.get("/lessons/:lessonId", async (req: AuthRequest, res, next) => {
         estimatedMinutes: lesson.estimated_minutes,
         keyTakeaways: lesson.key_takeaways,
         hasQuiz: lesson.has_quiz,
+        ...lockedContent(locked),
       },
     });
   } catch (err) {

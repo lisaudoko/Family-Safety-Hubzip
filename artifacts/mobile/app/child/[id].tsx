@@ -15,13 +15,15 @@ export default function ChildProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { family, removeChild, updateChild } = useFamily();
+  const { family, removeChild, updateChild, setChildPin } = useFamily();
   const haptics = useHaptics();
 
   const child = family?.children.find(c => c.id === id);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(child?.name ?? "");
   const [ageBand, setAgeBand] = useState<AgeBand>(child?.ageBand ?? "10-13");
+  const [settingPin, setSettingPin] = useState(false);
+  const [newPin, setNewPin] = useState("");
 
   if (!child) { router.back(); return null; }
 
@@ -37,6 +39,23 @@ export default function ChildProfileScreen() {
     } catch (e: any) {
       console.error("[child] save error:", e?.message || e);
       Alert.alert("Error", "Failed to save changes. Please try again.");
+    }
+  };
+
+  const handleSetPin = async () => {
+    if (!/^\d{4,6}$/.test(newPin)) {
+      Alert.alert("Invalid PIN", "PIN must be 4-6 digits.");
+      return;
+    }
+    try {
+      await setChildPin(child.id, newPin);
+      await haptics.notify(Haptics.NotificationFeedbackType.Success);
+      setSettingPin(false);
+      setNewPin("");
+      Alert.alert("PIN Updated", `${child.name} can now log in with this PIN.`);
+    } catch (e: any) {
+      console.error("[child] set pin error:", e?.message || e);
+      Alert.alert("Error", "Failed to update the PIN. Please try again.");
     }
   };
 
@@ -149,6 +168,38 @@ export default function ChildProfileScreen() {
             <Text style={[styles.starterText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>{starter}</Text>
           </View>
         ))}
+      </View>
+
+      <View style={styles.infoSection}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground, fontFamily: "Inter_700Bold" }]}>Login PIN</Text>
+        {settingPin ? (
+          <View style={styles.editSection}>
+            <TextInput
+              style={[styles.nameInput, { color: colors.foreground, borderColor: colors.primary, fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: 4 }]}
+              value={newPin}
+              onChangeText={setNewPin}
+              placeholder="••••"
+              placeholderTextColor={colors.mutedForeground}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+              autoFocus
+            />
+            <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSetPin} activeOpacity={0.85}>
+              <Text style={[styles.saveBtnText, { fontFamily: "Inter_700Bold" }]}>Save PIN</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.starterRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => setSettingPin(true)}
+          >
+            <Feather name="lock" size={16} color={colors.primary} />
+            <Text style={[styles.starterText, { color: colors.foreground, fontFamily: "Inter_400Regular" }]}>
+              {child.name} uses this PIN with the family code to log in as themselves. Tap to change it.
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <TouchableOpacity style={[styles.deleteBtn, { borderColor: colors.destructive + "44" }]} onPress={handleDelete}>

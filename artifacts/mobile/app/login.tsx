@@ -18,15 +18,25 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password.trim()) {
+      setEmailError("");
       Alert.alert("Missing Info", "Please enter your email and password.");
       return;
     }
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+    setEmailError("");
     try {
       setLoading(true);
-      await login(email.trim().toLowerCase(), password);
+      await login(trimmedEmail.toLowerCase(), password);
       await haptics.notify(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)");
     } catch (err: any) {
@@ -95,11 +105,19 @@ export default function LoginScreen() {
               placeholder="you@example.com"
               placeholderTextColor={colors.mutedForeground}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError("");
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
             />
+            {emailError ? (
+              <Text style={[styles.errorText, { color: colors.destructive, fontFamily: "Inter_400Regular" }]}>
+                {emailError}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.field}>
@@ -172,6 +190,18 @@ export default function LoginScreen() {
           <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>Create one</Text>
         </Text>
       </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/child-login")} style={styles.switchRow}>
+        <Text
+          style={[
+            styles.switchText,
+            { color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
+          ]}
+        >
+          Are you a kid?{" "}
+          <Text style={{ color: colors.primary, fontFamily: "Inter_600SemiBold" }}>Log in here</Text>
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -210,6 +240,7 @@ const styles = StyleSheet.create({
   form: { gap: 16 },
   field: { gap: 8 },
   label: { fontSize: 14 },
+  errorText: { fontSize: 13, marginTop: -2 },
   input: {
     borderRadius: 14,
     borderWidth: 1,

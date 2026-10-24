@@ -73,7 +73,7 @@ async function apiFetch<T = unknown>(
 
 export interface ApiUser {
   id: string;
-  email: string;
+  email: string | null;
   name: string;
   role: string;
   isPremium: boolean;
@@ -135,7 +135,7 @@ export async function apiGetMe(): Promise<{ user: ApiUser }> {
 
 export async function apiUpdateMe(partial: {
   name?: string;
-  email?: string;
+  email?: string | null;
 }): Promise<{ user: ApiUser }> {
   return apiFetch("/auth/me", {
     method: "PATCH",
@@ -147,8 +147,17 @@ export async function apiCompleteOnboarding(): Promise<{ user: ApiUser }> {
   return apiFetch("/auth/onboarding", { method: "PATCH" });
 }
 
-export async function apiUpgradePremium(): Promise<{ user: ApiUser }> {
-  return apiFetch("/auth/upgrade", { method: "PATCH" });
+export async function apiCreateCheckoutSession(
+  plan: "monthly" | "annual",
+): Promise<{ url: string }> {
+  return apiFetch("/billing/checkout-session", {
+    method: "POST",
+    body: JSON.stringify({ plan }),
+  });
+}
+
+export async function apiCreatePortalSession(): Promise<{ url: string }> {
+  return apiFetch("/billing/portal-session", { method: "POST" });
 }
 
 // ── Family ──────────────────────────────────────────────────────────────────
@@ -157,6 +166,7 @@ export interface ApiFamily {
   id: string;
   name: string;
   parentId: string;
+  familyCode: string;
   createdAt: string;
   children: ApiChild[];
 }
@@ -173,8 +183,11 @@ export async function apiGetFamily(): Promise<{ family: ApiFamily | null }> {
   return apiFetch("/family");
 }
 
-export async function apiUpsertFamily(id: string, name: string): Promise<void> {
-  await apiFetch("/family", {
+export async function apiUpsertFamily(
+  id: string,
+  name: string,
+): Promise<{ ok: true; familyCode: string }> {
+  return apiFetch("/family", {
     method: "POST",
     body: JSON.stringify({ id, name }),
   });
@@ -185,16 +198,17 @@ export async function apiAddChild(
   familyId: string,
   name: string,
   ageBand: string,
-): Promise<void> {
-  await apiFetch("/family/children", {
+  pin?: string,
+): Promise<{ ok: true; pin: string }> {
+  return apiFetch("/family/children", {
     method: "POST",
-    body: JSON.stringify({ id, familyId, name, ageBand }),
+    body: JSON.stringify({ id, familyId, name, ageBand, pin }),
   });
 }
 
 export async function apiUpdateChild(
   childId: string,
-  updates: { name?: string; ageBand?: string },
+  updates: { name?: string; ageBand?: string; pin?: string },
 ): Promise<void> {
   await apiFetch(`/family/children/${childId}`, {
     method: "PATCH",
@@ -204,6 +218,30 @@ export async function apiUpdateChild(
 
 export async function apiDeleteChild(childId: string): Promise<void> {
   await apiFetch(`/family/children/${childId}`, { method: "DELETE" });
+}
+
+// ── Child login ─────────────────────────────────────────────────────────────
+
+export interface ApiFamilyByCodeChild {
+  id: string;
+  name: string;
+}
+
+export async function apiGetFamilyByCode(code: string): Promise<{
+  family: { name: string };
+  children: ApiFamilyByCodeChild[];
+}> {
+  return apiFetch(`/auth/family-by-code/${encodeURIComponent(code)}`);
+}
+
+export async function apiChildLogin(
+  childId: string,
+  pin: string,
+): Promise<{ token: string; user: ApiUser }> {
+  return apiFetch("/auth/child-login", {
+    method: "POST",
+    body: JSON.stringify({ childId, pin }),
+  });
 }
 
 // ── Agreement ───────────────────────────────────────────────────────────────
@@ -451,4 +489,72 @@ export interface ApiWeeklyTip {
 
 export async function apiGetTips(): Promise<{ tips: ApiWeeklyTip[] }> {
   return apiFetch("/tips");
+}
+
+// ── Devices ─────────────────────────────────────────────────────────────────
+
+export interface ApiDevice {
+  id: string;
+  ownerId: string;
+  familyId: string;
+  name: string;
+  platform: string;
+  osVersion: string | null;
+  appVersion: string | null;
+  capabilities: string[];
+  permissionStatus: Record<string, string>;
+  status: string;
+  isStale: boolean;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function apiRegisterDevice(device: {
+  id: string;
+  name: string;
+  platform: "ios" | "android";
+  osVersion?: string;
+  appVersion?: string;
+  capabilities?: string[];
+}): Promise<{ device: ApiDevice; syncIntervalSeconds: number }> {
+  return apiFetch("/devices", { method: "POST", body: JSON.stringify(device) });
+}
+
+export async function apiGetDevices(): Promise<{ devices: ApiDevice[] }> {
+  return apiFetch("/devices");
+}
+
+export async function apiUpdateDevice(
+  deviceId: string,
+  updates: { name?: string; capabilities?: string[]; permissionStatus?: Record<string, string> },
+): Promise<{ device: ApiDevice }> {
+  return apiFetch(`/devices/${deviceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function apiDeleteDevice(deviceId: string): Promise<void> {
+  await apiFetch(`/devices/${deviceId}`, { method: "DELETE" });
+}
+
+export async function apiDeviceHeartbeat(
+  deviceId: string,
+  updates?: { permissionStatus?: Record<string, string>; capabilities?: string[] },
+): Promise<{ ok: true; lastSyncedAt: string; syncIntervalSeconds: number }> {
+  return apiFetch(`/devices/${deviceId}/heartbeat`, {
+    method: "POST",
+    body: JSON.stringify(updates ?? {}),
+  });
+}
+
+export async function apiPostDeviceEvent(
+  deviceId: string,
+  event: { id: string; eventType: string; payload?: Record<string, unknown>; occurredAt?: string },
+): Promise<void> {
+  await apiFetch(`/devices/${deviceId}/events`, {
+    method: "POST",
+    body: JSON.stringify(event),
+  });
 }

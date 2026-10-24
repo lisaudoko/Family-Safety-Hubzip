@@ -19,6 +19,7 @@ import { AccessibilityProvider, useAccessibility } from "@/context/Accessibility
 import { FamilyProvider } from "@/context/FamilyContext";
 import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
+import { useDeviceSync } from "@/lib/deviceSync";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,7 +45,8 @@ function AuthRedirect() {
     const inRegister = pathname === "/register";
     const inOnboarding = pathname === "/onboarding";
     const inForgotPassword = pathname === "/forgot-password";
-    const inAuthFlow = inWelcome || inLogin || inRegister || inOnboarding || inForgotPassword;
+    const inChildLogin = pathname === "/child-login";
+    const inAuthFlow = inWelcome || inLogin || inRegister || inOnboarding || inForgotPassword || inChildLogin;
 
     if (!isAuthenticated && !inAuthFlow) {
       router.replace("/welcome");
@@ -71,6 +73,7 @@ function RootLayoutNav() {
         <Stack.Screen name="login" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="forgot-password" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="child-login" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="course/[id]" options={{ headerShown: false, animation: slide }} />
