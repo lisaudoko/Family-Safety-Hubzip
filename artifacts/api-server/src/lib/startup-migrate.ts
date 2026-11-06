@@ -102,6 +102,36 @@ export async function runStartupMigrations(): Promise<void> {
        )`,
       `CREATE INDEX IF NOT EXISTS device_restrictions_family_idx ON device_restrictions(family_id)`,
 
+      // ── family_policies / child_policies ──────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS family_policies (
+         id TEXT PRIMARY KEY,
+         family_id TEXT NOT NULL UNIQUE REFERENCES families(id) ON DELETE CASCADE,
+         screen_time_limit_minutes INTEGER,
+         bedtime_start TEXT,
+         bedtime_end TEXT,
+         block_new_app_installs BOOLEAN NOT NULL DEFAULT FALSE,
+         block_safari BOOLEAN NOT NULL DEFAULT FALSE,
+         block_explicit_content BOOLEAN NOT NULL DEFAULT FALSE,
+         require_parent_approval BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE TABLE IF NOT EXISTS child_policies (
+         id TEXT PRIMARY KEY,
+         child_id TEXT NOT NULL UNIQUE REFERENCES children(id) ON DELETE CASCADE,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         screen_time_limit_minutes INTEGER,
+         bedtime_start TEXT,
+         bedtime_end TEXT,
+         block_new_app_installs BOOLEAN NOT NULL DEFAULT FALSE,
+         block_safari BOOLEAN NOT NULL DEFAULT FALSE,
+         block_explicit_content BOOLEAN NOT NULL DEFAULT FALSE,
+         require_parent_approval BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS child_policies_family_idx ON child_policies(family_id)`,
+
       // ── device_app_rules ──────────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS device_app_rules (
          id TEXT PRIMARY KEY,
