@@ -68,8 +68,8 @@ Added 2026-07-10. New `audit_log` table (`family_id`/`actor_id` indexed) records
 ## Known Gaps (documented, not fixed here)
 
 - Email verification exists (implemented 2026-07-11) but is not enforced — unverified accounts have unrestricted access to every feature. Open question: should any endpoints (e.g. billing, coach) gate on `profiles.email_verified`? No decision made yet.
-- CORS is open to all origins.
-- Child PINs are low-entropy by design (UX tradeoff); brute-force protection relies on the global rate limit only.
+- CORS: production now uses an allowlist from `CORS_ORIGINS` (unset = no cross-origin browser access); non-production stays open. Set it before deploying a web client.
+- Child PINs are low-entropy by design (UX tradeoff); brute-force protection: 8 failed attempts per 15 min per IP+child (and per IP+email for parent login/reset), added 2026-11-05. No cross-IP/account-wide lockout yet.
 - GET reads during an admin support session are not individually audit-logged, only mutations.
 - No admin-side UI for redeeming/ending support sessions — API-only by design.
 - Automated tests exist (Vitest in `artifacts/api-server/test/`, incl. `cross-family.test.ts`, `admin.test.ts`) but coverage of the above gaps is incomplete.

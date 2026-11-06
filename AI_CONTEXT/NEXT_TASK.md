@@ -132,6 +132,25 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 
 ---
 
+## Release Blockers (audit 2026-11-05) — must resolve before App Store / production
+
+_Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, security headers, production CORS allowlist, no codes/keys in logs._
+
+- [ ] **Account deletion** (in-app + API, cascading child profiles/devices/events/sessions/subscriptions) — Apple 5.1.1(v)
+- [ ] **Privacy policy + terms** linked in-app and in store listing; COPPA / parental-consent flow; App Store privacy labels (needs product-owner/legal)
+- [ ] Apple setup: real `appleTeamId` in `app.json`, Family Controls for 3 extension App IDs, App Group, EAS dev build + device test
+- [ ] Billing on iOS: Stripe checkout/portal must not be the iOS purchase path (use RevenueCat IAP); `getRevenueCatApiKey()` throws if any of 3 keys unset — make non-fatal / set in `eas.json` env
+- [ ] Production config: unique URL scheme (currently `mobile`; also `MOBILE_APP_SCHEME`), `expo-router` origin is `replit.com`, `EXPO_PUBLIC_DOMAIN` in eas.json (base URL falls back to `""`), SMTP creds, `CORS_ORIGINS`, `STRIPE_WEBHOOK_SECRET`
+- [ ] Sessions: store token in SecureStore (currently AsyncStorage), hash tokens at rest, revoke on password change
+- [ ] Decide email-verification gating (billing/coach)
+- [ ] Stripe webhook idempotency (dedupe by event id)
+- [ ] `expo-location` dependency unused and has no usage strings — remove or justify
+- [ ] Startup migrations have no versioning/locking (autoscale: concurrent boots)
+- [ ] Fix root `pnpm run lint` (eslint-plugin-react vs ESLint 10) and add Linux CI (typecheck/lint/test); win32 binaries excluded in `pnpm-workspace.yaml` so tests don't run on Windows
+- [ ] Error monitoring (Sentry), DB index review, deployment run/build commands in `.replit`
+- [ ] Resolve `Notes.md` open bugs (keyboard covers sign-in, screen-time save, default-restriction toggles) — verify on device after migration fix
+- [ ] Decide on untracked `.config/`; strip 20 `console.*` calls from mobile
+
 ## Pending Decisions
 
 - ~~Curriculum single-source~~ — resolved 2026-07-10 (product owner): serve exclusively from DB; retire `artifacts/mobile/data/seed.ts`. Not yet implemented — see backlog below.

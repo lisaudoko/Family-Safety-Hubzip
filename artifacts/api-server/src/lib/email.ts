@@ -1,4 +1,18 @@
 import nodemailer from "nodemailer";
+import { logger } from "./logger.js";
+
+const isProduction = process.env.NODE_ENV === "production";
+
+// With no SMTP configured, dev/test logs the message body so flows stay testable.
+// In production the body (reset/verification codes) must never reach the logs, so
+// only the failure is recorded.
+function noTransport(kind: string, to: string, body: string): void {
+  if (isProduction) {
+    logger.error({ kind }, "SMTP not configured - email was NOT sent");
+    return;
+  }
+  logger.info({ kind, to }, `[email] SMTP not configured - ${body}`);
+}
 
 let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
@@ -20,7 +34,7 @@ function getTransporter() {
 export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
   const transport = getTransporter();
   if (!transport) {
-    console.log(`[email] SMTP not configured — reset code for ${to}: ${code}`);
+    noTransport("password_reset", to, `reset code: ${code}`);
     return;
   }
   await transport.sendMail({
@@ -34,7 +48,7 @@ export async function sendPasswordResetEmail(to: string, code: string): Promise<
 export async function sendEmailVerificationEmail(to: string, code: string): Promise<void> {
   const transport = getTransporter();
   if (!transport) {
-    console.log(`[email] SMTP not configured — verification code for ${to}: ${code}`);
+    noTransport("email_verification", to, `verification code: ${code}`);
     return;
   }
   await transport.sendMail({
@@ -120,7 +134,7 @@ export async function sendWeeklyDigestEmail(to: string, data: WeeklyDigestData):
   const text = buildWeeklyDigestText(data);
   const transport = getTransporter();
   if (!transport) {
-    console.log(`[email] SMTP not configured — weekly digest for ${to}:\n${text}`);
+    noTransport("weekly_digest", to, `weekly digest:\n${text}`);
     return;
   }
   await transport.sendMail({

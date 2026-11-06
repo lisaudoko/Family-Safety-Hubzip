@@ -190,3 +190,29 @@ describe('auth flows', () => {
     expect(reResend.status).toBe(200);
   });
 });
+
+describe('failed-login lockout', () => {
+  it('429s after repeated failed logins for one account, without affecting other accounts', async () => {
+    const victim = uniqueEmail('lockout');
+    const other = uniqueEmail('lockout-other');
+    const reg = await api
+      .post('/api/auth/register')
+      .send({ name: 'Lockout', email: victim, password: 'password123' });
+    cleanup.trackUser(reg.body.user.id);
+
+    let last = 0;
+    for (let i = 0; i < 9; i++) {
+      const res = await api.post('/api/auth/login').send({ email: victim, password: 'wrong-pass' });
+      last = res.status;
+    }
+    expect(last).toBe(429);
+
+    // Even the correct password is blocked while locked out.
+    const blocked = await api.post('/api/auth/login').send({ email: victim, password: 'password123' });
+    expect(blocked.status).toBe(429);
+
+    // A different account from the same IP is unaffected.
+    const unaffected = await api.post('/api/auth/login').send({ email: other, password: 'wrong-pass' });
+    expect(unaffected.status).toBe(401);
+  });
+});

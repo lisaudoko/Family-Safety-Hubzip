@@ -29,6 +29,34 @@ const verificationResendLimiter = rateLimit({
   keyGenerator: (req: AuthRequest) => req.userId ?? ipKeyGenerator(req.ip ?? 'unknown'),
 });
 
+// Brute-force guards. Only failed attempts count (skipSuccessfulRequests), and the
+// key includes the targeted account so one attacker IP cannot grind a single
+// parent password or child PIN, while a shared home/school IP is not locked out
+// by other users' typos.
+function failedAuthLimiter(identifier: (req: AuthRequest) => string) {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 8,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many failed attempts. Please try again later.' },
+    keyGenerator: (req: AuthRequest) =>
+      `${ipKeyGenerator(req.ip ?? 'unknown')}:${identifier(req).toLowerCase()}`,
+  });
+}
+const loginLimiter = failedAuthLimiter((req) => String(req.body?.email ?? '').trim());
+const childLoginLimiter = failedAuthLimiter((req) => String(req.body?.childId ?? '').trim());
+const resetLimiter = failedAuthLimiter((req) => String(req.body?.email ?? '').trim());
+const forgotLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again later.' },
+  keyGenerator: (req: AuthRequest) => ipKeyGenerator(req.ip ?? 'unknown'),
+});
+
 const SESSION_TTL_DAYS = 90;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -153,7 +181,7 @@ router.post('/auth/register', async (req, res, next) => {
 });
 
 // POST /api/auth/login
-router.post('/auth/login', async (req, res, next) => {
+router.post('/auth/login', loginLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body as {
       email?: string;
@@ -260,7 +288,7 @@ router.get('/auth/family-by-code/:code', async (req, res, next) => {
 });
 
 // POST /api/auth/child-login
-router.post('/auth/child-login', async (req, res, next) => {
+router.post('/auth/child-login', childLoginLimiter, async (req, res, next) => {
   try {
     const { childId, pin } = req.body as {
       childId?: string;
@@ -328,7 +356,7 @@ router.post('/auth/child-login', async (req, res, next) => {
 const RESET_CODE_TTL_MINUTES = 15;
 
 // POST /api/auth/forgot-password
-router.post('/auth/forgot-password', async (req, res, next) => {
+router.post('/auth/forgot-password', forgotLimiter, async (req, res, next) => {
   try {
     const { email } = req.body as { email?: string };
     if (!email?.trim()) {
@@ -374,7 +402,7 @@ router.post('/auth/forgot-password', async (req, res, next) => {
 });
 
 // POST /api/auth/reset-password
-router.post('/auth/reset-password', async (req, res, next) => {
+router.post('/auth/reset-password', resetLimiter, async (req, res, next) => {
   try {
     const { email, code, newPassword } = req.body as {
       email?: string;

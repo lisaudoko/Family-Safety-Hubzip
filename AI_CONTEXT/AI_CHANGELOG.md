@@ -2,6 +2,14 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Release-readiness audit + first hardening pass
+
+- **What**: Full-app audit (see NEXT_TASK "Release Blockers"). Fixed the code-only items: auth brute-force limiters (`/auth/login`, `/auth/child-login`, `/auth/reset-password`: 8 failed attempts/15 min per IP+account, successes not counted; `/auth/forgot-password`: 5/hr per IP); `trust proxy` (default 1 hop, `TRUST_PROXY` override) so rate limits key on the real client IP; baseline security headers + `x-powered-by` off; production CORS allowlist via `CORS_ORIGINS` (unset = no cross-origin browser access; dev unchanged); `email.ts` no longer `console.log`s reset/verification codes — dev logs them via pino, production logs only that an email was not sent; removed the RevenueCat API-key `console.log`s in `lib/revenuecat.tsx`.
+- **Why**: Codes in production logs allowed account takeover by anyone with log access; shared proxy IP collapsed all clients into one rate-limit bucket; child PINs (4–6 digits) had only the global limiter.
+- **Deploy note**: set `CORS_ORIGINS` (only if a web client is used) and SMTP_* in production. Without SMTP, reset/verification emails silently do not send.
+- **Verification**: api-server + mobile typecheck clean. Vitest NOT run (win32 Rollup binary excluded by workspace config) — new test `failed-login lockout` in `test/auth-flows.test.ts` unverified; run on Replit/Linux. Helmet was deliberately not added (it rewrote ~2000 lockfile lines under pnpm 12/Windows); headers are set inline in `app.ts`.
+- **Files**: `api-server/src/app.ts`, `routes/auth.ts`, `lib/email.ts`, `test/auth-flows.test.ts`, `mobile/lib/revenuecat.tsx`.
+
 ## 2026-10-28 — Native phase begins: Screen Time enforcement (bedtime + web filters) on child devices
 
 - **What**: Apple approved the Family Controls entitlement (Development + Distribution; main app only so far). Added `eas.json`, plugins `expo-dev-client`, `expo-build-properties` (iOS 16), `react-native-device-activity` (appleTeamId is still the placeholder `YOUR_TEAM_ID`; App Group `group.com.iriemom.digitalvillage`). New `GET /api/devices/:deviceId/policy` (device owner or same-family parent) returns the effective policy. Mobile: `lib/screenControl.ts` (guarded no-op wrapper; child authorization, bedtime via DeviceActivity schedule + block-all mode, web filter: blockSafari -> search-engine domain block, blockExplicitContent -> Apple auto filter), `useScreenControlSync` in `lib/deviceSync.ts` (child sessions only, on foreground), `components/ScreenControlCard.tsx` on the child profile.
