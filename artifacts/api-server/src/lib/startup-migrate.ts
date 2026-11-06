@@ -335,6 +335,7 @@ export async function runStartupMigrations(): Promise<void> {
          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
        )`,
+      `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_stripe_event_at TIMESTAMP`,
       `CREATE INDEX IF NOT EXISTS subscriptions_customer_idx ON subscriptions(stripe_customer_id)`,
 
       // ── stripe_webhook_events ─────────────────────────────────────────────────

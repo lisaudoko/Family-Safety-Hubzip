@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Stripe webhook event ordering
+
+- **What**: New nullable `subscriptions.last_stripe_event_at` (schema + startup-migrate ALTER). `checkout.session.completed` (upsert `setWhere`), `customer.subscription.updated/deleted` and `invoice.payment_failed` now only write when the event's `created` time is >= the last applied one (ties apply — Stripe timestamps are 1s resolution); a stale event is acknowledged with 200 and changes nothing, including the family premium/free tier. Before this, a late-arriving old event could overwrite newer subscription state or flip a family's tier.
+- **Limits**: same-second events are still unordered; `customer.subscription.created` and invoice-paid events are not handled at all (not new).
+- **Verification**: libs + api-server typecheck clean; new ordering test in `test/stripe-webhook-idempotency.test.ts` UNRUN (Windows). Run on Replit/Linux.
+
 ## 2026-11-05 — Session tokens hashed at rest; child PIN change revokes sessions
 
 - **What**: `sessions.token` now holds SHA-256 hex of the bearer token (`lib/session-token.ts` `hashToken`); the client still holds the plaintext. Hashed at every write (register, login, child-login, admin support sessions) and every read/delete (`requireAuth`, logout). Startup migration hashes legacy 36-char plaintext rows in place (idempotent; existing logins survive). Changing a child's PIN (`PATCH /family/children/:id`) now deletes that child's sessions. Password reset already revoked all of a user's sessions; there is no separate change-password endpoint.

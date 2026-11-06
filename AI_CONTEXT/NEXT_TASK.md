@@ -143,7 +143,7 @@ _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, sec
 - [ ] Production config: unique URL scheme (currently `mobile`; also `MOBILE_APP_SCHEME`), `expo-router` origin is `replit.com`, `EXPO_PUBLIC_DOMAIN` in eas.json (base URL falls back to `""`), SMTP creds, `CORS_ORIGINS`, `STRIPE_WEBHOOK_SECRET`
 - [x] Sessions — SecureStore on mobile + SHA-256 hashed tokens at rest + child PIN change revokes sessions (2026-11-05); password reset already revokes all sessions
 - [ ] Decide email-verification gating (billing/coach)
-- [x] Stripe webhook idempotency — done 2026-11-05 (event-id table); out-of-order events still open (compare `event.created`)
+- [x] Stripe webhook idempotency — done 2026-11-05 (event-id table); out-of-order events handled via `last_stripe_event_at` (2026-11-05)
 - [ ] `expo-location` dependency unused and has no usage strings — remove or justify
 - [ ] Startup migrations have no versioning/locking (autoscale: concurrent boots)
 - [ ] Fix root `pnpm run lint` (eslint-plugin-react vs ESLint 10) and add Linux CI (typecheck/lint/test); win32 binaries excluded in `pnpm-workspace.yaml` so tests don't run on Windows

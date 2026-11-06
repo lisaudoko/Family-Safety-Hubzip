@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { db } from '@workspace/db';
 import { profilesTable, subscriptionsTable, stripeWebhookEventsTable } from '@workspace/db';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lte, or } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { stripe, STRIPE_PRICE_IDS, type BillingPlan } from '../lib/stripe.js';
@@ -178,6 +178,14 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
     return;
   }
 
+  // Stripe does not guarantee delivery order. Every subscription write below is
+  // conditional on this event being at least as new as the last one applied.
+  const eventAt = new Date(event.created * 1000);
+  const notStale = or(
+    isNull(subscriptionsTable.last_stripe_event_at),
+    lte(subscriptionsTable.last_stripe_event_at, eventAt),
+  );
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -189,7 +197,7 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
         const subscription = await stripe.subscriptions.retrieve(session.subscription);
         const item = subscription.items.data[0];
 
-        await db
+        const applied = await db
           .insert(subscriptionsTable)
           .values({
             id: randomUUID(),
@@ -203,10 +211,13 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
               ? new Date(item.current_period_end * 1000)
               : null,
             cancel_at_period_end: subscription.cancel_at_period_end,
+            last_stripe_event_at: eventAt,
           })
           .onConflictDoUpdate({
             target: subscriptionsTable.family_id,
+            setWhere: notStale,
             set: {
+              last_stripe_event_at: eventAt,
               stripe_customer_id: String(session.customer),
               stripe_subscription_id: subscription.id,
               stripe_price_id: item?.price.id ?? null,
@@ -218,9 +229,11 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
               cancel_at_period_end: subscription.cancel_at_period_end,
               updated_at: new Date(),
             },
-          });
+          })
+          .returning({ id: subscriptionsTable.id });
 
-        await setFamilyTier(familyId, 'premium');
+        // (the upsert above is skipped when a newer event already ran)
+        if (applied.length > 0) await setFamilyTier(familyId, 'premium');
         break;
       }
 
@@ -230,9 +243,10 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
         if (!familyId) break;
         const item = subscription.items.data[0];
 
-        await db
+        const applied = await db
           .update(subscriptionsTable)
           .set({
+            last_stripe_event_at: eventAt,
             stripe_subscription_id: subscription.id,
             stripe_price_id: item?.price.id ?? null,
             status: subscription.status,
@@ -242,7 +256,9 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
             cancel_at_period_end: subscription.cancel_at_period_end,
             updated_at: new Date(),
           })
-          .where(eq(subscriptionsTable.family_id, familyId));
+          .where(and(eq(subscriptionsTable.family_id, familyId), notStale))
+          .returning({ id: subscriptionsTable.id });
+        if (applied.length === 0) break; // stale or unknown family
 
         const stillActive = subscription.status === 'active' || subscription.status === 'trialing';
         await setFamilyTier(familyId, stillActive ? 'premium' : 'free');
@@ -254,10 +270,12 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
         const familyId = subscription.metadata?.familyId;
         if (!familyId) break;
 
-        await db
+        const applied = await db
           .update(subscriptionsTable)
-          .set({ status: 'canceled', updated_at: new Date() })
-          .where(eq(subscriptionsTable.family_id, familyId));
+          .set({ status: 'canceled', last_stripe_event_at: eventAt, updated_at: new Date() })
+          .where(and(eq(subscriptionsTable.family_id, familyId), notStale))
+          .returning({ id: subscriptionsTable.id });
+        if (applied.length === 0) break; // stale or unknown family
 
         await setFamilyTier(familyId, 'free');
         break;
@@ -270,8 +288,8 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
 
         await db
           .update(subscriptionsTable)
-          .set({ status: 'past_due', updated_at: new Date() })
-          .where(eq(subscriptionsTable.stripe_customer_id, customerId));
+          .set({ status: 'past_due', last_stripe_event_at: eventAt, updated_at: new Date() })
+          .where(and(eq(subscriptionsTable.stripe_customer_id, customerId), notStale));
         break;
       }
 

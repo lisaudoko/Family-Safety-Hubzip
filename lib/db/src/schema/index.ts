@@ -766,6 +766,8 @@ export const subscriptionsTable = pgTable(
     status: text('status').notNull().default('none'),
     plan: text('plan'),
     current_period_end: timestamp('current_period_end'),
+    // created-time of the newest Stripe event applied; older (out-of-order) events are ignored
+    last_stripe_event_at: timestamp('last_stripe_event_at'),
     cancel_at_period_end: boolean('cancel_at_period_end').notNull().default(false),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
