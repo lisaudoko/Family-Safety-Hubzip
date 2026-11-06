@@ -136,7 +136,7 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 
 _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, security headers, production CORS allowlist, no codes/keys in logs._
 
-- [ ] **Account deletion** (in-app + API, cascading child profiles/devices/events/sessions/subscriptions) — Apple 5.1.1(v)
+- [x] **Account deletion** — implemented 2026-11-05 (`DELETE /api/auth/account` + Profile UI); tests unrun, add App Store subscription-cancel copy
 - [ ] **Privacy policy + terms** linked in-app and in store listing; COPPA / parental-consent flow; App Store privacy labels (needs product-owner/legal)
 - [ ] Apple setup: real `appleTeamId` in `app.json`, Family Controls for 3 extension App IDs, App Group, EAS dev build + device test
 - [ ] Billing on iOS: Stripe checkout/portal must not be the iOS purchase path (use RevenueCat IAP); `getRevenueCatApiKey()` throws if any of 3 keys unset — make non-fatal / set in `eas.json` env

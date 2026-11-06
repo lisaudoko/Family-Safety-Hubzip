@@ -11,6 +11,7 @@ import {
   apiGetMe,
   apiLogin,
   apiLogout,
+  apiDeleteAccount,
   apiRegister,
   apiUpdateMe,
   clearToken,
@@ -46,6 +47,7 @@ interface AuthContextType extends AuthState {
   register: (name: string, email: string, password: string) => Promise<void>;
   childLogin: (childId: string, pin: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   startCheckout: (plan: "monthly" | "annual") => Promise<void>;
   manageSubscription: () => Promise<void>;
@@ -210,6 +212,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState({ user: null, isLoading: false, isAuthenticated: false });
   }, []);
 
+  // Throws (leaving local state untouched) if the server refuses, so a failed
+  // deletion never looks successful. On success, wipe all local app data.
+  const deleteAccount = useCallback(async (password: string) => {
+    await apiDeleteAccount(password);
+    await clearToken();
+    await clearPendingLocalPassword();
+    await AsyncStorage.clear();
+    setCanReturnToParent(false);
+    setState({ user: null, isLoading: false, isAuthenticated: false });
+  }, []);
+
   const completeOnboarding = useCallback(async () => {
     if (!state.user) return;
     try {
@@ -342,6 +355,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         childLogin,
         logout,
+        deleteAccount,
         completeOnboarding,
         startCheckout,
         manageSubscription,

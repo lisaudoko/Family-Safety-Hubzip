@@ -19,7 +19,7 @@ import { fontFamily } from "@/constants/typography";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, updateProfile, canReturnToParent, returnToParent, manageSubscription, refreshUser } = useAuth();
+  const { user, logout, deleteAccount, updateProfile, canReturnToParent, returnToParent, manageSubscription, refreshUser } = useAuth();
   const [managingSubscription, setManagingSubscription] = useState(false);
   const [verifyModal, setVerifyModal] = useState(false);
   const [verifyCode, setVerifyCode] = useState("");
@@ -28,6 +28,10 @@ export default function ProfileScreen() {
   const haptics = useHaptics();
   const { progress } = useFamily();
   const { badges: BADGES } = useCurriculum();
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState(user?.name ?? "");
   const [supportModal, setSupportModal] = useState(false);
@@ -101,6 +105,24 @@ export default function ProfileScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: performLogout },
     ]);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError("Enter your password to confirm.");
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount(deletePassword);
+      setDeleteModal(false);
+      router.replace("/welcome");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Could not delete your account. Please try again.");
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleNotifications = () => {
@@ -350,8 +372,42 @@ export default function ProfileScreen() {
         <BodyStrong color={colors.destructive}>Sign Out</BodyStrong>
       </TouchableOpacity>
 
+      {isParent && !canReturnToParent && (
+        <TouchableOpacity
+          style={[styles.logoutBtn, { borderColor: colors.destructive + "44" }]}
+          onPress={() => { setDeletePassword(""); setDeleteError(null); setDeleteModal(true); }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Delete account"
+        >
+          <Feather name="trash-2" size={18} color={colors.destructive} />
+          <BodyStrong color={colors.destructive}>Delete Account</BodyStrong>
+        </TouchableOpacity>
+      )}
+
       <Caption color={colors.mutedForeground} style={styles.version}>Digital Village v1.0.0</Caption>
       <Small color={colors.mutedForeground} style={styles.version}>Powered by nexgenoptimize.com</Small>
+
+      <Modal visible={deleteModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setDeleteModal(false)}>
+        <View style={[styles.modalBody, { backgroundColor: colors.background, flex: 1, padding: spacing.lg, gap: spacing.md }]}>
+          <H2>Delete Account</H2>
+          <Body color={colors.mutedForeground}>
+            This permanently deletes your account, your family, every child profile, all linked devices and activity, and cancels any subscription. This cannot be undone.
+          </Body>
+          <TextField
+            label="Password"
+            value={deletePassword}
+            onChangeText={setDeletePassword}
+            placeholder="Confirm your password"
+            secureTextEntry
+            autoCapitalize="none"
+            autoFocus
+          />
+          {deleteError && <Caption color={colors.destructive}>{deleteError}</Caption>}
+          <Button title={deleteLoading ? "Deleting..." : "Permanently Delete Account"} onPress={handleDeleteAccount} disabled={deleteLoading} variant="destructive" />
+          <Button title="Cancel" onPress={() => setDeleteModal(false)} variant="ghost" disabled={deleteLoading} />
+        </View>
+      </Modal>
 
       <Modal visible={editModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditModal(false)}>
         <View style={[styles.modalContainer, { backgroundColor: colors.background, paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxl }]}>

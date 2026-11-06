@@ -141,6 +141,10 @@ export async function apiLogout(): Promise<void> {
   }
 }
 
+export async function apiDeleteAccount(password: string): Promise<void> {
+  await apiFetch("/auth/account", { method: "DELETE", body: JSON.stringify({ password }) });
+}
+
 export async function apiGetMe(): Promise<{ user: ApiUser }> {
   return apiFetch("/auth/me");
 }

@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Account deletion (App Store 5.1.1(v))
+
+- **What**: `DELETE /api/auth/account` (parent only, body `{ password }`; 403 for child/admin/support sessions, 401 wrong password, 409 if another parent shares the family). Cancels the Stripe subscription and deletes the Stripe customer first (aborts with 502 if that fails, so no one is deleted-but-billed), then in one transaction deletes child profiles (no FK to family) and the parent profile, which cascades to family, children rows, devices/events, policies, progress, subscriptions, sessions, audit rows. Logged via pino (audit rows cascade away). Mobile: `apiDeleteAccount`, `AuthContext.deleteAccount` (wipes AsyncStorage on success only), "Delete Account" button + password-confirm modal on Profile (parents only, hidden while in a child-impersonation state).
+- **Verification**: api-server + mobile typecheck clean. New `test/account-deletion.test.ts` (3 tests) NOT run (Windows can't run Vitest here) — run on Replit/Linux. Not tested on device; Stripe cancel path untested against Stripe.
+- **Follow-ups**: RevenueCat/App Store subscriptions can't be cancelled server-side — user must cancel in Apple settings (add copy). Pending: privacy policy link, data export.
+
 ## 2026-11-05 — Release-readiness audit + first hardening pass
 
 - **What**: Full-app audit (see NEXT_TASK "Release Blockers"). Fixed the code-only items: auth brute-force limiters (`/auth/login`, `/auth/child-login`, `/auth/reset-password`: 8 failed attempts/15 min per IP+account, successes not counted; `/auth/forgot-password`: 5/hr per IP); `trust proxy` (default 1 hop, `TRUST_PROXY` override) so rate limits key on the real client IP; baseline security headers + `x-powered-by` off; production CORS allowlist via `CORS_ORIGINS` (unset = no cross-origin browser access; dev unchanged); `email.ts` no longer `console.log`s reset/verification codes — dev logs them via pino, production logs only that an email was not sent; removed the RevenueCat API-key `console.log`s in `lib/revenuecat.tsx`.

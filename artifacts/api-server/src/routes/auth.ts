@@ -10,11 +10,14 @@ import {
   passwordResetCodesTable,
   profilesTable,
   sessionsTable,
+  subscriptionsTable,
 } from '@workspace/db';
-import { and, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, ne } from 'drizzle-orm';
 import { requireAuth, type AuthRequest } from '../lib/auth-middleware.js';
 import { sendPasswordResetEmail, sendEmailVerificationEmail } from '../lib/email.js';
 import { logAuditEvent } from '../lib/audit.js';
+import { logger } from '../lib/logger.js';
+import { stripe } from '../lib/stripe.js';
 
 const router = Router();
 
@@ -615,6 +618,108 @@ router.post('/auth/logout', requireAuth as any, async (req: AuthRequest, res, ne
       action: 'logout',
       ip: req.ip,
     });
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/auth/account
+// Permanent account deletion (App Store guideline 5.1.1(v)). Parent-only, requires
+// the current password, and is refused during admin support sessions. Deleting the
+// parent profile cascades to the family and everything under it (children rows,
+// devices/events, policies, progress, subscriptions, sessions, audit rows); child
+// profiles have no FK to the family, so they are removed explicitly first.
+router.delete('/auth/account', requireAuth as any, async (req: AuthRequest, res, next) => {
+  try {
+    if (req.isSupportSession || req.actorRole !== 'parent') {
+      res.status(403).json({ error: 'Only the parent account owner can delete the account' });
+      return;
+    }
+
+    const { password } = (req.body ?? {}) as { password?: string };
+    if (!password) {
+      res.status(400).json({ error: 'password required' });
+      return;
+    }
+
+    const userId = req.userId!;
+    const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, userId)).limit(1);
+    if (!profile || profile.role !== 'parent') {
+      res.status(403).json({ error: 'Only the parent account owner can delete the account' });
+      return;
+    }
+
+    if (!(await bcrypt.compare(password, profile.password_hash))) {
+      void logAuditEvent({
+        actorId: userId,
+        actorRole: 'parent',
+        familyId: profile.family_id,
+        action: 'login_failed',
+        metadata: { reason: 'account_deletion_bad_password' },
+        ip: req.ip,
+      });
+      res.status(401).json({ error: 'Incorrect password' });
+      return;
+    }
+
+    const [family] = await db.select().from(familiesTable).where(eq(familiesTable.parent_id, userId)).limit(1);
+
+    if (family) {
+      const coParents = await db
+        .select({ id: profilesTable.id })
+        .from(profilesTable)
+        .where(
+          and(
+            eq(profilesTable.family_id, family.id),
+            eq(profilesTable.role, 'parent'),
+            ne(profilesTable.id, userId),
+          ),
+        )
+        .limit(1);
+      if (coParents.length > 0) {
+        res.status(409).json({ error: 'Another parent belongs to this family. Remove them before deleting the account.' });
+        return;
+      }
+
+      // Stop billing first: if this fails we abort so the user is never left
+      // deleted-but-still-charged.
+      if (stripe) {
+        const [sub] = await db
+          .select()
+          .from(subscriptionsTable)
+          .where(eq(subscriptionsTable.family_id, family.id))
+          .limit(1);
+        try {
+          if (sub?.stripe_subscription_id && sub.status !== 'canceled') {
+            await stripe.subscriptions.cancel(sub.stripe_subscription_id);
+          }
+          if (sub?.stripe_customer_id) {
+            await stripe.customers.del(sub.stripe_customer_id);
+          }
+        } catch (err: any) {
+          if (err?.code !== 'resource_missing') {
+            req.log?.error({ err }, 'account deletion: stripe cleanup failed');
+            res.status(502).json({ error: 'Could not cancel your subscription. Please try again.' });
+            return;
+          }
+        }
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      if (family) {
+        await tx
+          .delete(profilesTable)
+          .where(and(eq(profilesTable.family_id, family.id), eq(profilesTable.role, 'child')));
+      }
+      await tx.delete(profilesTable).where(eq(profilesTable.id, userId));
+    });
+
+    // The audit_log rows for this user/family cascade away with them, so record
+    // the deletion in the application log (ids only, no personal data).
+    logger.info({ userId, familyId: family?.id ?? null }, 'account deleted');
 
     res.json({ ok: true });
   } catch (err) {
