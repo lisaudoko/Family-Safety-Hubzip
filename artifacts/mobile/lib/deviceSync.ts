@@ -2,7 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef } from "react";
 import { AppState, AppStateStatus, Platform } from "react-native";
 import Constants from "expo-constants";
-import { apiDeviceHeartbeat, apiPostDeviceEvent, apiRegisterDevice } from "@/lib/apiClient";
+import { apiDeviceHeartbeat, apiGetDevicePolicy, apiPostDeviceEvent, apiRegisterDevice } from "@/lib/apiClient";
+import { applyPolicy, getScreenControlStatus } from "@/lib/screenControl";
 
 const DEVICE_ID_KEY = "@dv_device_id";
 const LAST_SYNC_KEY = "@dv_device_last_sync";
@@ -28,7 +29,7 @@ function genEventId(): string {
   return "evt_" + Date.now().toString() + Math.random().toString(36).slice(2, 8);
 }
 
-async function getOrCreateDeviceId(): Promise<string> {
+export async function getOrCreateDeviceId(): Promise<string> {
   const existing = await AsyncStorage.getItem(DEVICE_ID_KEY);
   if (existing) return existing;
   const id = "dev_" + Date.now().toString() + Math.random().toString(36).slice(2, 8);
@@ -166,4 +167,32 @@ export function useForegroundScreenTime(isAuthenticated: boolean) {
       flushSession();
     };
   }, [isAuthenticated, flushSession]);
+}
+
+
+// Pulls the resolved policy for this device and applies it through Screen
+// Time on every foreground, so parent changes take effect the next time the
+// child opens the app. Enforcement itself then keeps running without the app
+// (the DeviceActivity monitor extension handles bedtime start/end). Child
+// sessions only - a parent signed in on this device must not alter its policy.
+export function useScreenControlSync(isAuthenticated: boolean, role?: "parent" | "child") {
+  const run = useCallback(async () => {
+    if (!isAuthenticated || role !== "child") return;
+    if (getScreenControlStatus() !== "approved") return;
+    try {
+      const deviceId = await getOrCreateDeviceId();
+      const { policy } = await apiGetDevicePolicy(deviceId);
+      applyPolicy(policy);
+    } catch {
+      // best-effort; last applied policy stays in force
+    }
+  }, [isAuthenticated, role]);
+
+  useEffect(() => {
+    run();
+    const sub = AppState.addEventListener("change", next => {
+      if (next === "active") run();
+    });
+    return () => sub.remove();
+  }, [run]);
 }

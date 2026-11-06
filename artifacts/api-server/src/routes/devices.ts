@@ -21,6 +21,7 @@ import {
   deleteDeviceAppRule,
 } from "../services/deviceAppRules.js";
 import { deviceRestrictionsTable, deviceAppRulesTable } from "@workspace/db";
+import { getEffectivePolicy } from "../services/effectivePolicy.js";
 import { isDeviceStale, deviceStatusLabel, SYNC_INTERVAL_SECONDS } from "../lib/deviceStatus.js";
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -708,6 +709,30 @@ function validateRestrictionsPatch(body: unknown): { data?: DeviceRestrictionsIn
 
   return { data };
 }
+
+// GET /api/devices/:deviceId/policy
+// The resolved policy (family -> child -> this device) for the device's
+// owner. Readable by the owning child session so the on-device enforcement
+// agent can apply it, and by parents of the same family.
+router.get("/devices/:deviceId/policy", async (req: AuthRequest, res, next) => {
+  try {
+    const { device, authorized } = await loadDeviceForCaller(req, String(req.params.deviceId));
+    if (!device || !authorized) {
+      res.status(404).json({ error: "device not found" });
+      return;
+    }
+
+    const policy = await getEffectivePolicy(device.owner_id, device.family_id, device.id);
+    if (!policy) {
+      res.status(404).json({ error: "device not found" });
+      return;
+    }
+
+    res.json({ policy });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/devices/:deviceId/restrictions
 router.get(

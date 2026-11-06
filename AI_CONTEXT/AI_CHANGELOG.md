@@ -2,6 +2,21 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-10-28 — Native phase begins: Screen Time enforcement (bedtime + web filters) on child devices
+
+- **What**: Apple approved the Family Controls entitlement (Development + Distribution; main app only so far). Added `eas.json`, plugins `expo-dev-client`, `expo-build-properties` (iOS 16), `react-native-device-activity` (appleTeamId is still the placeholder `YOUR_TEAM_ID`; App Group `group.com.iriemom.digitalvillage`). New `GET /api/devices/:deviceId/policy` (device owner or same-family parent) returns the effective policy. Mobile: `lib/screenControl.ts` (guarded no-op wrapper; child authorization, bedtime via DeviceActivity schedule + block-all mode, web filter: blockSafari -> search-engine domain block, blockExplicitContent -> Apple auto filter), `useScreenControlSync` in `lib/deviceSync.ts` (child sessions only, on foreground), `components/ScreenControlCard.tsx` on the child profile.
+- **Why**: Roadmap Priority 5 native prerequisite is unblocked.
+- **Not enforced yet**: daily screen-time limit, per-app blocking (need Apple picker selections, which are device-local tokens - must be chosen on the child device), blockNewAppInstalls, requireParentApproval.
+- **Before first build**: set real Team ID; request Family Controls for the three extension App IDs (ActivityMonitorExtension, ShieldAction, ShieldConfiguration under com.iriemom.digitalvillage); create the App Group; `eas build -p ios --profile development`.
+- **Verification**: mobile typecheck clean for touched files (remaining errors are pre-existing, unbuilt libs). api-server not typechecked (deps not installed). No device run.
+
+## 2026-10-28 — Startup migration now creates `family_policies` and `child_policies`
+
+- **What**: Added both tables (plus `child_policies_family_idx`) to `artifacts/api-server/src/lib/startup-migrate.ts`, matching `lib/db/src/schema/index.ts`.
+- **Why**: Only the Drizzle schema defined them; databases not `drizzle-kit push`ed had no tables, so every PATCH on family/child default restrictions would 500 and toggles/screen-time saves appeared to do nothing (Notes.md bugs).
+- **Verification**: not run — no `node_modules` in this checkout; SQL-only change. Needs `pnpm install` + server restart, then test toggling child default restrictions.
+- **Files affected**: `artifacts/api-server/src/lib/startup-migrate.ts`.
+
 ## 2026-08-08 — Mobile visual redesign: design-token layer + primitives, all 23 screens migrated
 
 - **What**: The user found the app's current look unpolished and asked for a "warm & friendly" visual redesign covering the whole app, while preserving every existing feature. Research confirmed the app had no shared UI primitives at all — `components/UI.tsx` (106 lines) contained only display widgets (`ProgressBar`, `SectionHeader`, `EmptyState`, `PremiumBadge`, `CategoryPill`, `ScoreRing`, `LoadingSpinner`), never a `Button`/`Card`/`Input`/`Badge`; every one of the 23 screens hand-rolled its own `TouchableOpacity` buttons and `TextInput` styling from local `StyleSheet.create` + inline `[styles.x, {color, fontFamily}]` arrays. Font sizes (11–32px) and spacing/radius values were freely hand-picked per screen with no scale. The color palette itself was already solid and warm (`constants/colors.ts`: primary `#F97316` orange, teal `#14B8A6`, cream `#FFFBF5` background, full dark + high-contrast variants) — the plan was to build real infrastructure on top of it, not replace it.

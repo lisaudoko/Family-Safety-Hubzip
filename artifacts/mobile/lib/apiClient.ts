@@ -855,6 +855,10 @@ export async function apiGetEffectivePolicy(
   return apiFetch(`/family/children/${childId}/effective-policy${query}`);
 }
 
+export async function apiGetDevicePolicy(deviceId: string): Promise<{ policy: EffectivePolicy }> {
+  return apiFetch(`/devices/${deviceId}/policy`);
+}
+
 // ── Device App Rules (General Apps — per-app accessible/inaccessible windows) ─
 //
 // Storage/definition only: nothing here enforces app access on-device. There

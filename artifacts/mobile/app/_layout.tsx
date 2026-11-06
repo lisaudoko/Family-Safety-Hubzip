@@ -22,7 +22,7 @@ import { FamilyProvider } from "@/context/FamilyContext";
 import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
 import { configureApi } from "@/lib/api";
-import { useDeviceSync, useForegroundScreenTime } from "@/lib/deviceSync";
+import { useDeviceSync, useForegroundScreenTime, useScreenControlSync } from "@/lib/deviceSync";
 import { initializeRevenueCat } from "@/lib/revenuecat";
 import { SubscriptionProvider } from "@/lib/revenuecat";
 
@@ -72,7 +72,7 @@ function AuthRedirect() {
 
 function RootLayoutNav() {
   const { settings } = useAccessibility();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const osScheme = useColorScheme();
   const isDark = settings.themeMode === "system" ? osScheme === "dark" : settings.themeMode === "dark";
   const slide = settings.reduceMotion ? "none" : "slide_from_right";
@@ -80,6 +80,7 @@ function RootLayoutNav() {
 
   useDeviceSync(isAuthenticated);
   useForegroundScreenTime(isAuthenticated);
+  useScreenControlSync(isAuthenticated, user?.role);
 
   return (
     <>

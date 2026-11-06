@@ -57,8 +57,11 @@
   },
   "dependencies": {
     "expo-application": "~7.0.8",
+    "expo-build-properties": "^1.0.10",
+    "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
     "expo-secure-store": "^56.0.4",
+    "react-native-device-activity": "^0.6.1",
     "react-native-purchases": "^10.4.1",
     "react-native-url-polyfill": "^3.0.0"
   }

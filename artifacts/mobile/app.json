@@ -31,7 +31,16 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-dev-client",
+      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" } }],
+      [
+        "react-native-device-activity",
+        {
+          "appleTeamId": "YOUR_TEAM_ID",
+          "appGroup": "group.com.iriemom.digitalvillage"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

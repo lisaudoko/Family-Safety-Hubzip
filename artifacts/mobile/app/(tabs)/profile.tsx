@@ -11,6 +11,7 @@ import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { apiCreateSupportCode, apiResendVerification, apiVerifyEmail } from "@/lib/apiClient";
 import { Avatar, Badge, Body, BodyStrong, Button, Card, Caption, Display, H2, H3, Small, TextField } from "@/components/primitives";
+import { ScreenControlCard } from "@/components/ScreenControlCard";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
 import { fontFamily } from "@/constants/typography";
@@ -193,6 +194,8 @@ export default function ProfileScreen() {
           <Badge label={user?.isPremium ? "Premium" : "Free Plan"} tone={user?.isPremium ? colors.accent : colors.mutedForeground} variant="soft" icon={user?.isPremium ? "star" : "user"} />
         </View>
       </Card>
+
+      {user?.role === "child" && <ScreenControlCard />}
 
       {user?.role === "parent" && user?.emailVerified === false && (
         <Card variant="outline" style={styles.verifyCard}>

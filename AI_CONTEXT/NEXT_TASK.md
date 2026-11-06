@@ -80,7 +80,7 @@ _The family agreement remains a social contract. Device restrictions are stored 
 
 _Product-owner decision 2026-08-08: build all the non-native groundwork first (effective-policy engine above, family-wide policy mobile UI, clearer online/last-active device status), and treat everything below as a deferred, explicitly separate phase gated on pursuing Apple's Family Controls entitlement. This app is pure Expo-managed today (no `eas.json`, no dev-client plugin, no native modules) — that has to change before any of the below is possible on iOS._
 
-- [ ] **Native phase prerequisite**: request Apple's `com.apple.developer.family-controls` entitlement (weeks-long approval, not guaranteed) and migrate off Expo Go to a custom dev client / EAS builds.
+- [x] **Native phase prerequisite** (entitlement approved 2026-10-28 for main app; extensions + EAS dev build still to do): request Apple's `com.apple.developer.family-controls` entitlement (weeks-long approval, not guaranteed) and migrate off Expo Go to a custom dev client / EAS builds.
 - [ ] Cross-platform enforcement agent (iOS & Android)
 - [ ] App install blocking — iOS: via Screen Time API (`ManagedSettings`) once the entitlement above is granted
 - [ ] App usage schedules & time limits — _definition/storage exists (`device_app_rules`, see Policy Definition above), and the resolved answer now exists too (`getEffectivePolicy`); actual on-device enforcement still requires the native phase, no agent exists_
