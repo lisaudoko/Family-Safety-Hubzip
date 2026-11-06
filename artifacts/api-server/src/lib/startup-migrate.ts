@@ -13,6 +13,14 @@ export async function runStartupMigrations(): Promise<void> {
 
     const statements = [
       // ── profiles ────────────────────────────────────────────────────────────
+      // Session tokens are stored as SHA-256 hex digests (64 chars). Legacy rows hold
+      // the plaintext UUID (36 chars); hash them in place so existing logins survive.
+      `DO $$ BEGIN
+         IF to_regclass('public.sessions') IS NOT NULL THEN
+           UPDATE sessions SET token = encode(sha256(convert_to(token, 'UTF8')), 'hex') WHERE length(token) = 36;
+         END IF;
+       END $$`,
+
       `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE`,
 
       // ── families ────────────────────────────────────────────────────────────

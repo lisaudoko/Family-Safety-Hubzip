@@ -17,6 +17,7 @@ import { requireAuth, type AuthRequest } from '../lib/auth-middleware.js';
 import { sendPasswordResetEmail, sendEmailVerificationEmail } from '../lib/email.js';
 import { logAuditEvent } from '../lib/audit.js';
 import { logger } from '../lib/logger.js';
+import { hashToken } from '../lib/session-token.js';
 import { stripe } from '../lib/stripe.js';
 
 const router = Router();
@@ -150,7 +151,7 @@ router.post('/auth/register', async (req, res, next) => {
 
     const token = randomUUID();
     await db.insert(sessionsTable).values({
-      token,
+      token: hashToken(token),
       user_id: id,
       expires_at: sessionExpiry(),
     });
@@ -234,7 +235,7 @@ router.post('/auth/login', loginLimiter, async (req, res, next) => {
 
     const token = randomUUID();
     await db.insert(sessionsTable).values({
-      token,
+      token: hashToken(token),
       user_id: profile.id,
       expires_at: sessionExpiry(),
     });
@@ -337,7 +338,7 @@ router.post('/auth/child-login', childLoginLimiter, async (req, res, next) => {
 
     const token = randomUUID();
     await db.insert(sessionsTable).values({
-      token,
+      token: hashToken(token),
       user_id: profile.id,
       expires_at: sessionExpiry(),
     });
@@ -609,7 +610,7 @@ router.post('/auth/logout', requireAuth as any, async (req: AuthRequest, res, ne
   try {
     const header = req.headers.authorization!;
     const token = header.slice(7);
-    await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
+    await db.delete(sessionsTable).where(eq(sessionsTable.token, hashToken(token)));
 
     void logAuditEvent({
       actorId: req.userId!,

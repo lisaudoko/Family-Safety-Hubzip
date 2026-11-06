@@ -26,7 +26,7 @@ import {
   type ChildPolicyInput,
 } from '../services/childPolicy.js';
 import { getEffectivePolicy } from '../services/effectivePolicy.js';
-import { familyPoliciesTable, childPoliciesTable } from '@workspace/db';
+import { familyPoliciesTable, childPoliciesTable, sessionsTable } from '@workspace/db';
 
 const router = Router();
 router.use(requireAuth as any);
@@ -312,6 +312,10 @@ router.patch('/family/children/:childId', requireParent, async (req: AuthRequest
       if (pin) profileUpdates.password_hash = await bcrypt.hash(pin, 12);
       if (name?.trim() || pin) {
         await tx.update(profilesTable).set(profileUpdates).where(eq(profilesTable.id, childId));
+      }
+      // A changed PIN must end any session already open on a child's device.
+      if (pin) {
+        await tx.delete(sessionsTable).where(eq(sessionsTable.user_id, childId));
       }
     });
 

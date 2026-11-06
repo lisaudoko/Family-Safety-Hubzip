@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { db } from '@workspace/db';
 import { supportCodesTable, supportSessionsTable, sessionsTable } from '@workspace/db';
 import { and, eq, gt, isNull } from 'drizzle-orm';
+import { hashToken } from '../lib/session-token.js';
 import { requireAuth, requireAdmin, type AuthRequest } from '../lib/auth-middleware.js';
 import { logAuditEvent } from '../lib/audit.js';
 
@@ -70,7 +71,7 @@ router.post('/admin/support-sessions', requireAuth as any, requireAdmin as any, 
 
     const token = randomUUID();
     await db.insert(sessionsTable).values({
-      token,
+      token: hashToken(token),
       user_id: req.userId!,
       expires_at: expiresAt,
       support_session_id: sessionId,

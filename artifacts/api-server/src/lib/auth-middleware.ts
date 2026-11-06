@@ -1,3 +1,4 @@
+import { hashToken } from './session-token.js';
 import type { Request, Response, NextFunction } from 'express';
 import { db } from '@workspace/db';
 import { sessionsTable, profilesTable, supportSessionsTable } from '@workspace/db';
@@ -26,7 +27,7 @@ export async function requireAuth(
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
-  const token = header.slice(7);
+  const token = hashToken(header.slice(7));
   try {
     const rows = await db
       .select({

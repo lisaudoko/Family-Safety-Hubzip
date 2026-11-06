@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Session tokens hashed at rest; child PIN change revokes sessions
+
+- **What**: `sessions.token` now holds SHA-256 hex of the bearer token (`lib/session-token.ts` `hashToken`); the client still holds the plaintext. Hashed at every write (register, login, child-login, admin support sessions) and every read/delete (`requireAuth`, logout). Startup migration hashes legacy 36-char plaintext rows in place (idempotent; existing logins survive). Changing a child's PIN (`PATCH /family/children/:id`) now deletes that child's sessions. Password reset already revoked all of a user's sessions; there is no separate change-password endpoint.
+- **Deploy note**: any code or script that looks up `sessions.token` directly must use `hashToken`. Rolling back the code after the migration runs would invalidate all sessions (forces re-login only).
+- **Verification**: api-server typecheck clean; new tests in `test/auth.test.ts` (hash-at-rest, PIN-change revoke) and the updated expiry test NOT run (Windows can't run Vitest here) — run on Replit/Linux.
+
 ## 2026-11-05 — Session token in SecureStore, quiet RevenueCat init, Stripe webhook idempotency
 
 - **What**: (1) New `mobile/lib/secureStorage.ts`; session token and the stashed parent token (child-switch) now live in expo-secure-store on native (AsyncStorage on web), with a one-time migration of legacy AsyncStorage tokens on first read. (2) `lib/revenuecat.tsx`: no longer throws when a platform key is missing — picks the one key for the platform, skips configure and disables queries if absent, debug logging only in __DEV__. (3) New `stripe_webhook_events` table (schema + startup-migrate); webhook claims the event id before processing (duplicate → 200 `{duplicate:true}`), releases the claim if handling throws so Stripe's retry reprocesses.
