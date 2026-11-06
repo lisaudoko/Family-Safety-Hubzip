@@ -1,8 +1,10 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
+import { useAuth } from "@/context/AuthContext";
+import { apiSyncPurchases } from "@/lib/apiClient";
 
 const REVENUECAT_TEST_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
 const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
@@ -34,6 +36,32 @@ export function initializeRevenueCat() {
 }
 
 function useSubscriptionContext() {
+  const { user, refreshUser } = useAuth();
+  const queryClient = useQueryClient();
+  // Purchases must be attributed to the family, not an anonymous RevenueCat id,
+  // so the server (and webhook) can map them back. Only parents buy; children
+  // never log in here.
+  const loginRef = useRef<Promise<unknown>>(Promise.resolve());
+  const isParent = user?.role === "parent";
+  const familyId = isParent ? user?.familyId : undefined;
+
+  useEffect(() => {
+    if (!revenueCatConfigured) return;
+    loginRef.current = (familyId
+      ? Purchases.logIn(familyId)
+      : Purchases.logOut()
+    )
+      .catch(() => undefined) // logOut on an anonymous user throws; harmless
+      .then(() => queryClient.invalidateQueries({ queryKey: ["revenuecat"] }));
+  }, [familyId, queryClient]);
+
+  // Ask the server to verify with RevenueCat, then reload the user so premium
+  // gating (which reads the server-provided tier) updates.
+  const syncWithServer = async () => {
+    await apiSyncPurchases();
+    await refreshUser();
+  };
+
   const customerInfoQuery = useQuery({
     queryKey: ["revenuecat", "customer-info"],
     queryFn: async () => {
@@ -56,17 +84,24 @@ function useSubscriptionContext() {
 
   const purchaseMutation = useMutation({
     mutationFn: async (packageToPurchase: any) => {
+      await loginRef.current;
       const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
       return customerInfo;
     },
-    onSuccess: () => customerInfoQuery.refetch(),
+    onSuccess: async () => {
+      await syncWithServer().catch(() => undefined);
+      await customerInfoQuery.refetch();
+    },
   });
 
   const restoreMutation = useMutation({
     mutationFn: async () => {
       return Purchases.restorePurchases();
     },
-    onSuccess: () => customerInfoQuery.refetch(),
+    onSuccess: async () => {
+      await syncWithServer().catch(() => undefined);
+      await customerInfoQuery.refetch();
+    },
   });
 
   const isSubscribed =

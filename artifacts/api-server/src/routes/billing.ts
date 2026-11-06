@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { randomUUID } from 'crypto';
+import { randomUUID, timingSafeEqual } from 'crypto';
 import { db } from '@workspace/db';
 import { profilesTable, subscriptionsTable, stripeWebhookEventsTable } from '@workspace/db';
 import { and, eq, isNull, lte, or } from 'drizzle-orm';
@@ -7,6 +7,7 @@ import type Stripe from 'stripe';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
 import { stripe, STRIPE_PRICE_IDS, type BillingPlan } from '../lib/stripe.js';
 import { logAuditEvent } from '../lib/audit.js';
+import { fetchPremiumEntitlement, isRevenueCatConfigured } from '../lib/revenuecat.js';
 
 const router = Router();
 
@@ -15,6 +16,38 @@ async function setFamilyTier(familyId: string, tier: 'free' | 'premium') {
     .update(profilesTable)
     .set({ subscription_tier: tier, updated_at: new Date() })
     .where(eq(profilesTable.family_id, familyId));
+}
+
+// Premium if EITHER billing source is active: an App Store/Play subscription
+// (RevenueCat) or a Stripe subscription. RevenueCat is asked directly, so the
+// client can never assert its own entitlement. If RevenueCat can't be reached
+// the tier is left unchanged.
+async function syncFamilyTierFromBilling(familyId: string): Promise<boolean | null> {
+  const rcPremium = await fetchPremiumEntitlement(familyId);
+  if (rcPremium === null) return null;
+
+  const [stripeSub] = await db
+    .select({ status: subscriptionsTable.status })
+    .from(subscriptionsTable)
+    .where(eq(subscriptionsTable.family_id, familyId))
+    .limit(1);
+  const stripeActive = stripeSub?.status === 'active' || stripeSub?.status === 'trialing';
+
+  const premium = rcPremium || stripeActive;
+  await setFamilyTier(familyId, premium ? 'premium' : 'free');
+  return premium;
+}
+
+// A Stripe subscription ended/lapsed. Only drop to free if there is no active
+// App Store/Play entitlement either. If RevenueCat is configured but unreachable
+// we throw so Stripe retries the event instead of wrongly downgrading.
+async function downgradeAfterStripeEnds(familyId: string): Promise<void> {
+  if (isRevenueCatConfigured()) {
+    const result = await syncFamilyTierFromBilling(familyId);
+    if (result === null) throw new Error('RevenueCat unavailable; retry webhook');
+    return;
+  }
+  await setFamilyTier(familyId, 'free');
 }
 
 async function getOrCreateStripeCustomer(familyId: string, email: string | null): Promise<string> {
@@ -44,6 +77,72 @@ async function getOrCreateStripeCustomer(familyId: string, email: string | null)
 }
 
 // POST /api/billing/checkout-session
+// POST /api/billing/sync-purchases
+// Called by the app right after an in-app purchase or restore. The server
+// re-verifies with RevenueCat and updates the family's tier.
+router.post('/billing/sync-purchases', requireAuth as any, requireParent, async (req: AuthRequest, res, next) => {
+  try {
+    if (!isRevenueCatConfigured()) {
+      res.status(503).json({ error: 'In-app purchases are not configured' });
+      return;
+    }
+    const premium = await syncFamilyTierFromBilling(req.familyId!);
+    if (premium === null) {
+      res.status(502).json({ error: 'Could not verify purchases right now. Please try again.' });
+      return;
+    }
+    res.json({ isPremium: premium });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/billing/revenuecat-webhook
+// Configure in RevenueCat with the Authorization header set to
+// REVENUECAT_WEBHOOK_AUTH. Events are only a nudge: the payload is not trusted
+// for entitlement state, we re-read it from RevenueCat (also makes ordering and
+// redelivery harmless).
+router.post('/billing/revenuecat-webhook', async (req, res, next) => {
+  try {
+    const expected = process.env.REVENUECAT_WEBHOOK_AUTH;
+    const provided = req.headers.authorization ?? '';
+    const ok =
+      Boolean(expected) &&
+      provided.length === expected!.length &&
+      timingSafeEqual(Buffer.from(provided), Buffer.from(expected!));
+    if (!ok) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const appUserId = (req.body as { event?: { app_user_id?: string } })?.event?.app_user_id;
+    if (!appUserId || appUserId.startsWith('$RCAnonymousID')) {
+      res.json({ received: true, ignored: true });
+      return;
+    }
+
+    const [family] = await db
+      .select({ id: profilesTable.family_id })
+      .from(profilesTable)
+      .where(eq(profilesTable.family_id, appUserId))
+      .limit(1);
+    if (!family) {
+      res.json({ received: true, ignored: true });
+      return;
+    }
+
+    const premium = await syncFamilyTierFromBilling(appUserId);
+    if (premium === null) {
+      // Let RevenueCat retry.
+      res.status(502).json({ error: 'RevenueCat lookup failed' });
+      return;
+    }
+    res.json({ received: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/billing/checkout-session', requireAuth as any, requireParent, async (req: AuthRequest, res, next) => {
   try {
     if (!stripe) {
@@ -261,7 +360,8 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
         if (applied.length === 0) break; // stale or unknown family
 
         const stillActive = subscription.status === 'active' || subscription.status === 'trialing';
-        await setFamilyTier(familyId, stillActive ? 'premium' : 'free');
+        if (stillActive) await setFamilyTier(familyId, 'premium');
+        else await downgradeAfterStripeEnds(familyId);
         break;
       }
 
@@ -277,7 +377,7 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
           .returning({ id: subscriptionsTable.id });
         if (applied.length === 0) break; // stale or unknown family
 
-        await setFamilyTier(familyId, 'free');
+        await downgradeAfterStripeEnds(familyId);
         break;
       }
 

@@ -142,6 +142,12 @@ export async function apiLogout(): Promise<void> {
   }
 }
 
+// After an in-app purchase/restore: the server re-verifies with RevenueCat and
+// updates the family's tier. Never trusts the client's own entitlement claim.
+export async function apiSyncPurchases(): Promise<{ isPremium: boolean }> {
+  return apiFetch("/billing/sync-purchases", { method: "POST" });
+}
+
 export async function apiDeleteAccount(password: string): Promise<void> {
   await apiFetch("/auth/account", { method: "DELETE", body: JSON.stringify({ password }) });
 }

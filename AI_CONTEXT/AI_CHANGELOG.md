@@ -2,6 +2,14 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — iOS/Android in-app purchases now actually unlock Premium
+
+- **Problem found**: the Subscription screen already bought via RevenueCat, but nothing told the server. All premium gating reads the server-provided `user.isPremium`, so a purchase unlocked nothing (and server-side limits like coach quota/child count never changed). "Manage Subscription" also opened the Stripe portal, which has no customer for App Store buyers.
+- **What**: Server: `lib/revenuecat.ts` (server-to-server entitlement lookup with `REVENUECAT_SECRET_API_KEY`; family id = RevenueCat app user id), `POST /api/billing/sync-purchases` (parent-only; re-verifies with RevenueCat then sets the family tier), `POST /api/billing/revenuecat-webhook` (shared-secret `REVENUECAT_WEBHOOK_AUTH`, constant-time compare; treated only as a nudge to re-sync, so redelivery/ordering are harmless). Tier = premium if RevenueCat OR Stripe is active; Stripe cancel/expiry events no longer downgrade a family that still holds an App Store subscription (and throw so Stripe retries if RevenueCat is unreachable). Mobile: `Purchases.logIn(familyId)` for parent sessions (logOut otherwise; purchase awaits the login), `apiSyncPurchases()` + `refreshUser()` after purchase/restore, Manage Subscription opens the App Store / Play subscriptions page on native (Stripe portal only on web).
+- **Deploy actions**: set `REVENUECAT_SECRET_API_KEY`, `REVENUECAT_WEBHOOK_AUTH` on the API server; in RevenueCat add the webhook URL `https://<api-domain>/api/billing/revenuecat-webhook` with that Authorization value; create the `premium` entitlement + App Store products; sandbox-test a purchase and a restore.
+- **Limits**: Stripe checkout still exists server-side (used by web). Apple requires IAP for digital goods inside the iOS app, so do not link iOS users to Stripe checkout. A family bought on RevenueCat while the secret key is unset stays free until it is set (sync-purchases returns 503).
+- **Verification**: api-server + mobile typecheck clean. New `test/billing-revenuecat.test.ts` (7 tests) UNRUN on Windows — run on Replit/Linux. Nothing exercised against real RevenueCat/App Store sandbox.
+
 ## 2026-11-05 — Unique URL scheme and EAS environment wiring
 
 - **What**: App URL scheme `mobile` -> `digitalvillage` (`app.json`; server default and `.env.example` for `MOBILE_APP_SCHEME` updated to match — Stripe checkout/portal return URLs use it). `eas.json` build profiles now set `environment` (development/preview/production) so EAS pulls the `EXPO_PUBLIC_*` variables stored per environment; no domain or key is hard-coded. `mobile/.env.example` replaced (it listed unused Supabase vars) with the real variables and the `eas env:create` command.

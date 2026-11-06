@@ -7,6 +7,8 @@ const Purchases = {
   LOG_LEVEL: { DEBUG: "DEBUG" },
   setLogLevel: () => {},
   configure: () => {},
+  logIn: () => Promise.resolve({ customerInfo: { entitlements: { active: {} } }, created: false }),
+  logOut: () => Promise.resolve({ entitlements: { active: {} } }),
   getCustomerInfo: () => Promise.resolve({ entitlements: { active: {} } }),
   getOfferings: () => Promise.resolve({ current: null, all: {} }),
   purchasePackage: unavailable,

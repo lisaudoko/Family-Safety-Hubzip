@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -261,6 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const manageSubscription = useCallback(async () => {
     if (!state.user) return;
+    // Subscriptions bought in-app are managed in the store, not the Stripe portal.
+    if (Platform.OS === "ios") {
+      await Linking.openURL("https://apps.apple.com/account/subscriptions");
+      return;
+    }
+    if (Platform.OS === "android") {
+      await Linking.openURL("https://play.google.com/store/account/subscriptions");
+      return;
+    }
     const { url } = await apiCreatePortalSession();
     const redirectUrl = Linking.createURL("profile");
     await WebBrowser.openAuthSessionAsync(url, redirectUrl);
