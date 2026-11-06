@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -95,87 +96,81 @@ export default function ChildLoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+    <KeyboardAwareScrollViewCompat style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <LinearGradient
+      colors={[colors.primary, colors.teal]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
     >
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <LinearGradient
-        colors={[colors.primary, colors.teal]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
-      >
-        <TouchableOpacity onPress={goBack} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
-        </TouchableOpacity>
+      <TouchableOpacity onPress={goBack} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
+      </TouchableOpacity>
 
-        <View style={[styles.badge, { backgroundColor: colors.primaryForeground + "40" }]}>
-          <Feather name="smile" size={30} color={colors.primaryForeground} />
-        </View>
-
-        <Display style={[styles.title, { color: colors.primaryForeground }]}>
-          {step === "code" && "Kid Login"}
-          {step === "child" && (familyName || "Your Family")}
-          {step === "pin" && (selectedChild?.name ?? "Enter PIN")}
-        </Display>
-        <Body style={[styles.subtitle, { color: colors.primaryForeground + "E6" }]}>
-          {step === "code" && "Enter the code your parent gave you"}
-          {step === "child" && "Tap your name"}
-          {step === "pin" && "Enter your PIN to sign in"}
-        </Body>
-      </LinearGradient>
-
-      <View style={styles.middle}>
-        {step === "code" && (
-          <View style={styles.form}>
-            <TextField
-              label="Family Code"
-              placeholder="ABC123"
-              value={familyCode}
-              onChangeText={setFamilyCode}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={8}
-              style={styles.codeInput}
-            />
-            <Button title={loading ? "Looking…" : "Continue"} onPress={handleFindFamily} loading={loading} disabled={loading} style={styles.btn} />
-          </View>
-        )}
-
-        {step === "child" && (
-          <View style={styles.form}>
-            {children.map(child => (
-              <Card key={child.id} variant="outline" pressable onPress={() => handlePickChild(child)} style={styles.childRow}>
-                <View style={[styles.childAvatar, { backgroundColor: colors.secondary }]}>
-                  <Feather name="user" size={20} color={colors.primary} />
-                </View>
-                <Body color={colors.foreground} style={{ flex: 1 }}>{child.name}</Body>
-                <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-              </Card>
-            ))}
-          </View>
-        )}
-
-        {step === "pin" && (
-          <View style={styles.form}>
-            <TextField
-              label="PIN"
-              placeholder="••••"
-              value={pin}
-              onChangeText={setPin}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={6}
-              style={styles.codeInput}
-            />
-            <Button title={loading ? "Signing in…" : "Sign In"} onPress={handleChildLogin} loading={loading} disabled={loading} style={styles.btn} />
-          </View>
-        )}
+      <View style={[styles.badge, { backgroundColor: colors.primaryForeground + "40" }]}>
+        <Feather name="smile" size={30} color={colors.primaryForeground} />
       </View>
-    </ScrollView>
-    </KeyboardAvoidingView>
+
+      <Display style={[styles.title, { color: colors.primaryForeground }]}>
+        {step === "code" && "Kid Login"}
+        {step === "child" && (familyName || "Your Family")}
+        {step === "pin" && (selectedChild?.name ?? "Enter PIN")}
+      </Display>
+      <Body style={[styles.subtitle, { color: colors.primaryForeground + "E6" }]}>
+        {step === "code" && "Enter the code your parent gave you"}
+        {step === "child" && "Tap your name"}
+        {step === "pin" && "Enter your PIN to sign in"}
+      </Body>
+    </LinearGradient>
+
+    <View style={styles.middle}>
+      {step === "code" && (
+        <View style={styles.form}>
+          <TextField
+            label="Family Code"
+            placeholder="ABC123"
+            value={familyCode}
+            onChangeText={setFamilyCode}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={8}
+            style={styles.codeInput}
+          />
+          <Button title={loading ? "Looking…" : "Continue"} onPress={handleFindFamily} loading={loading} disabled={loading} style={styles.btn} />
+        </View>
+      )}
+
+      {step === "child" && (
+        <View style={styles.form}>
+          {children.map(child => (
+            <Card key={child.id} variant="outline" pressable onPress={() => handlePickChild(child)} style={styles.childRow}>
+              <View style={[styles.childAvatar, { backgroundColor: colors.secondary }]}>
+                <Feather name="user" size={20} color={colors.primary} />
+              </View>
+              <Body color={colors.foreground} style={{ flex: 1 }}>{child.name}</Body>
+              <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+            </Card>
+          ))}
+        </View>
+      )}
+
+      {step === "pin" && (
+        <View style={styles.form}>
+          <TextField
+            label="PIN"
+            placeholder="••••"
+            value={pin}
+            onChangeText={setPin}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={6}
+            style={styles.codeInput}
+          />
+          <Button title={loading ? "Signing in…" : "Sign In"} onPress={handleChildLogin} loading={loading} disabled={loading} style={styles.btn} />
+        </View>
+      )}
+    </View>
+    </KeyboardAwareScrollViewCompat>
   );
 }
 

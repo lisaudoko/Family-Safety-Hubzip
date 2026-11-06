@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Keyboard covering auth forms; remove unused expo-location
+
+- **What**: `login`, `register`, `forgot-password`, `child-login` used React Native's `KeyboardAvoidingView` + `ScrollView`, which does not work under the app-wide `KeyboardProvider` (react-native-keyboard-controller) — the likely cause of the Notes.md report that the keyboard hides the password field and Sign In button on iPhone. They now use the existing `KeyboardAwareScrollViewCompat` (`bottomOffset={24}`). Removed the unused `expo-location` dependency (no imports, no plugin, no permission strings) from `mobile/package.json` and by hand from `pnpm-lock.yaml` (a `pnpm remove` rewrites ~2000 lockfile lines under pnpm 12/Windows); a `--frozen-lockfile` install accepts the result.
+- **Reviewed, no change**: the 17 remaining mobile `console.error/warn` calls only log error messages in catch blocks (no secrets); left as diagnostics until a crash reporter exists. The Notes.md screen-time-save and default-restriction-toggle bugs: client code is correct; the cause was the missing `family_policies`/`child_policies` tables (fixed by the startup-migration commit) — needs on-device verification.
+- **Verification**: mobile typecheck clean. Keyboard behavior NOT verified on a device/simulator.
+
 ## 2026-11-05 — iOS/Android in-app purchases now actually unlock Premium
 
 - **Problem found**: the Subscription screen already bought via RevenueCat, but nothing told the server. All premium gating reads the server-provided `user.isPremium`, so a purchase unlocked nothing (and server-side limits like coach quota/child count never changed). "Manage Subscription" also opened the Stripe portal, which has no customer for App Store buyers.

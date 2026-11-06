@@ -144,12 +144,12 @@ _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, sec
 - [x] Sessions — SecureStore on mobile + SHA-256 hashed tokens at rest + child PIN change revokes sessions (2026-11-05); password reset already revokes all sessions
 - [ ] Decide email-verification gating (billing/coach)
 - [x] Stripe webhook idempotency — done 2026-11-05 (event-id table); out-of-order events handled via `last_stripe_event_at` (2026-11-05)
-- [ ] `expo-location` dependency unused and has no usage strings — remove or justify
+- [x] `expo-location` removed (2026-11-05)
 - [ ] Startup migrations have no versioning/locking (autoscale: concurrent boots)
 - [ ] Fix root `pnpm run lint` (eslint-plugin-react vs ESLint 10) and add Linux CI (typecheck/lint/test); win32 binaries excluded in `pnpm-workspace.yaml` so tests don't run on Windows
 - [ ] Error monitoring (Sentry), DB index review, deployment run/build commands in `.replit`
-- [ ] Resolve `Notes.md` open bugs (keyboard covers sign-in, screen-time save, default-restriction toggles) — verify on device after migration fix
-- [ ] Decide on untracked `.config/`; strip 20 `console.*` calls from mobile
+- [ ] `Notes.md` bugs — keyboard fix applied (auth screens) and policy-table migration fix shipped earlier; **verify all three on a device**, then delete Notes.md
+- [ ] Decide on untracked `.config/`; (mobile console.error calls reviewed 2026-11-05: benign, kept)
 
 ## Pending Decisions
 

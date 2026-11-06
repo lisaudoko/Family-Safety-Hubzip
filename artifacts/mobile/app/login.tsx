@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -60,85 +61,80 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollViewCompat
+      bottomOffset={24}
       style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top : 0}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+      <LinearGradient
+        colors={[colors.primary, colors.teal]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
       >
-        <LinearGradient
-          colors={[colors.primary, colors.teal]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.hero, { paddingTop: insets.top + spacing.lg }]}
-        >
-          <TouchableOpacity onPress={() => router.back()} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
-          </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={styles.back} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="arrow-left" size={22} color={colors.primaryForeground} />
+        </TouchableOpacity>
 
-          <View style={[styles.badge, { backgroundColor: colors.primaryForeground + "40" }]}>
-            <Feather name="sun" size={30} color={colors.primaryForeground} />
-          </View>
-
-          <Display style={[styles.title, { color: colors.primaryForeground }]}>Welcome back</Display>
-          <Body style={[styles.subtitle, { color: colors.primaryForeground + "E6" }]}>Sign in to continue your family&apos;s digital safety journey</Body>
-        </LinearGradient>
-
-        <View style={styles.middle}>
-          <View style={styles.form}>
-            <TextField
-              label="Email"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError("");
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              errorText={emailError || undefined}
-            />
-
-            <TextField
-              label="Password"
-              placeholder="Your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPw}
-              autoComplete="password"
-              rightElement={
-                <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
-                </TouchableOpacity>
-              }
-            />
-
-            <TouchableOpacity onPress={() => router.push("/forgot-password")} style={styles.forgotRow}>
-              <Body color={colors.primary} style={{ fontSize: 13 }}>Forgot password?</Body>
-            </TouchableOpacity>
-
-            <Button title={loading ? "Signing in…" : "Sign In"} onPress={handleLogin} loading={loading} disabled={loading} style={styles.btn} />
-          </View>
+        <View style={[styles.badge, { backgroundColor: colors.primaryForeground + "40" }]}>
+          <Feather name="sun" size={30} color={colors.primaryForeground} />
         </View>
 
-        <TouchableOpacity onPress={() => router.push("/register")} style={styles.switchRow}>
-          <Body color={colors.mutedForeground}>
-            Don&apos;t have an account? <Body color={colors.primary}>Create one</Body>
-          </Body>
-        </TouchableOpacity>
+        <Display style={[styles.title, { color: colors.primaryForeground }]}>Welcome back</Display>
+        <Body style={[styles.subtitle, { color: colors.primaryForeground + "E6" }]}>Sign in to continue your family&apos;s digital safety journey</Body>
+      </LinearGradient>
 
-        <TouchableOpacity onPress={() => router.push("/child-login")} style={styles.switchRow}>
-          <Body color={colors.mutedForeground}>
-            Are you a kid? <Body color={colors.primary}>Log in here</Body>
-          </Body>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={styles.middle}>
+        <View style={styles.form}>
+          <TextField
+            label="Email"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (emailError) setEmailError("");
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            errorText={emailError || undefined}
+          />
+
+          <TextField
+            label="Password"
+            placeholder="Your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPw}
+            autoComplete="password"
+            rightElement={
+              <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather name={showPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            }
+          />
+
+          <TouchableOpacity onPress={() => router.push("/forgot-password")} style={styles.forgotRow}>
+            <Body color={colors.primary} style={{ fontSize: 13 }}>Forgot password?</Body>
+          </TouchableOpacity>
+
+          <Button title={loading ? "Signing in…" : "Sign In"} onPress={handleLogin} loading={loading} disabled={loading} style={styles.btn} />
+        </View>
+      </View>
+
+      <TouchableOpacity onPress={() => router.push("/register")} style={styles.switchRow}>
+        <Body color={colors.mutedForeground}>
+          Don&apos;t have an account? <Body color={colors.primary}>Create one</Body>
+        </Body>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/child-login")} style={styles.switchRow}>
+        <Body color={colors.mutedForeground}>
+          Are you a kid? <Body color={colors.primary}>Log in here</Body>
+        </Body>
+      </TouchableOpacity>
+    </KeyboardAwareScrollViewCompat>
   );
 }
 
