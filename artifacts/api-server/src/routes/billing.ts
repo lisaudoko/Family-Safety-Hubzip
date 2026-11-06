@@ -73,7 +73,7 @@ router.post('/billing/checkout-session', requireAuth as any, requireParent, asyn
 
     const customerId = await getOrCreateStripeCustomer(req.familyId, profile?.email ?? null);
 
-    const scheme = process.env.MOBILE_APP_SCHEME ?? 'mobile';
+    const scheme = process.env.MOBILE_APP_SCHEME ?? 'digitalvillage';
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -122,7 +122,7 @@ router.post('/billing/portal-session', requireAuth as any, requireParent, async 
       return;
     }
 
-    const scheme = process.env.MOBILE_APP_SCHEME ?? 'mobile';
+    const scheme = process.env.MOBILE_APP_SCHEME ?? 'digitalvillage';
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: `${scheme}://profile`,

@@ -2,6 +2,13 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Unique URL scheme and EAS environment wiring
+
+- **What**: App URL scheme `mobile` -> `digitalvillage` (`app.json`; server default and `.env.example` for `MOBILE_APP_SCHEME` updated to match — Stripe checkout/portal return URLs use it). `eas.json` build profiles now set `environment` (development/preview/production) so EAS pulls the `EXPO_PUBLIC_*` variables stored per environment; no domain or key is hard-coded. `mobile/.env.example` replaced (it listed unused Supabase vars) with the real variables and the `eas env:create` command.
+- **Deploy action required (not doable from code)**: create `EXPO_PUBLIC_DOMAIN` (API host, no scheme) and the three RevenueCat keys in each EAS environment, and set `MOBILE_APP_SCHEME=digitalvillage` (or leave unset) on the API server. Without `EXPO_PUBLIC_DOMAIN` a native build sends every request to a relative URL and fails.
+- **Not changed**: `expo-router` plugin `origin` is still `https://replit.com/` — set it to the production web origin if you ship web/API routes or universal links.
+- **Verification**: static config only; typecheck unaffected, no EAS build run.
+
 ## 2026-11-05 — Stripe webhook event ordering
 
 - **What**: New nullable `subscriptions.last_stripe_event_at` (schema + startup-migrate ALTER). `checkout.session.completed` (upsert `setWhere`), `customer.subscription.updated/deleted` and `invoice.payment_failed` now only write when the event's `created` time is >= the last applied one (ties apply — Stripe timestamps are 1s resolution); a stale event is acknowledged with 200 and changes nothing, including the family premium/free tier. Before this, a late-arriving old event could overwrite newer subscription state or flip a family's tier.

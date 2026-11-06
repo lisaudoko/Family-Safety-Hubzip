@@ -4,7 +4,7 @@
 // so a syntactically-valid dummy test-mode key is enough to let the app
 // import cleanly without making any real Stripe network calls.
 process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy_key_for_tests_00000000000000000000';
-process.env.MOBILE_APP_SCHEME ??= 'mobile';
+process.env.MOBILE_APP_SCHEME ??= 'digitalvillage';
 // Ensure the email module takes its no-op console-log branch instead of
 // trying to open a real SMTP connection.
 delete process.env.SMTP_HOST;

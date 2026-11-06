@@ -140,7 +140,7 @@ _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, sec
 - [ ] **Privacy policy + terms** linked in-app and in store listing; COPPA / parental-consent flow; App Store privacy labels (needs product-owner/legal)
 - [ ] Apple setup: real `appleTeamId` in `app.json`, Family Controls for 3 extension App IDs, App Group, EAS dev build + device test
 - [ ] Billing on iOS: Stripe checkout/portal must not be the iOS purchase path (use RevenueCat IAP). _RevenueCat startup crash fixed 2026-11-05 (missing keys now non-fatal); still set the 3 keys in `eas.json` env._
-- [ ] Production config: unique URL scheme (currently `mobile`; also `MOBILE_APP_SCHEME`), `expo-router` origin is `replit.com`, `EXPO_PUBLIC_DOMAIN` in eas.json (base URL falls back to `""`), SMTP creds, `CORS_ORIGINS`, `STRIPE_WEBHOOK_SECRET`
+- [ ] Production config — _scheme now `digitalvillage` and `eas.json` wired to EAS environments (2026-11-05)_; remaining: create `EXPO_PUBLIC_DOMAIN` + RevenueCat keys in each EAS environment, set `expo-router` `origin` (still `replit.com`), SMTP creds, `CORS_ORIGINS`, `STRIPE_WEBHOOK_SECRET`
 - [x] Sessions — SecureStore on mobile + SHA-256 hashed tokens at rest + child PIN change revokes sessions (2026-11-05); password reset already revokes all sessions
 - [ ] Decide email-verification gating (billing/coach)
 - [x] Stripe webhook idempotency — done 2026-11-05 (event-id table); out-of-order events handled via `last_stripe_event_at` (2026-11-05)
