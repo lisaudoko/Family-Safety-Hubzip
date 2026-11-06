@@ -329,6 +329,13 @@ export async function runStartupMigrations(): Promise<void> {
        )`,
       `CREATE INDEX IF NOT EXISTS subscriptions_customer_idx ON subscriptions(stripe_customer_id)`,
 
+      // ── stripe_webhook_events ─────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+         id TEXT PRIMARY KEY,
+         type TEXT NOT NULL,
+         received_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+
       // ── coach_usage ───────────────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS coach_usage (
          id TEXT PRIMARY KEY,

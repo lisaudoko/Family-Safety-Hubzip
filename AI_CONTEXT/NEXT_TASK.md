@@ -139,11 +139,11 @@ _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, sec
 - [x] **Account deletion** — implemented 2026-11-05 (`DELETE /api/auth/account` + Profile UI); tests unrun, add App Store subscription-cancel copy
 - [ ] **Privacy policy + terms** linked in-app and in store listing; COPPA / parental-consent flow; App Store privacy labels (needs product-owner/legal)
 - [ ] Apple setup: real `appleTeamId` in `app.json`, Family Controls for 3 extension App IDs, App Group, EAS dev build + device test
-- [ ] Billing on iOS: Stripe checkout/portal must not be the iOS purchase path (use RevenueCat IAP); `getRevenueCatApiKey()` throws if any of 3 keys unset — make non-fatal / set in `eas.json` env
+- [ ] Billing on iOS: Stripe checkout/portal must not be the iOS purchase path (use RevenueCat IAP). _RevenueCat startup crash fixed 2026-11-05 (missing keys now non-fatal); still set the 3 keys in `eas.json` env._
 - [ ] Production config: unique URL scheme (currently `mobile`; also `MOBILE_APP_SCHEME`), `expo-router` origin is `replit.com`, `EXPO_PUBLIC_DOMAIN` in eas.json (base URL falls back to `""`), SMTP creds, `CORS_ORIGINS`, `STRIPE_WEBHOOK_SECRET`
-- [ ] Sessions: store token in SecureStore (currently AsyncStorage), hash tokens at rest, revoke on password change
+- [ ] Sessions: _token now in SecureStore (2026-11-05)_; still TODO: hash tokens at rest, revoke other sessions on password change
 - [ ] Decide email-verification gating (billing/coach)
-- [ ] Stripe webhook idempotency (dedupe by event id)
+- [x] Stripe webhook idempotency — done 2026-11-05 (event-id table); out-of-order events still open (compare `event.created`)
 - [ ] `expo-location` dependency unused and has no usage strings — remove or justify
 - [ ] Startup migrations have no versioning/locking (autoscale: concurrent boots)
 - [ ] Fix root `pnpm run lint` (eslint-plugin-react vs ESLint 10) and add Linux CI (typecheck/lint/test); win32 binaries excluded in `pnpm-workspace.yaml` so tests don't run on Windows

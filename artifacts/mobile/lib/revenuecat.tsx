@@ -10,35 +10,27 @@ const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_AP
 
 export const REVENUECAT_ENTITLEMENT_IDENTIFIER = "premium";
 
-function getRevenueCatApiKey() {
-  if (!REVENUECAT_TEST_API_KEY || !REVENUECAT_IOS_API_KEY || !REVENUECAT_ANDROID_API_KEY) {
-    throw new Error("RevenueCat Public API Keys not found");
-  }
-
+// Returns the key for this platform/build, or null when none is configured. A
+// missing key must never crash the app: subscriptions are simply unavailable.
+function getRevenueCatApiKey(): string | null {
   // Use Test Store key for dev, web, and store client
   if (__DEV__ || Platform.OS === "web" || Constants.executionEnvironment === "storeClient") {
-    return REVENUECAT_TEST_API_KEY;
+    return REVENUECAT_TEST_API_KEY ?? null;
   }
-
-  if (Platform.OS === "ios") {
-    return REVENUECAT_IOS_API_KEY;
-  }
-
-  if (Platform.OS === "android") {
-    return REVENUECAT_ANDROID_API_KEY;
-  }
-
-  return REVENUECAT_TEST_API_KEY;
+  if (Platform.OS === "ios") return REVENUECAT_IOS_API_KEY ?? null;
+  if (Platform.OS === "android") return REVENUECAT_ANDROID_API_KEY ?? null;
+  return REVENUECAT_TEST_API_KEY ?? null;
 }
+
+let revenueCatConfigured = false;
 
 export function initializeRevenueCat() {
   const apiKey = getRevenueCatApiKey();
-  if (!apiKey) throw new Error("RevenueCat Public API Key not found");
+  if (!apiKey) return;
 
-  Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
+  if (__DEV__) Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
   Purchases.configure({ apiKey });
-
-  console.log("Configured RevenueCat");
+  revenueCatConfigured = true;
 }
 
 function useSubscriptionContext() {
@@ -49,6 +41,7 @@ function useSubscriptionContext() {
       return info;
     },
     staleTime: 60 * 1000,
+    enabled: revenueCatConfigured,
   });
 
   const offeringsQuery = useQuery({
@@ -58,6 +51,7 @@ function useSubscriptionContext() {
       return offerings;
     },
     staleTime: 300 * 1000,
+    enabled: revenueCatConfigured,
   });
 
   const purchaseMutation = useMutation({

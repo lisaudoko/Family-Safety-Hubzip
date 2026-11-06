@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import { getSecureItem, removeSecureItem, setSecureItem } from "@/lib/secureStorage";
 
 const TOKEN_KEY = "@dv_auth_token";
 
@@ -25,18 +26,18 @@ function getBase(): string {
 
 export async function getToken(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    return await getSecureItem(TOKEN_KEY);
   } catch {
     return null;
   }
 }
 
 export async function setToken(token: string): Promise<void> {
-  await AsyncStorage.setItem(TOKEN_KEY, token);
+  await setSecureItem(TOKEN_KEY, token);
 }
 
 export async function clearToken(): Promise<void> {
-  await AsyncStorage.removeItem(TOKEN_KEY);
+  await removeSecureItem(TOKEN_KEY);
 }
 
 // ── Core fetch wrapper ──────────────────────────────────────────────────────

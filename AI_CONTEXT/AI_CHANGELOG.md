@@ -2,6 +2,13 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-05 — Session token in SecureStore, quiet RevenueCat init, Stripe webhook idempotency
+
+- **What**: (1) New `mobile/lib/secureStorage.ts`; session token and the stashed parent token (child-switch) now live in expo-secure-store on native (AsyncStorage on web), with a one-time migration of legacy AsyncStorage tokens on first read. (2) `lib/revenuecat.tsx`: no longer throws when a platform key is missing — picks the one key for the platform, skips configure and disables queries if absent, debug logging only in __DEV__. (3) New `stripe_webhook_events` table (schema + startup-migrate); webhook claims the event id before processing (duplicate → 200 `{duplicate:true}`), releases the claim if handling throws so Stripe's retry reprocesses.
+- **Not done**: hashing session tokens at rest in the DB; revoking sessions on password change; out-of-order Stripe events (handlers set absolute state; a stale `subscription.updated` arriving late could overwrite newer state — consider comparing `event.created`).
+- **Verification**: libs/api-server/mobile typecheck clean. New `test/stripe-webhook-idempotency.test.ts` unrun (Windows can't run Vitest here). SecureStore not tested on device.
+- **Files**: `mobile/lib/secureStorage.ts`, `apiClient.ts`, `context/AuthContext.tsx`, `lib/revenuecat.tsx`, `lib/db/src/schema/index.ts`, `api-server/src/lib/startup-migrate.ts`, `routes/billing.ts`.
+
 ## 2026-11-05 — Account deletion (App Store 5.1.1(v))
 
 - **What**: `DELETE /api/auth/account` (parent only, body `{ password }`; 403 for child/admin/support sessions, 401 wrong password, 409 if another parent shares the family). Cancels the Stripe subscription and deletes the Stripe customer first (aborts with 502 if that fails, so no one is deleted-but-billed), then in one transaction deletes child profiles (no FK to family) and the parent profile, which cascades to family, children rows, devices/events, policies, progress, subscriptions, sessions, audit rows. Logged via pino (audit rows cascade away). Mobile: `apiDeleteAccount`, `AuthContext.deleteAccount` (wipes AsyncStorage on success only), "Delete Account" button + password-confirm modal on Profile (parents only, hidden while in a child-impersonation state).

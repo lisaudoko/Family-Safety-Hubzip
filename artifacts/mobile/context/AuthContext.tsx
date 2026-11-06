@@ -18,6 +18,7 @@ import {
   getToken,
   setToken,
 } from "@/lib/apiClient";
+import { getSecureItem, removeSecureItem, setSecureItem } from "@/lib/secureStorage";
 import {
   clearPendingLocalPassword,
   setPendingLocalPassword,
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { user } = await apiGetMe();
           setState({ user: apiUserToUser(user), isLoading: false, isAuthenticated: true });
-          setCanReturnToParent(user.role === "child" && !!(await AsyncStorage.getItem(PARENT_TOKEN_KEY)));
+          setCanReturnToParent(user.role === "child" && !!(await getSecureItem(PARENT_TOKEN_KEY)));
           return;
         } catch {
           // Token is expired/invalid — clear it and fall through to local check
@@ -205,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiLogout();
     await clearToken();
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
-    await AsyncStorage.removeItem(PARENT_TOKEN_KEY);
+    await removeSecureItem(PARENT_TOKEN_KEY);
     await AsyncStorage.removeItem(PARENT_KEY);
     await clearPendingLocalPassword();
     setCanReturnToParent(false);
@@ -217,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deleteAccount = useCallback(async (password: string) => {
     await apiDeleteAccount(password);
     await clearToken();
+    await removeSecureItem(PARENT_TOKEN_KEY);
     await clearPendingLocalPassword();
     await AsyncStorage.clear();
     setCanReturnToParent(false);
@@ -283,7 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (state.user?.role === "parent") {
       const parentToken = await getToken();
       if (parentToken) {
-        await AsyncStorage.setItem(PARENT_TOKEN_KEY, parentToken);
+        await setSecureItem(PARENT_TOKEN_KEY, parentToken);
         await AsyncStorage.setItem(PARENT_KEY, JSON.stringify(state.user));
       }
     }
@@ -291,15 +293,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setToken(token);
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
     setState({ user: apiUserToUser(user), isLoading: false, isAuthenticated: true });
-    setCanReturnToParent(!!(await AsyncStorage.getItem(PARENT_TOKEN_KEY)));
+    setCanReturnToParent(!!(await getSecureItem(PARENT_TOKEN_KEY)));
   }, [state.user]);
 
   const returnToParent = useCallback(async () => {
-    const parentToken = await AsyncStorage.getItem(PARENT_TOKEN_KEY);
+    const parentToken = await getSecureItem(PARENT_TOKEN_KEY);
     const parentRaw = await AsyncStorage.getItem(PARENT_KEY);
     if (!parentToken || !parentRaw) return;
     await setToken(parentToken);
-    await AsyncStorage.removeItem(PARENT_TOKEN_KEY);
+    await removeSecureItem(PARENT_TOKEN_KEY);
     await AsyncStorage.removeItem(PARENT_KEY);
     const parent: User = JSON.parse(parentRaw);
     setState({ user: parent, isLoading: false, isAuthenticated: true });

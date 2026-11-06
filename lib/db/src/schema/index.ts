@@ -781,6 +781,13 @@ export const selectSubscriptionSchema = createSelectSchema(subscriptionsTable);
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptionsTable.$inferSelect;
 
+// ── stripe_webhook_events (idempotency: one row per processed Stripe event id) ───
+export const stripeWebhookEventsTable = pgTable('stripe_webhook_events', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull(),
+  received_at: timestamp('received_at').notNull().defaultNow(),
+});
+
 // ── coach_usage ──────────────────────────────────────────────────────────────────
 export const coachUsageTable = pgTable(
   'coach_usage',

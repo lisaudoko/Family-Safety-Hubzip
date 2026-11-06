@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { db } from '@workspace/db';
-import { profilesTable, subscriptionsTable } from '@workspace/db';
+import { profilesTable, subscriptionsTable, stripeWebhookEventsTable } from '@workspace/db';
 import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { requireAuth, requireParent, type AuthRequest } from '../lib/auth-middleware.js';
@@ -165,6 +165,19 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
     return;
   }
 
+  // Idempotency: Stripe retries deliveries. Claim the event id first; a conflict
+  // means it was already handled. If processing fails the claim is released so
+  // Stripe's retry can run again.
+  const claimed = await db
+    .insert(stripeWebhookEventsTable)
+    .values({ id: event.id, type: event.type })
+    .onConflictDoNothing()
+    .returning({ id: stripeWebhookEventsTable.id });
+  if (claimed.length === 0) {
+    res.json({ received: true, duplicate: true });
+    return;
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -268,6 +281,10 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
 
     res.json({ received: true });
   } catch (err) {
+    await db
+      .delete(stripeWebhookEventsTable)
+      .where(eq(stripeWebhookEventsTable.id, event.id))
+      .catch(() => undefined);
     next(err);
   }
 }
