@@ -6,6 +6,8 @@ export default defineConfig({
     globals: false,
     include: ['test/**/*.test.ts'],
     setupFiles: ['./test/setup.ts'],
+    // Applies the server's idempotent startup migrations once per run.
+    globalSetup: ['./test/global-setup.ts'],
     testTimeout: 20000,
     hookTimeout: 20000,
     // Run test files serially (not in parallel worker pools) since they all

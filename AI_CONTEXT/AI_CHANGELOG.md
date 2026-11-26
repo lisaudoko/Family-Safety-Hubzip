@@ -2,6 +2,11 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — Tests apply startup migrations themselves
+
+- **What**: After the terms-checkbox change, 110/118 tests failed with 500 on registration because the dev database lacked `profiles.terms_accepted_at`: the column is added by `runStartupMigrations`, which only runs when the API server boots, and tests import `app` directly. New `test/global-setup.ts` (wired as Vitest `globalSetup`) runs the same idempotent migrations once per test run and closes the pool after. Schema additions no longer require restarting the server before testing.
+- **Verification**: src + tests typecheck. Re-run on Replit.
+
 ## 2026-11-26 — "I agree" checkbox at sign-up (terms acceptance recorded)
 
 - **What**: Register screen has an "I agree to the Terms of Use and Privacy Policy" checkbox (links open the documents behind the parent gate, as on Welcome); "Create Free Account" stays disabled until it is ticked. `POST /api/auth/register` now **requires** `acceptedTerms: true` (400 otherwise; safe because the app has not launched, so no older clients exist) and stores `profiles.terms_accepted_at` (schema + startup ALTER). `apiRegister`/`AuthContext.register` take the flag; offline-created accounts sync with `true` since they can only be created after ticking the box.
