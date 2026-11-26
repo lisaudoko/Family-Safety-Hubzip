@@ -14,6 +14,8 @@ export const profilesTable = pgTable(
     subscription_tier: text('subscription_tier').notNull().default('free'),
     family_id: text('family_id'),
     has_completed_onboarding: boolean('has_completed_onboarding').notNull().default(false),
+    // When the parent ticked "I agree to the Terms of Use and Privacy Policy" at sign-up.
+    terms_accepted_at: timestamp('terms_accepted_at'),
     email_verified: boolean('email_verified').notNull().default(false),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),

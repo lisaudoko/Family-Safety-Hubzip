@@ -1,5 +1,7 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
 import { logger } from '../src/lib/logger.js';
+import { eq } from 'drizzle-orm';
+import { db, profilesTable } from '@workspace/db';
 
 // With SMTP unset, src/lib/email.ts logs the code via pino (outside production);
 // that log line is the only place a test can recover the plaintext code.
@@ -24,7 +26,7 @@ describe('auth flows', () => {
     const email = uniqueEmail('reg');
     const res = await api
       .post('/api/auth/register')
-      .send({ name: 'Reg Test', email, password: 'password123' });
+      .send({ acceptedTerms: true, name: 'Reg Test', email, password: 'password123' });
 
     expect(res.status).toBe(201);
     expect(res.body.token).toBeTruthy();
@@ -40,31 +42,31 @@ describe('auth flows', () => {
     const email = uniqueEmail('dupe');
     const first = await api
       .post('/api/auth/register')
-      .send({ name: 'First', email, password: 'password123' });
+      .send({ acceptedTerms: true, name: 'First', email, password: 'password123' });
     cleanup.trackUser(first.body.user.id);
 
     const second = await api
       .post('/api/auth/register')
-      .send({ name: 'Second', email, password: 'password123' });
+      .send({ acceptedTerms: true, name: 'Second', email, password: 'password123' });
     expect(second.status).toBe(409);
   });
 
   it('rejects registration with a short password or malformed email (400)', async () => {
     const shortPw = await api
       .post('/api/auth/register')
-      .send({ name: 'X', email: uniqueEmail('short'), password: '123' });
+      .send({ acceptedTerms: true, name: 'X', email: uniqueEmail('short'), password: '123' });
     expect(shortPw.status).toBe(400);
 
     const badEmail = await api
       .post('/api/auth/register')
-      .send({ name: 'X', email: 'not-an-email', password: 'password123' });
+      .send({ acceptedTerms: true, name: 'X', email: 'not-an-email', password: 'password123' });
     expect(badEmail.status).toBe(400);
   });
 
   it('logs in with correct credentials and rejects incorrect ones', async () => {
     const email = uniqueEmail('login');
     const password = 'password123';
-    const reg = await api.post('/api/auth/register').send({ name: 'Login Test', email, password });
+    const reg = await api.post('/api/auth/register').send({ acceptedTerms: true, name: 'Login Test', email, password });
     cleanup.trackUser(reg.body.user.id);
 
     const good = await api.post('/api/auth/login').send({ email, password });
@@ -109,7 +111,7 @@ describe('auth flows', () => {
     const email = uniqueEmail('reset');
     const reg = await api
       .post('/api/auth/register')
-      .send({ name: 'Reset Test', email, password: 'oldpassword' });
+      .send({ acceptedTerms: true, name: 'Reset Test', email, password: 'oldpassword' });
     cleanup.trackUser(reg.body.user.id);
 
     // SMTP isn't configured in this test environment, so sendPasswordResetEmail
@@ -152,7 +154,7 @@ describe('auth flows', () => {
     const logSpy = spyEmailLog();
     const reg = await api
       .post('/api/auth/register')
-      .send({ name: 'Verify Test', email, password: 'password123' });
+      .send({ acceptedTerms: true, name: 'Verify Test', email, password: 'password123' });
     cleanup.trackUser(reg.body.user.id);
     expect(reg.body.user.emailVerified).toBe(false);
 
@@ -200,13 +202,32 @@ describe('auth flows', () => {
   });
 });
 
+describe('terms acceptance at sign-up', () => {
+  it('rejects registration without accepting the terms, and records when they were accepted', async () => {
+    const email = uniqueEmail('terms');
+    const refused = await api.post('/api/auth/register').send({ name: 'Terms', email, password: 'password123' });
+    expect(refused.status).toBe(400);
+
+    const before = Date.now();
+    const ok = await api
+      .post('/api/auth/register')
+      .send({ acceptedTerms: true, name: 'Terms', email, password: 'password123' });
+    expect(ok.status).toBe(201);
+    cleanup.trackUser(ok.body.user.id);
+
+    const [row] = await db.select().from(profilesTable).where(eq(profilesTable.id, ok.body.user.id));
+    expect(row!.terms_accepted_at).toBeInstanceOf(Date);
+    expect(row!.terms_accepted_at!.getTime()).toBeGreaterThanOrEqual(before - 5_000);
+  });
+});
+
 describe('failed-login lockout', () => {
   it('429s after repeated failed logins for one account, without affecting other accounts', async () => {
     const victim = uniqueEmail('lockout');
     const other = uniqueEmail('lockout-other');
     const reg = await api
       .post('/api/auth/register')
-      .send({ name: 'Lockout', email: victim, password: 'password123' });
+      .send({ acceptedTerms: true, name: 'Lockout', email: victim, password: 'password123' });
     cleanup.trackUser(reg.body.user.id);
 
     let last = 0;

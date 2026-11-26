@@ -22,6 +22,7 @@ export async function runStartupMigrations(): Promise<void> {
        END $$`,
 
       `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE profiles ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP`,
 
       // ── families ────────────────────────────────────────────────────────────
       `ALTER TABLE families ADD COLUMN IF NOT EXISTS family_code TEXT`,

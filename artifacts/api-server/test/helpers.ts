@@ -66,7 +66,7 @@ export async function registerParent(cleanup: Cleanup, label = 'parent'): Promis
   const email = uniqueEmail(label);
   const res = await api
     .post('/api/auth/register')
-    .send({ name: `Test ${label}`, email, password: 'password123' });
+    .send({ acceptedTerms: true, name: `Test ${label}`, email, password: 'password123' });
   if (res.status !== 201) {
     throw new Error(`registerParent failed: ${res.status} ${JSON.stringify(res.body)}`);
   }

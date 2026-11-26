@@ -135,7 +135,9 @@ export async function syncLocalAccountToServer(localUser: {
   };
 
   try {
-    return await finish(await apiRegister(localUser.name, localUser.email, password));
+    // Offline accounts are only created from the sign-up screen, after the
+    // parent ticked the terms checkbox, so acceptance carries over to the sync.
+    return await finish(await apiRegister(localUser.name, localUser.email, password, true));
   } catch (err) {
     if (err instanceof Error && err.message.includes("already exists")) {
       try {

@@ -46,7 +46,7 @@ interface AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, acceptedTerms: boolean) => Promise<void>;
   childLogin: (childId: string, pin: string) => Promise<void>;
   logout: () => Promise<void>;
   deleteAccount: (password: string) => Promise<void>;
@@ -187,9 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, email: string, password: string, acceptedTerms: boolean) => {
     try {
-      const { token, user } = await apiRegister(name, email, password);
+      const { token, user } = await apiRegister(name, email, password, acceptedTerms);
       await setToken(token);
       await AsyncStorage.removeItem(LOCAL_USER_KEY);
       setState({ user: apiUserToUser(user), isLoading: false, isAuthenticated: true });

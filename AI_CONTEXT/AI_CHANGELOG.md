@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — "I agree" checkbox at sign-up (terms acceptance recorded)
+
+- **What**: Register screen has an "I agree to the Terms of Use and Privacy Policy" checkbox (links open the documents behind the parent gate, as on Welcome); "Create Free Account" stays disabled until it is ticked. `POST /api/auth/register` now **requires** `acceptedTerms: true` (400 otherwise; safe because the app has not launched, so no older clients exist) and stores `profiles.terms_accepted_at` (schema + startup ALTER). `apiRegister`/`AuthContext.register` take the flag; offline-created accounts sync with `true` since they can only be created after ticking the box.
+- **Tests**: every test registration sends `acceptedTerms: true` (`helpers.ts`, `auth-flows.test.ts`); new test asserts the 400 without it and that `terms_accepted_at` is recorded. Typechecked (src + tests); re-run on Replit.
+- **Follow-up**: no terms *version* is stored — if the terms change materially, consider adding `terms_version` and re-prompting.
+
 ## 2026-11-26 — First real test run: 5 failures fixed, 2 production bugs found
 
 - **Context**: the product owner ran the api-server suite on Replit (first run of the tests added since the 2026-11-05 audit): 111 passed, 5 failed.

@@ -104,10 +104,11 @@ async function issueEmailVerificationCode(userId: string, email: string): Promis
 // POST /api/auth/register
 router.post('/auth/register', async (req, res, next) => {
   try {
-    const { name, email, password } = req.body as {
+    const { name, email, password, acceptedTerms } = req.body as {
       name?: string;
       email?: string;
       password?: string;
+      acceptedTerms?: boolean;
     };
 
     if (!name?.trim() || !email?.trim() || !password || password.length < 6) {
@@ -117,6 +118,11 @@ router.post('/auth/register', async (req, res, next) => {
 
     if (!EMAIL_REGEX.test(email.trim())) {
       res.status(400).json({ error: 'Please enter a valid email address' });
+      return;
+    }
+
+    if (acceptedTerms !== true) {
+      res.status(400).json({ error: 'You must agree to the Terms of Use and Privacy Policy' });
       return;
     }
 
@@ -146,6 +152,7 @@ router.post('/auth/register', async (req, res, next) => {
         role: 'parent',
         subscription_tier: 'free',
         has_completed_onboarding: false,
+        terms_accepted_at: new Date(),
       })
       .returning();
 

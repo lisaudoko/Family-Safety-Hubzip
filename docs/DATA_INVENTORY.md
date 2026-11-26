@@ -7,6 +7,7 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 | Data | Whose | Purpose | Stored where | Notes |
 | --- | --- | --- | --- | --- |
 | Name, email, password (bcrypt hash) | Parent | Account, sign-in, password reset | `profiles` | Email is used to send reset and verification codes |
+| Date the parent accepted the Terms of Use and Privacy Policy | Parent | Record of consent at sign-up | `profiles.terms_accepted_at` | |
 | Child first name, age band, PIN (bcrypt hash) | Child (entered by parent) | Child profile and sign-in | `children`, `profiles` | No child email. Children cannot self-register |
 | Family name, family code | Family | Linking parent and children | `families` | |
 | Learning progress (courses, lessons, quiz scores, badges, assessment, challenges) | Parent and child | App functionality | `user_progress` | |

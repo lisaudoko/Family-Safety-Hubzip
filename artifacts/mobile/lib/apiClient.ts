@@ -88,10 +88,12 @@ export async function apiRegister(
   name: string,
   email: string,
   password: string,
+  /** The parent ticked "I agree to the Terms of Use and Privacy Policy". Required by the server. */
+  acceptedTerms: boolean,
 ): Promise<{ token: string; user: ApiUser }> {
   return apiFetch("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, password, acceptedTerms }),
   });
 }
 
