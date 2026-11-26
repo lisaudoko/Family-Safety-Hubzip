@@ -8,13 +8,21 @@ import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 import { TABS } from "@/constants/tabs";
 
+// The AI Coach is parents-only; child sessions never see the tab.
+function useHiddenTab() {
+  const { user } = useAuth();
+  return (key: string) => key === "coach" && user?.role !== "parent";
+}
+
 function NativeTabLayout() {
+  const isHidden = useHiddenTab();
   return (
     <NativeTabs>
       {TABS.map(tab => (
-        <NativeTabs.Trigger key={tab.key} name={tab.key}>
+        <NativeTabs.Trigger key={tab.key} name={tab.key} hidden={isHidden(tab.key)}>
           <Icon sf={{ default: tab.sfSymbol as never, selected: tab.sfSymbolSelected as never }} />
           <Label>{tab.label}</Label>
         </NativeTabs.Trigger>
@@ -25,6 +33,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const isHidden = useHiddenTab();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
@@ -67,6 +76,7 @@ function ClassicTabLayout() {
           name={tab.key}
           options={{
             title: tab.label,
+            href: isHidden(tab.key) ? null : undefined,
             tabBarIcon: ({ color }) =>
               isIOS ? (
                 <SymbolView name={tab.sfSymbol as never} tintColor={color} size={24} />

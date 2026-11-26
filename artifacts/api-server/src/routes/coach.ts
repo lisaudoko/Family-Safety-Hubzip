@@ -5,7 +5,7 @@ import { SendCoachMessageBody, SendCoachMessageResponse } from "@workspace/api-z
 import { db } from "@workspace/db";
 import { coachUsageTable } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
-import { requireAuth, type AuthRequest } from "../lib/auth-middleware.js";
+import { requireAuth, requireParent, type AuthRequest } from "../lib/auth-middleware.js";
 import { isFamilyPremium, currentPeriod } from "../lib/subscription.js";
 
 const router: IRouter = Router();
@@ -49,7 +49,10 @@ function sanitizeReply(text: string): string {
     .trim();
 }
 
-router.post("/coach/chat", async (req: AuthRequest, res): Promise<void> => {
+// Parents only (product decision 2026-11-26): children's free text must not be
+// sent to a third-party AI (COPPA / Google Play Families Policy). Gated per route,
+// not router.use, so other routers' child requests are unaffected.
+router.post("/coach/chat", requireParent as any, async (req: AuthRequest, res): Promise<void> => {
   const parsed = SendCoachMessageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

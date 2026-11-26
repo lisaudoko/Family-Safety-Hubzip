@@ -134,7 +134,7 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 
 ## Launch checklist (2026-11-26)
 
-The product owner's full store-launch checklist is triaged in `docs/LAUNCH_CHECKLIST.md` (source of truth for launch status). Decided 2026-11-26: Play audience = parents + children 6–17 (Families Policy; app-side changes done), retention = tiered (job built). Open decisions: push notifications (none exist), AI Coach access for children.
+The product owner's full store-launch checklist is triaged in `docs/LAUNCH_CHECKLIST.md` (source of truth for launch status). Decided 2026-11-26: Play audience = parents + children 6–17 (Families Policy; app-side changes done), retention = tiered (job built). AI Coach = parents only (done). Open decision: push notifications (none exist).
 
 ## Release Blockers (audit 2026-11-05) — must resolve before App Store / production
 

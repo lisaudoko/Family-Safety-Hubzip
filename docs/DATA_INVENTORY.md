@@ -29,7 +29,7 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 
 | Service | What it receives | Why |
 | --- | --- | --- |
-| Anthropic (Claude API) | Text of AI Coach messages, sent from our server | Generating coach replies. No account identifiers are sent |
+| Anthropic (Claude API) | Text of AI Coach messages, sent from our server. **Parents only**: child accounts cannot use the Coach | Generating coach replies. No account identifiers are sent |
 | RevenueCat | Family ID (as the app user ID), purchase receipts | In-app subscriptions |
 | Apple App Store / Google Play | Purchase transactions | Payments |
 | Stripe | Parent email, family ID (metadata) | Web subscriptions only |

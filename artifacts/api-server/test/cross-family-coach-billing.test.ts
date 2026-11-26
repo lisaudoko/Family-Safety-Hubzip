@@ -131,6 +131,17 @@ describe('cross-family authorization — billing', () => {
       .send({});
     expect(portalRes.status).toBe(403);
   });
+
+  it('a child account cannot use the AI coach (parents only; no child text sent to the AI provider)', async () => {
+    const parent = await createParentWithFamily(cleanup, 'xf-coach-C');
+    const child = await addChildAndLogin(cleanup, parent, 'xf-coach-C-kid');
+
+    const res = await api
+      .post('/api/coach/chat')
+      .set('Authorization', `Bearer ${child.token}`)
+      .send({ messages: [{ role: 'user', content: 'hi' }] });
+    expect(res.status).toBe(403);
+  });
 });
 
 describe('cross-family authorization — notifications (weekly digest)', () => {

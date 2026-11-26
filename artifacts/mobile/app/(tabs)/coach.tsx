@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useCoach, type ChatMessage } from "@/context/CoachContext";
+import { useAuth } from "@/context/AuthContext";
 import { Body, Caption, H1, Small } from "@/components/primitives";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
@@ -73,7 +74,24 @@ function TypingBubble() {
   );
 }
 
+// Parents only: a child session reaching this route (e.g. via a deep link)
+// gets a short message instead of the chat.
 export default function CoachScreen() {
+  const { user } = useAuth();
+  const colors = useColors();
+  if (user?.role !== "parent") {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background }}>
+        <Body color={colors.mutedForeground} style={{ textAlign: "center" }}>
+          The Coach is for parents. Ask a parent if you have a question.
+        </Body>
+      </View>
+    );
+  }
+  return <CoachChat />;
+}
+
+function CoachChat() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<ChatMessage>>(null);

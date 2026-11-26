@@ -107,7 +107,7 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 | Target SDK | Built | Expo SDK 54 targets the current Play requirement |
 | EAS Android production profile | Built | Same profiles; produces `.aab` by default |
 | Listing, feature graphic, Data Safety, content rating, ads declaration | **You** | Ads: none |
-| Target audience / Families Policy | Built (app side) / **You** | Decided 2026-11-26: declare parents **and** children 6–17 (mixed audience), so Families Policy applies. Done in code: children never see purchase screens (they see "ask a parent"); RevenueCat only starts for parent sessions; outside links (Terms, Privacy, support email) go behind a parent gate (math question) on Welcome and in child sessions; no ads or analytics. Open: AI Coach for children (decision pending); confirm in Play Console that no in-app SDK used by children needs Families self-certification |
+| Target audience / Families Policy | Built (app side) / **You** | Decided 2026-11-26: declare parents **and** children 6–17 (mixed audience), so Families Policy applies. Done in code: children never see purchase screens (they see "ask a parent"); RevenueCat only starts for parent sessions; outside links (Terms, Privacy, support email) go behind a parent gate (math question) on Welcome and in child sessions; no ads or analytics. AI Coach is parents-only (decided 2026-11-26: tab hidden for children, server returns 403). Open: confirm in Play Console that no in-app SDK used by children needs Families self-certification |
 | Reviewer access instructions | **You** | Same demo accounts as Apple |
 | Testing tracks | **You** | New personal accounts need a closed test with 12+ testers for 14 days |
 
