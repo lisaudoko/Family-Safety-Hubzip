@@ -2,6 +2,11 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — App Store listing draft; Premium feature list corrected
+
+- **What**: Drafted the App Store listing (name, subtitle, promotional text, keywords, categories, description, subscription group/products) as a Claude Doc for the product owner; all fields within Apple's limits and limited to features that exist. Product IDs proposed: `digitalvillage.premium.monthly`, `digitalvillage.premium.annual` (must match RevenueCat). App fix: the subscription screen advertised "Monthly Family Digital-Safety Report", which was never built (`family_reports` table is reserved only) — removed; "All 8 courses" changed to "Every course" (count comes from the DB).
+- **Verification**: mobile typecheck clean.
+
 ## 2026-11-26 — Live screen viewing, phase 3 (iOS extension) + policy updates
 
 - **iOS**: `artifacts/mobile/targets/ScreenBroadcast/` Broadcast Upload Extension (Swift, adapted from the Jitsi sample the LiveKit RN SDK documents) sending JPEG frames over the `rtc_SSFD` Unix socket in App Group `group.com.iriemom.digitalvillage` with the header format `LKRNScreenCapturer` parses; own `Info.plist`; built via `@kingstinct/expo-apple-targets` (type `notification-service` as a generic app-extension shell, since the plugin has no broadcast type and keeps an existing Info.plist). Bundle ID `com.iriemom.digitalvillage.ScreenBroadcast` (product owner creates the App ID). `.gitignore` excludes the Screen Time targets react-native-device-activity copies in at prebuild. **Not compiled** (no Mac/Xcode here). **Open decision**: keeping the main app alive in the background (CallKit vs. publishing from the extension) — see plan.

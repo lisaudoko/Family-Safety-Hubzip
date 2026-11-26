@@ -27,7 +27,7 @@ function formatPeriod(period: string): string {
 }
 
 const FEATURES = [
-  { icon: "book-open" as const, label: "All 8 courses (including premium)", free: false, premium: true },
+  { icon: "book-open" as const, label: "Every course (including premium)", free: false, premium: true },
   { icon: "shield" as const, label: "Cyberbullying & Scam Awareness", free: true, premium: true },
   { icon: "activity" as const, label: "Digital Footprints & Gaming Safety", free: true, premium: true },
   { icon: "eye-off" as const, label: "Online Predator Awareness course", free: false, premium: true },
@@ -39,7 +39,6 @@ const FEATURES = [
   { icon: "clipboard" as const, label: "Social Media Readiness Assessment", free: true, premium: true },
   { icon: "message-circle" as const, label: "10 coach messages / month", free: true, premium: true },
   { icon: "message-circle" as const, label: "Unlimited AI coach access", free: false, premium: true },
-  { icon: "trending-up" as const, label: "Monthly Family Digital-Safety Report", free: false, premium: true },
 ];
 
 export default function SubscriptionScreen() {
