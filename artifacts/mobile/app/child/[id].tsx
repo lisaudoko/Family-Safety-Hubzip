@@ -560,6 +560,49 @@ export default function ChildProfileScreen() {
         )}
       </View>
 
+      {/* Consent-based screen sharing uses FaceTime / Google Meet; Digital Village
+          never captures or receives the child's screen. */}
+      <View style={styles.infoSection}>
+        <H2 style={{ marginBottom: 0 }}>See Their Screen Together</H2>
+        <Body color={colors.mutedForeground}>
+          Want to see what&apos;s on {child.name}&apos;s screen? Ask them to share it with you on a video call. They stay in
+          control and can stop at any time.
+        </Body>
+        {[
+          {
+            icon: "smartphone" as const,
+            title: "iPhone or iPad (FaceTime)",
+            steps: [
+              "Start a FaceTime video call with each other.",
+              "Your child taps the Share Content button at the top of the call.",
+              "They tap Share My Screen. Tapping it again stops sharing.",
+            ],
+          },
+          {
+            icon: "video" as const,
+            title: "Android (Google Meet)",
+            steps: [
+              "Start a Google Meet video call with each other.",
+              "Your child taps More options (the three dots), then Share screen.",
+              "They tap Start. Tapping Stop sharing ends it.",
+            ],
+          },
+        ].map((guide) => (
+          <Card key={guide.title} variant="outline" style={{ gap: spacing.xs }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+              <Feather name={guide.icon} size={16} color={colors.primary} />
+              <Body color={colors.foreground}>{guide.title}</Body>
+            </View>
+            {guide.steps.map((step, i) => (
+              <Caption key={step} color={colors.mutedForeground}>{`${i + 1}. ${step}`}</Caption>
+            ))}
+          </Card>
+        ))}
+        <Caption color={colors.mutedForeground}>
+          Sharing happens directly in FaceTime or Google Meet. Digital Village never sees or records your child&apos;s screen.
+        </Caption>
+      </View>
+
       <View style={styles.conversationSection}>
         <H2 style={{ marginBottom: 0 }}>Conversation Starters</H2>
         {[
