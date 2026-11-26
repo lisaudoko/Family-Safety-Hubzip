@@ -1,4 +1,13 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
+import { logger } from '../src/lib/logger.js';
+
+// With SMTP unset, src/lib/email.ts logs the code via pino (outside production);
+// that log line is the only place a test can recover the plaintext code.
+const spyEmailLog = () => vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+const joinLogged = (spy: ReturnType<typeof spyEmailLog>) =>
+  spy.mock.calls
+    .map((args) => (args as unknown[]).map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '))
+    .join('\n');
 import {
   api,
   Cleanup,
@@ -107,13 +116,13 @@ describe('auth flows', () => {
     // (src/lib/email.ts) falls back to logging the plaintext code instead of
     // emailing it — the only place the code is ever available outside its
     // bcrypt hash, so this is how a test recovers it.
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = spyEmailLog();
     const forgot = await api.post('/api/auth/forgot-password').send({ email });
     expect(forgot.status).toBe(200);
 
-    const logged = logSpy.mock.calls.map((args) => args.join(' ')).join('\n');
+    const logged = joinLogged(logSpy);
     logSpy.mockRestore();
-    const match = logged.match(/reset code for .*: (\d{6})/);
+    const match = logged.match(/reset code: (\d{6})/);
     expect(match).toBeTruthy();
     const code = match![1];
 
@@ -139,16 +148,16 @@ describe('auth flows', () => {
 
     // Registration itself sends the first verification code; capture it the
     // same way the forgot-password test captures the reset code (SMTP isn't
-    // configured in tests, so src/lib/email.ts falls back to console.log).
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    // configured in tests, so src/lib/email.ts logs it via the pino logger).
+    const logSpy = spyEmailLog();
     const reg = await api
       .post('/api/auth/register')
       .send({ name: 'Verify Test', email, password: 'password123' });
     cleanup.trackUser(reg.body.user.id);
     expect(reg.body.user.emailVerified).toBe(false);
 
-    let logged = logSpy.mock.calls.map((args) => args.join(' ')).join('\n');
-    let match = logged.match(/verification code for .*: (\d{6})/);
+    let logged = joinLogged(logSpy);
+    let match = logged.match(/verification code: (\d{6})/);
     expect(match).toBeTruthy();
     const token = reg.body.token;
 
@@ -164,9 +173,9 @@ describe('auth flows', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(resend.status).toBe(200);
 
-    logged = logSpy.mock.calls.map((args) => args.join(' ')).join('\n');
+    logged = joinLogged(logSpy);
     logSpy.mockRestore();
-    match = logged.match(/verification code for .*: (\d{6})/);
+    match = logged.match(/verification code: (\d{6})/);
     expect(match).toBeTruthy();
     const code = match![1];
 

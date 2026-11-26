@@ -102,7 +102,10 @@ router.post('/billing/sync-purchases', requireAuth as any, requireParent, async 
 // REVENUECAT_WEBHOOK_AUTH. Events are only a nudge: the payload is not trusted
 // for entitlement state, we re-read it from RevenueCat (also makes ordering and
 // redelivery harmless).
-router.post('/billing/revenuecat-webhook', async (req, res, next) => {
+// Mounted in app.ts (like the Stripe webhook): routers mounted before billing
+// apply requireAuth to every request, which would reject RevenueCat's
+// Authorization header as an unknown session.
+export async function revenueCatWebhookHandler(req: any, res: any, next: any) {
   try {
     const expected = process.env.REVENUECAT_WEBHOOK_AUTH;
     const provided = req.headers.authorization ?? '';
@@ -141,7 +144,7 @@ router.post('/billing/revenuecat-webhook', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
 
 router.post('/billing/checkout-session', requireAuth as any, requireParent, async (req: AuthRequest, res, next) => {
   try {
@@ -279,7 +282,7 @@ export async function billingWebhookHandler(req: AuthRequest, res: any, next: an
 
   // Stripe does not guarantee delivery order. Every subscription write below is
   // conditional on this event being at least as new as the last one applied.
-  const eventAt = new Date(event.created * 1000);
+  const eventAt = Number.isFinite(event.created) ? new Date(event.created * 1000) : new Date();
   const notStale = or(
     isNull(subscriptionsTable.last_stripe_event_at),
     lte(subscriptionsTable.last_stripe_event_at, eventAt),

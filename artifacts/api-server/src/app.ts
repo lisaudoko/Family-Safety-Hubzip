@@ -4,7 +4,7 @@ import pinoHttp from 'pino-http';
 import rateLimit from 'express-rate-limit';
 import router from './routes';
 import { logger } from './lib/logger';
-import { billingWebhookHandler } from './routes/billing';
+import { billingWebhookHandler, revenueCatWebhookHandler } from './routes/billing';
 import { logSupportSessionWrite } from './lib/audit';
 
 const app: Express = express();
@@ -73,6 +73,10 @@ app.use(corsMiddleware);
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), billingWebhookHandler as any);
 
 app.use(express.json());
+
+// Server-to-server webhook with its own shared-secret auth; registered before
+// the API router so session middleware never sees its Authorization header.
+app.post('/api/billing/revenuecat-webhook', revenueCatWebhookHandler as any);
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', globalLimiter, logSupportSessionWrite as any, router);

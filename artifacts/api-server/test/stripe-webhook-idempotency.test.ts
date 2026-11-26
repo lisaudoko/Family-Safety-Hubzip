@@ -32,6 +32,7 @@ describe('POST /api/billing/webhook idempotency', () => {
       id: eventId,
       object: 'event',
       type: 'invoice.payment_failed',
+      created: Math.floor(Date.now() / 1000),
       data: { object: { id: 'in_test', object: 'invoice', customer: `cus_${randomUUID()}` } },
     });
 

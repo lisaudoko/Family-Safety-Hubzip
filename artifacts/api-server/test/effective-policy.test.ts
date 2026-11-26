@@ -1,4 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { db, profilesTable } from '@workspace/db';
 import { api, Cleanup, createParentWithFamily, addChildAndLogin, registerDevice } from './helpers.js';
 
 const cleanup = new Cleanup();
@@ -132,6 +134,11 @@ describe('effective policy', () => {
 
   it('404s when ?deviceId= belongs to a different child', async () => {
     const parent = await createParentWithFamily(cleanup, 'ep-6');
+    // Free families are limited to one child; this test needs two.
+    await db
+      .update(profilesTable)
+      .set({ subscription_tier: 'premium' })
+      .where(eq(profilesTable.family_id, parent.familyId));
     const childA = await addChildAndLogin(cleanup, parent, 'ep-6-child-a');
     const childB = await addChildAndLogin(cleanup, parent, 'ep-6-child-b');
     const { deviceId } = await registerDevice(childB.token, { capabilities: [] });

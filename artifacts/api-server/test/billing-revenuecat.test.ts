@@ -57,6 +57,19 @@ describe('POST /api/billing/sync-purchases', () => {
     expect(await isPremium(parent.token)).toBe(false);
   });
 
+  it('an App Store/Play subscriber (no Stripe row) gets premium limits, e.g. a second child', async () => {
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_test_rc';
+    const parent = await createParentWithFamily(cleanup, 'rc-limits');
+    await addChildAndLogin(cleanup, parent, 'rc-limits-kid1');
+
+    stubRevenueCat({ expires_date: null });
+    const synced = await api.post('/api/billing/sync-purchases').set('Authorization', `Bearer ${parent.token}`);
+    expect(synced.body.isPremium).toBe(true);
+
+    // Free families are capped at one child; this must now succeed.
+    await expect(addChildAndLogin(cleanup, parent, 'rc-limits-kid2')).resolves.toBeTruthy();
+  });
+
   it('502s and leaves the tier unchanged when RevenueCat errors', async () => {
     process.env.REVENUECAT_SECRET_API_KEY = 'sk_test_rc';
     const parent = await createParentWithFamily(cleanup, 'rc-outage');
