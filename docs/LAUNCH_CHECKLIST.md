@@ -8,7 +8,7 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 - **You** — needs the product owner: a console, a dashboard, legal text, a device, or a decision.
 - **Decide** — a scope decision is needed before anything else happens.
 
-> Nothing in the app has been run on a physical iPhone or Android device, and the ~20 newest api-server tests have never run (Vitest can't run on the Windows dev machine). Run `pnpm --filter @workspace/api-server run test` on Replit/Linux first.
+> **Automated tests: all 117 api-server tests pass on Replit (2026-11-26).** Nothing has been run on a physical iPhone or Android device yet. Re-run `pnpm --filter @workspace/api-server run test` on Replit after server changes (Vitest can't run on the Windows dev machine).
 
 ## 1. Application functionality
 
@@ -40,7 +40,7 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 | Production API URL / `EXPO_PUBLIC_DOMAIN` | **You** | Create in each EAS environment (`eas env:create`) |
 | Production database configured | **You** | |
 | All database migrations completed | Built | Run automatically at server start (`startup-migrate.ts`) |
-| Authentication and authorization tested | Built | Tests exist; newest ones unrun |
+| Authentication and authorization tested | Built | 117/117 api-server tests pass (2026-11-26) |
 | Parent and child role permissions verified | Built | Cross-family isolation tests |
 | Password reset email delivery tested | **You** | Needs SMTP + a real send |
 | SMTP credentials in env vars | **You** | `SMTP_*` |

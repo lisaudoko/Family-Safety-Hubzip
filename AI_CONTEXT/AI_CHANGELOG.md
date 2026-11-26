@@ -7,7 +7,7 @@ _Append newest entries at the top. Format: date, what, why, files, future consid
 - **Context**: the product owner ran the api-server suite on Replit (first run of the tests added since the 2026-11-05 audit): 111 passed, 5 failed.
 - **Production bugs fixed**: (1) `POST /api/billing/revenuecat-webhook` always 401'd — routers mounted before billing (`coach`, `family`, etc.) apply `requireAuth` to every request, so RevenueCat's `Authorization` header was rejected as an unknown session. Now registered directly in `app.ts` (`revenueCatWebhookHandler`), like the Stripe webhook. (2) `isFamilyPremium` (`lib/subscription.ts`) only read the Stripe `subscriptions` table, so App Store/Play subscribers kept free limits server-side (one child, coach quota, premium course locks). It now also accepts the family's `subscription_tier`, which both billing paths maintain. Regression test added in `billing-revenuecat.test.ts`. Also: the Stripe webhook tolerates a missing `event.created`.
 - **Test fixes**: `auth-flows` read reset/verification codes from `console.log`, which the 2026-11-05 hardening moved to pino — now spies on `logger.info`; the Stripe idempotency test event lacked `created`; `effective-policy` "different child" test predates the free one-child limit and now marks its family premium.
-- **Verification**: src + tests typecheck (temporary tsconfig incl. `test/`). Re-run the suite on Replit to confirm.
+- **Verification**: re-run on Replit by the product owner: **20/20 files, 117/117 tests pass.**
 
 ## 2026-11-26 — Parent push notifications
 
