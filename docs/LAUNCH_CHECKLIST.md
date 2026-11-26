@@ -26,7 +26,7 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 | Device synchronization and heartbeat | Built | Foreground-only (no background sync) |
 | Screen-time or activity tracking | Built (limited) | Measures **Digital Village's own** foreground time only, not system-wide usage. See section 3 |
 | Monitoring permissions and capability status | Built (iOS) | Screen Time authorization card on child profile (iOS 16+). Android has no equivalent |
-| Parent notifications and alerts | **Decide** | **No push notifications exist.** Only a weekly digest email that a parent triggers by hand. Either build push (expo-notifications + APNs/FCM) or remove the claim from listings |
+| Parent notifications and alerts | Built / **You** | Push alerts to parents (2026-11-26): Screen Time turned off on a child's iPhone, child device inactive 3 days, course/challenge completed, Sunday weekly summary. Opt-in from Profile → Notifications (parents only). **You:** run `eas init` (sets the EAS projectId tokens need), upload APNs key (`eas credentials`) and FCM V1 credentials, schedule `POST /api/internal/run-jobs` hourly if the API runs on autoscale |
 | Subscription and payment functionality | Built / **You** | RevenueCat IAP, server-verified. Needs RevenueCat + store setup |
 | Subscription restoration | Built | "Restore Purchases" on the subscription screen |
 | Account deletion | Built | Profile → Delete Account (parents) |

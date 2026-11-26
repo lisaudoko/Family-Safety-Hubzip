@@ -2,6 +2,14 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — Parent push notifications
+
+- **Decision**: all four alert types — Screen Time turned off, child device inactive 3 days, learning milestones (course/challenge completed), Sunday weekly summary. Parents only, opt-in.
+- **Server**: `devices.push_token` + `devices.inactive_alert_sent_at`, `families.last_weekly_push_at` (schema + startup ALTERs; reused existing tables). `lib/push.ts` (`notifyParents` → Expo push API in batches of 100, optional `EXPO_ACCESS_TOKEN`, clears tokens on `DeviceNotRegistered`, never throws). `lib/alerts.ts` triggers: Screen Time approved→not-approved on heartbeat/PATCH; `education_activity` with `course_completed`/`challenge_completed` after a successful (unique-id) insert; inactive devices and Sunday-UTC weekly summary, each claimed with a conditional UPDATE so multiple instances send once. `lib/jobs.ts` runs alerts hourly + retention daily in-process; `POST /api/internal/run-jobs` (`JOBS_SECRET`, timing-safe) for an external scheduler, since autoscale instances that scale to zero run no timers. `PATCH /devices/:id` accepts `pushToken` only from the device's own parent owner (not a child, another parent, or a support session); the API returns `notificationsEnabled`, never the token.
+- **Mobile**: `expo-notifications` ~0.32.17 + plugin. Lockfile updated with `pnpm@10.20.0 --lockfile-only` (pnpm 12 rewrites ~2000 lines; the lockfile is pnpm 9/10 format), then a pnpm 12 frozen install. `lib/pushNotifications.ts` (enable/disable, detach on logout and before a child signs in on the phone, re-attach for parent sessions, tap → `data.url` route with cold-start delay). Profile → "Notifications: On/Off" (parents only). Child iPhones report `permissionStatus.screen_time` in heartbeats. `FamilyContext` now emits `course_completed` (first time a course reaches 100%) with titles; `completeChallenge` no longer re-emits for an already-completed challenge.
+- **Setup needed**: `eas init` (writes `extra.eas.projectId`; without it the toggle says "not set up"), APNs key and FCM V1 credentials via `eas credentials`, optional `EXPO_ACCESS_TOKEN`, `JOBS_SECRET` + hourly scheduler on autoscale.
+- **Verification**: api-server + mobile typecheck clean; all api-server test files (incl. new `test/push-alerts.test.ts`, 5 tests with the Expo API stubbed) typecheck via a temporary tsconfig — still UNRUN (Windows). No device test; no real push sent.
+
 ## 2026-11-26 — Data retention job; Google Play Families Policy changes
 
 - **Decisions (product owner, 2026-11-26)**: Google Play audience = parents **and** children 6–17 (mixed audience, so Families Policy applies). Retention = tiered: heartbeats 30 days, other device activity and blocked-app events 12 months, audit log 12 months, accounts/progress/settings until deletion.

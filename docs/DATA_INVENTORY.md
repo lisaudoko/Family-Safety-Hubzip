@@ -17,6 +17,7 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 | Audit log (sign-ins, failed sign-ins, account changes) incl. IP address | Parent / child / support staff | Security and abuse prevention | `audit_log` | Deleted with the account |
 | Subscription status, Stripe customer ID | Family | Billing | `subscriptions`, `profiles.subscription_tier` | |
 | Coach message count per month | Family | Free-tier quota | `coach_usage` | **Message text is not stored on our server** |
+| Push token (parents who turn alerts on) | Parent device | Sending family alerts | `devices.push_token` | Removed on logout, when a child signs in on that phone, when alerts are turned off, or when the OS reports the app uninstalled |
 
 ## Kept only on the device
 
@@ -33,6 +34,7 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 | RevenueCat | Family ID (as the app user ID), purchase receipts | In-app subscriptions |
 | Apple App Store / Google Play | Purchase transactions | Payments |
 | Stripe | Parent email, family ID (metadata) | Web subscriptions only |
+| Expo push service → Apple (APNs) / Google (FCM) | Parent push token; alert text, which can include a child's first name, device name, and course/challenge title | Delivering parent alerts |
 | Email provider (SMTP) | Parent email address, reset/verification codes, weekly digest content | Transactional email |
 | Hosting/database provider | All server data above | Infrastructure |
 
