@@ -11,6 +11,7 @@ import dashboardRouter from "./dashboard.js";
 import notificationsRouter from "./notifications.js";
 import adminRouter from "./admin.js";
 import jobsRouter from "./jobs.js";
+import screenShareRouter from "./screenShare.js";
 
 const router: IRouter = Router();
 
@@ -38,6 +39,9 @@ router.use(curriculumRouter);
 router.use(devicesRouter);
 router.use(billingRouter);
 router.use(analyticsRouter);
+// Must stay before dashboardRouter (blanket requireParent): children call
+// screen-share routes to accept/decline/end.
+router.use(screenShareRouter);
 router.use(adminRouter);
 router.use(dashboardRouter);
 router.use(notificationsRouter);

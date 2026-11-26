@@ -49,14 +49,22 @@ async function familyWithPushEnabledParent(label: string) {
 const sentTo = (token: string) => pushes.filter((p) => p.to === token);
 
 describe('push token registration', () => {
-  it('only the owning parent can set a token, and it must be an Expo token', async () => {
+  it('only the device owner can set its token, and it must be an Expo token', async () => {
     const { parent, child, childDevice, parentDevice } = await familyWithPushEnabledParent('push-reg');
 
-    const childTries = await api
+    // A child may register their own device (for screen-view requests)...
+    const childOwn = await api
       .patch(`/api/devices/${childDevice}`)
       .set('Authorization', `Bearer ${child.token}`)
       .send({ pushToken: tokenFor() });
-    expect(childTries.status).toBe(403);
+    expect(childOwn.status).toBe(200);
+
+    // ...but never a parent's device.
+    const childOnParentDevice = await api
+      .patch(`/api/devices/${parentDevice}`)
+      .set('Authorization', `Bearer ${child.token}`)
+      .send({ pushToken: tokenFor() });
+    expect([403, 404]).toContain(childOnParentDevice.status);
 
     const parentOnChildDevice = await api
       .patch(`/api/devices/${childDevice}`)

@@ -14,3 +14,5 @@ Long-form rationale: `docs/DECISIONS.md`. Add new decisions here first.
 | Family code + child PIN login (no child emails) | Kids shouldn't need email accounts | Public lookup endpoint by code; PIN on child record |
 | Coach usage metered per family per period | Enforce free-tier limit server-side | `coach_usage` unique (family_id, period) |
 | Typecheck as canonical gate, plus root ESLint + api-server Vitest | Lean but not test-free | `pnpm run typecheck` must pass; run `pnpm run lint` and api-server tests when touching server code |
+| Live screen viewing via LiveKit Cloud, consent per session (2026-11-26) | Product owner wants parents to view a child's screen live; OSes require child consent + visible indicator | `screen_share_requests` table; server mints single-room tokens (child publish-screen-only, parent watch-only); never recorded; online-only exception to offline-first; launch delayed until shipped; privacy docs must change |
+| Child devices may register push tokens (2026-11-26) | Children receive screen-view requests | PATCH `/devices/:id` `pushToken` allowed for the device's own owner (any role); parent alerts still filter to parent role |

@@ -2,6 +2,13 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — Live screen viewing, phase 1 (server)
+
+- **Decisions**: full in-app, consent-based live screen viewing; LiveKit Cloud; launch delayed until it ships (`docs/SCREEN_MIRRORING_PLAN.md`, `DECISIONS.md`).
+- **What**: `screen_share_requests` table (schema + startup migration). `routes/screenShare.ts` (mounted before `dashboardRouter`): `POST /screen-share/requests` (parent, own child only; one open request per child; 5/child/hour), `GET /screen-share/active` (child: own; parent: family), `GET /screen-share/requests/:id`, `POST …/:id/accept` and `/decline` (that child only), `POST …/:id/viewer-token` (family parent, only once accepted), `POST …/:id/end` (child or family parent; best-effort LiveKit `deleteRoom`). Status expires lazily (request 2 min, session 15 min). `lib/livekit.ts` mints single-room tokens with `livekit-server-sdk` 2.20: child = publish `screen_share` only, no subscribe/data; parent = subscribe only. No egress/recording. Push: `notifyUser` (child devices get the request; parents get accepted/declined); child devices may now register their own push token. Audit actions `screen_share_requested|accepted|declined|ended`. Dependency added via `pnpm@10.20.0 --lockfile-only` (30-line lockfile diff).
+- **Tests**: new `test/screen-share.test.ts` (7 tests: full flow + token grants decoded, decline, expiry, parent-only + own-child, cross-family isolation, open/rate limits, 503 unconfigured); `push-alerts.test.ts` updated for the owner-only token rule. Token claims verified locally. Suite not yet run (run on Replit).
+- **Not done**: mobile (phases 2–3: Android MediaProjection, iOS broadcast extension, viewer, request/accept UI), policy rewrites (privacy policy, in-app text, data inventory, FaceTime tip wording), LiveKit account/keys.
+
 ## 2026-11-26 — Tests apply startup migrations themselves
 
 - **What**: After the terms-checkbox change, 110/118 tests failed with 500 on registration because the dev database lacked `profiles.terms_accepted_at`: the column is added by `runStartupMigrations`, which only runs when the API server boots, and tests import `app` directly. New `test/global-setup.ts` (wired as Vitest `globalSetup`) runs the same idempotent migrations once per test run and closes the pool after. Schema additions no longer require restarting the server before testing.

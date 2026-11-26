@@ -418,12 +418,12 @@ router.patch('/devices/:deviceId', async (req: AuthRequest, res, next) => {
       pushToken?: string | null;
     };
 
-    // Push tokens: only the device's own (parent) owner may set or clear one.
-    // A parent editing a child's device, or a child session, cannot redirect
-    // family alerts to another phone.
+    // Push tokens: only the device's own owner may set or clear one (parents get
+    // family alerts; children get screen-view requests). Nobody can point
+    // another person's device at their own phone, and support sessions can't.
     if (pushToken !== undefined) {
-      if (device.owner_id !== req.userId || req.role !== 'parent' || req.isSupportSession) {
-        res.status(403).json({ error: 'Only the parent who owns this device can change its notifications' });
+      if (device.owner_id !== req.userId || req.isSupportSession) {
+        res.status(403).json({ error: 'Only the owner of this device can change its notifications' });
         return;
       }
       if (pushToken !== null && !isValidPushToken(pushToken)) {

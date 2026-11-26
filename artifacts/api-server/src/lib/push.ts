@@ -43,6 +43,34 @@ export async function notifyParents(familyId: string, message: PushMessage): Pro
           isNotNull(devicesTable.push_token),
         ),
       );
+    return await sendToDevices(rows, message);
+  } catch (err) {
+    logger.error({ err, familyId }, 'notifyParents failed');
+    return 0;
+  }
+}
+
+/** Sends a push to every device one user (e.g. a child) is signed in on. Never throws. */
+export async function notifyUser(userId: string, message: PushMessage): Promise<number> {
+  try {
+    const rows = await db
+      .select({ deviceId: devicesTable.id, token: devicesTable.push_token })
+      .from(devicesTable)
+      .where(and(eq(devicesTable.owner_id, userId), isNotNull(devicesTable.push_token)));
+    return await sendToDevices(rows, message);
+  } catch (err) {
+    logger.error({ err }, 'notifyUser failed');
+    return 0;
+  }
+}
+
+// Callers wrap this in try/catch: a push failure must never break the request
+// or job that triggered it.
+async function sendToDevices(
+  rows: { deviceId: string; token: string | null }[],
+  message: PushMessage,
+): Promise<number> {
+  {
     const targets = rows.filter((r): r is { deviceId: string; token: string } => isValidPushToken(r.token));
     if (targets.length === 0) return 0;
 
@@ -85,8 +113,5 @@ export async function notifyParents(familyId: string, message: PushMessage): Pro
       }
     }
     return sent;
-  } catch (err) {
-    logger.error({ err, familyId }, 'notifyParents failed');
-    return 0;
   }
 }

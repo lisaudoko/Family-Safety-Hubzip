@@ -343,6 +343,24 @@ export async function runStartupMigrations(): Promise<void> {
       `ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_stripe_event_at TIMESTAMP`,
       `CREATE INDEX IF NOT EXISTS subscriptions_customer_idx ON subscriptions(stripe_customer_id)`,
 
+      // ── screen_share_requests ──────────────────────────────────────────────────
+      `CREATE TABLE IF NOT EXISTS screen_share_requests (
+         id TEXT PRIMARY KEY,
+         family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+         parent_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+         child_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+         status TEXT NOT NULL DEFAULT 'requested',
+         room TEXT NOT NULL,
+         expires_at TIMESTAMP NOT NULL,
+         session_ends_at TIMESTAMP,
+         responded_at TIMESTAMP,
+         ended_at TIMESTAMP,
+         end_reason TEXT,
+         created_at TIMESTAMP NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS screen_share_requests_child_idx ON screen_share_requests(child_id)`,
+      `CREATE INDEX IF NOT EXISTS screen_share_requests_family_idx ON screen_share_requests(family_id)`,
+
       // ── stripe_webhook_events ─────────────────────────────────────────────────
       `CREATE TABLE IF NOT EXISTS stripe_webhook_events (
          id TEXT PRIMARY KEY,

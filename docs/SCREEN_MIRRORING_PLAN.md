@@ -1,6 +1,6 @@
 # Live Screen Mirroring: Plan (draft, not started)
 
-_Requested by the product owner on 2026-11-26: a parent asks to see a child's screen, the child accepts, and the child's screen streams live to the parent's Digital Village app. Architecture review done; implementation has not started. Decisions still needed are marked **Decide**._
+_Requested by the product owner on 2026-11-26: a parent asks to see a child's screen, the child accepts, and the child's screen streams live to the parent's Digital Village app. **Decided 2026-11-26: LiveKit Cloud; launch is delayed until this ships.** Phase 1 (server) is built; phases 2–4 are not started._
 
 ## What it is and isn't
 
@@ -45,7 +45,7 @@ _Requested by the product owner on 2026-11-26: a parent asks to see a child's sc
 
 ## Phases and rough effort
 
-1. **Server** (requests table, endpoints, token minting, audit, tests): 3–4 days.
+1. **Server** (requests table, endpoints, token minting, audit, tests): **built 2026-11-26** — `routes/screenShare.ts`, `lib/livekit.ts`, `test/screen-share.test.ts`. Limits: request expires after 2 minutes, session after 15, max 5 requests per child per hour.
 2. **Android** sharing + viewer: 1–1.5 weeks.
 3. **iOS** broadcast extension + viewer: 1.5–2 weeks.
 4. **Policy, store and legal updates; two-device testing on both platforms; fixes:** about 1 week.
@@ -54,7 +54,7 @@ _Requested by the product owner on 2026-11-26: a parent asks to see a child's sc
 
 ## Decisions needed
 
-- [ ] **Decide** video provider (recommended: LiveKit Cloud). You create the account; the server needs its API key and secret.
-- [ ] **Decide** timing: launch first and ship this in an update (recommended), or delay launch until it's done.
-- [ ] **Decide** session limit (proposed 15 minutes) and request rate limit (proposed 5 per child per hour).
+- [x] Video provider: LiveKit Cloud. Create the project and set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` on the API server.
+- [x] Timing: launch is delayed until this ships.
+- [x] Limits: 2-minute request expiry, 15-minute sessions, 5 requests per child per hour (defaults in `routes/screenShare.ts`; change if you want different values).
 - [ ] Confirm the wording a child sees, e.g. "Mom wants to see your screen. Accept / Decline."

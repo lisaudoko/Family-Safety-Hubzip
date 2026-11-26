@@ -26,7 +26,11 @@ export type AuditAction =
   | 'support_code_created'
   | 'support_session_started'
   | 'support_session_ended'
-  | 'support_session_write';
+  | 'support_session_write'
+  | 'screen_share_requested'
+  | 'screen_share_accepted'
+  | 'screen_share_declined'
+  | 'screen_share_ended';
 
 export interface AuditEventInput {
   // Omit for events with no matching account (e.g. a failed login attempt

@@ -791,6 +791,39 @@ export const selectSubscriptionSchema = createSelectSchema(subscriptionsTable);
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptionsTable.$inferSelect;
 
+// ── screen_share_requests ───────────────────────────────────────────────────────
+// Consent-based live screen viewing: a parent requests, the child accepts or
+// declines, and an accepted session streams live through LiveKit (never
+// recorded). status: requested | accepted | declined | expired | ended.
+export const screenShareRequestsTable = pgTable(
+  'screen_share_requests',
+  {
+    id: text('id').primaryKey(),
+    family_id: text('family_id')
+      .notNull()
+      .references(() => familiesTable.id, { onDelete: 'cascade' }),
+    parent_id: text('parent_id')
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    child_id: text('child_id')
+      .notNull()
+      .references(() => profilesTable.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('requested'),
+    room: text('room').notNull(),
+    expires_at: timestamp('expires_at').notNull(),
+    session_ends_at: timestamp('session_ends_at'),
+    responded_at: timestamp('responded_at'),
+    ended_at: timestamp('ended_at'),
+    end_reason: text('end_reason'),
+    created_at: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('screen_share_requests_child_idx').on(t.child_id),
+    index('screen_share_requests_family_idx').on(t.family_id),
+  ],
+);
+export type ScreenShareRequest = typeof screenShareRequestsTable.$inferSelect;
+
 // ── stripe_webhook_events (idempotency: one row per processed Stripe event id) ───
 export const stripeWebhookEventsTable = pgTable('stripe_webhook_events', {
   id: text('id').primaryKey(),
