@@ -52,8 +52,13 @@ export async function syncDeviceNow(force = false): Promise<void> {
 
     const deviceId = await getOrCreateDeviceId();
 
+    // Screen Time permission (iOS) is reported so parents are alerted if a
+    // child turns it off. "unavailable" (Android, Expo Go) is not reported.
+    const screenTime = getScreenControlStatus();
+    const permissionStatus = screenTime === "unavailable" ? undefined : { screen_time: screenTime };
+
     try {
-      await apiDeviceHeartbeat(deviceId, { capabilities: APP_CAPABILITIES });
+      await apiDeviceHeartbeat(deviceId, { capabilities: APP_CAPABILITIES, permissionStatus });
     } catch {
       // Device may not be registered yet (first run) or was removed by a
       // parent - (re)register and try once more.
@@ -65,7 +70,7 @@ export async function syncDeviceNow(force = false): Promise<void> {
         appVersion: Constants.expoConfig?.version,
         capabilities: APP_CAPABILITIES,
       });
-      await apiDeviceHeartbeat(deviceId, { capabilities: APP_CAPABILITIES });
+      await apiDeviceHeartbeat(deviceId, { capabilities: APP_CAPABILITIES, permissionStatus });
     }
 
     await AsyncStorage.setItem(LAST_SYNC_KEY, String(Date.now()));

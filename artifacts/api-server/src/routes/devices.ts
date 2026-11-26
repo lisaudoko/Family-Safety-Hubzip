@@ -23,6 +23,8 @@ import {
 import { deviceRestrictionsTable, deviceAppRulesTable } from "@workspace/db";
 import { getEffectivePolicy } from "../services/effectivePolicy.js";
 import { isDeviceStale, deviceStatusLabel, SYNC_INTERVAL_SECONDS } from "../lib/deviceStatus.js";
+import { isValidPushToken } from "../lib/push.js";
+import { maybeAlertMilestone, maybeAlertScreenTimeOff } from "../lib/alerts.js";
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -128,6 +130,8 @@ function safeDevice(d: typeof devicesTable.$inferSelect) {
     appVersion: d.app_version,
     capabilities: d.capabilities,
     permissionStatus: d.permission_status,
+    // The token itself is never returned (other family members can read devices).
+    notificationsEnabled: d.push_token !== null,
     status: d.status,
     isStale: isDeviceStale(d.last_synced_at),
     syncStatus: deviceStatusLabel(d.last_synced_at),
@@ -407,11 +411,26 @@ router.patch('/devices/:deviceId', async (req: AuthRequest, res, next) => {
       return;
     }
 
-    const { name, capabilities, permissionStatus } = req.body as {
+    const { name, capabilities, permissionStatus, pushToken } = req.body as {
       name?: string;
       capabilities?: string[];
       permissionStatus?: Record<string, string>;
+      pushToken?: string | null;
     };
+
+    // Push tokens: only the device's own (parent) owner may set or clear one.
+    // A parent editing a child's device, or a child session, cannot redirect
+    // family alerts to another phone.
+    if (pushToken !== undefined) {
+      if (device.owner_id !== req.userId || req.role !== 'parent' || req.isSupportSession) {
+        res.status(403).json({ error: 'Only the parent who owns this device can change its notifications' });
+        return;
+      }
+      if (pushToken !== null && !isValidPushToken(pushToken)) {
+        res.status(400).json({ error: 'pushToken must be an Expo push token or null' });
+        return;
+      }
+    }
 
     if (name !== undefined && typeof name !== 'string') {
       res.status(400).json({ error: 'name must be a string' });
@@ -439,8 +458,10 @@ router.patch('/devices/:deviceId', async (req: AuthRequest, res, next) => {
     if (name?.trim()) updates.name = name.trim();
     if (capabilities !== undefined) updates.capabilities = capabilities;
     if (permissionStatus !== undefined) updates.permission_status = permissionStatus;
+    if (pushToken !== undefined) updates.push_token = pushToken;
 
     await db.update(devicesTable).set(updates).where(eq(devicesTable.id, device.id));
+    void maybeAlertScreenTimeOff(device, device.permission_status, permissionStatus);
 
     const [updated] = await db
       .select()
@@ -526,6 +547,8 @@ router.post('/devices/:deviceId/heartbeat', async (req: AuthRequest, res, next) 
       last_synced_at: now,
       status: 'active',
       updated_at: now,
+      // Device is back: re-arm the "not checking in" alert.
+      inactive_alert_sent_at: null,
     };
     if (permissionStatus !== undefined) updates.permission_status = permissionStatus;
     // A device's real capabilities can change between heartbeats (e.g. the
@@ -534,6 +557,7 @@ router.post('/devices/:deviceId/heartbeat', async (req: AuthRequest, res, next) 
     if (capabilities !== undefined) updates.capabilities = capabilities;
 
     await db.update(devicesTable).set(updates).where(eq(devicesTable.id, deviceId));
+    void maybeAlertScreenTimeOff(device, device.permission_status, permissionStatus);
 
     await db.insert(deviceEventsTable).values({
       id: `${deviceId}_hb_${now.getTime()}`,
@@ -633,6 +657,11 @@ router.post('/devices/:deviceId/events', async (req: AuthRequest, res, next) => 
       payload: payload ?? {},
       occurred_at: occurredAtDate,
     });
+
+    // Insert succeeded, so this event id is new: at most one alert per event.
+    if (eventType === 'education_activity') {
+      void maybeAlertMilestone(req.userId!, device.family_id, payload);
+    }
 
     res.status(201).json({ ok: true });
   } catch (err) {

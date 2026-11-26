@@ -539,6 +539,7 @@ export interface ApiDevice {
   appVersion: string | null;
   capabilities: string[];
   permissionStatus: Record<string, string>;
+  notificationsEnabled?: boolean;
   status: string;
   isStale: boolean;
   syncStatus: "online" | "recent" | "stale";
@@ -564,7 +565,13 @@ export async function apiGetDevices(): Promise<{ devices: ApiDevice[] }> {
 
 export async function apiUpdateDevice(
   deviceId: string,
-  updates: { name?: string; capabilities?: string[]; permissionStatus?: Record<string, string> },
+  updates: {
+    name?: string;
+    capabilities?: string[];
+    permissionStatus?: Record<string, string>;
+    /** Parent's own device only; null turns alerts off for this phone. */
+    pushToken?: string | null;
+  },
 ): Promise<{ device: ApiDevice }> {
   return apiFetch(`/devices/${deviceId}`, {
     method: "PATCH",

@@ -14,6 +14,7 @@ import { Avatar, Badge, Body, BodyStrong, Button, Card, Caption, Display, H2, H3
 import { ScreenControlCard } from "@/components/ScreenControlCard";
 import { openPrivacyPolicy, openTerms } from "@/lib/legal";
 import { useParentGate } from "@/components/ParentGate";
+import { disablePushNotifications, enablePushNotifications, isPushEnabled } from "@/lib/pushNotifications";
 import { SUPPORT_EMAIL } from "@/constants/links";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
@@ -31,6 +32,7 @@ export default function ProfileScreen() {
   const haptics = useHaptics();
   const { progress } = useFamily();
   const { badges: BADGES } = useCurriculum();
+  const [pushOn, setPushOn] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -131,12 +133,40 @@ export default function ProfileScreen() {
     }
   };
 
+  React.useEffect(() => {
+    void isPushEnabled().then(setPushOn);
+  }, []);
+
   const handleNotifications = () => {
-    Alert.alert(
-      "Notifications",
-      "Push notifications will be available in a future update. You'll get weekly tips and progress reminders.",
-      [{ text: "Got it" }]
-    );
+    if (pushOn) {
+      Alert.alert("Family alerts are on", "You'll be told if Screen Time is turned off, a child's device stops checking in, or a child finishes a course or challenge, plus a weekly summary.", [
+        { text: "Keep on", style: "cancel" },
+        {
+          text: "Turn off",
+          style: "destructive",
+          onPress: async () => {
+            await disablePushNotifications();
+            setPushOn(false);
+          },
+        },
+      ]);
+      return;
+    }
+    Alert.alert("Turn on family alerts?", "Get a notification if Screen Time is turned off on a child's iPhone, a child's device stops checking in for 3 days, or a child finishes a course or challenge, plus a weekly summary.", [
+      { text: "Not now", style: "cancel" },
+      {
+        text: "Turn on",
+        onPress: async () => {
+          const result = await enablePushNotifications();
+          if (result.ok) {
+            setPushOn(true);
+            await haptics.notify(Haptics.NotificationFeedbackType.Success);
+          } else {
+            Alert.alert("Notifications", result.message);
+          }
+        },
+      },
+    ]);
   };
 
   const handlePrivacyPolicy = () => {
@@ -191,7 +221,7 @@ export default function ProfileScreen() {
   const settingsItems: { icon: React.ComponentProps<typeof Feather>["name"]; label: string; onPress: () => void }[] = [
     { icon: "user", label: "Edit Profile", onPress: () => { setEditName(user?.name ?? ""); setEditModal(true); } },
     { icon: "eye", label: "Accessibility", onPress: () => router.push("/settings/accessibility") },
-    { icon: "bell", label: "Notifications", onPress: handleNotifications },
+    ...(isParent ? [{ icon: "bell" as const, label: pushOn ? "Notifications: On" : "Notifications: Off", onPress: handleNotifications }] : []),
     { icon: "shield", label: "Privacy Policy", onPress: handlePrivacyPolicy },
     { icon: "file-text", label: "Terms of Use", onPress: () => leaveApp(() => void openTerms()) },
     { icon: "help-circle", label: "Help & Support", onPress: handleHelp },

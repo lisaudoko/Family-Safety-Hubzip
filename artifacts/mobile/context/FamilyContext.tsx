@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AgeBand, type Course } from "@/data/seed";
+import { AgeBand, CHALLENGES, type Course } from "@/data/seed";
 import { useAuth } from "@/context/AuthContext";
 import { useCurriculum } from "@/hooks/useCurriculum";
 import {
@@ -458,8 +458,14 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       [courseId]: Math.round((courseLessons.length / totalLessons) * 100),
     };
     updated.earnedBadges = deriveProgressBadges(updated, courses);
+    const courseJustCompleted =
+      updated.courseProgress[courseId] === 100 && (progress.courseProgress[courseId] ?? 0) < 100;
     await saveProgress(updated);
     submitActivityEvent("lesson_completed", { lessonId, courseId });
+    if (courseJustCompleted) {
+      const title = courses.find(c => c.id === courseId)?.title;
+      submitActivityEvent("course_completed", { courseId, title });
+    }
   }, [progress, user?.id, courses]);
 
   const completeQuiz = useCallback(async (quizId: string) => {
@@ -491,7 +497,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     };
     updated.earnedBadges = deriveProgressBadges(updated, courses);
     await saveProgress(updated);
-    submitActivityEvent("challenge_completed", { challengeId });
+    // Only the first completion counts as a milestone (parents get an alert).
+    if (!progress.completedChallenges.includes(challengeId)) {
+      submitActivityEvent("challenge_completed", { challengeId, title: CHALLENGES.find(c => c.id === challengeId)?.title });
+    }
   }, [progress, user?.id, courses]);
 
   const completeChallengeStep = useCallback(async (
@@ -515,7 +524,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       justCompleted = true;
     }
     await saveProgress(updated);
-    if (justCompleted) submitActivityEvent("challenge_completed", { challengeId });
+    if (justCompleted) submitActivityEvent("challenge_completed", { challengeId, title: CHALLENGES.find(c => c.id === challengeId)?.title });
     return justCompleted;
   }, [progress, user?.id, courses]);
 

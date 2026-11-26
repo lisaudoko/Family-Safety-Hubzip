@@ -19,6 +19,7 @@ import {
   setToken,
 } from "@/lib/apiClient";
 import { getSecureItem, removeSecureItem, setSecureItem } from "@/lib/secureStorage";
+import { detachPushToken } from "@/lib/pushNotifications";
 import {
   clearPendingLocalPassword,
   setPendingLocalPassword,
@@ -203,6 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // While the session is still valid: stop family alerts reaching this phone.
+    await detachPushToken();
     await apiLogout();
     await clearToken();
     await AsyncStorage.removeItem(LOCAL_USER_KEY);
@@ -292,6 +295,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // back without a fresh login.
   const childLogin = useCallback(async (childId: string, pin: string) => {
     if (state.user?.role === "parent") {
+      // A child is about to use this phone: parent alerts shouldn't appear on it.
+      await detachPushToken();
       const parentToken = await getToken();
       if (parentToken) {
         await setSecureItem(PARENT_TOKEN_KEY, parentToken);

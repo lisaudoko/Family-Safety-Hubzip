@@ -79,6 +79,10 @@ export async function runStartupMigrations(): Promise<void> {
       `CREATE INDEX IF NOT EXISTS devices_family_id_idx ON devices(family_id)`,
 
       // ── device_events ─────────────────────────────────────────────────────────
+      `ALTER TABLE devices ADD COLUMN IF NOT EXISTS push_token TEXT`,
+      `ALTER TABLE devices ADD COLUMN IF NOT EXISTS inactive_alert_sent_at TIMESTAMP`,
+      `ALTER TABLE families ADD COLUMN IF NOT EXISTS last_weekly_push_at TIMESTAMP`,
+
       `CREATE TABLE IF NOT EXISTS device_events (
          id TEXT PRIMARY KEY,
          device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,

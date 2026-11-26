@@ -10,6 +10,7 @@ import analyticsRouter from "./analytics.js";
 import dashboardRouter from "./dashboard.js";
 import notificationsRouter from "./notifications.js";
 import adminRouter from "./admin.js";
+import jobsRouter from "./jobs.js";
 
 const router: IRouter = Router();
 
@@ -29,6 +30,7 @@ const router: IRouter = Router();
 // routes matches. If dashboard.ts is ever refactored to gate per-route like
 // the rest, this ordering constraint goes away.
 router.use(healthRouter);
+router.use(jobsRouter);
 router.use(authRouter);
 router.use(coachRouter);
 router.use(familyRouter);

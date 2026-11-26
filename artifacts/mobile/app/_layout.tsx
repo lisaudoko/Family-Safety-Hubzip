@@ -23,6 +23,7 @@ import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
 import { configureApi } from "@/lib/api";
 import { useDeviceSync, useForegroundScreenTime, useScreenControlSync } from "@/lib/deviceSync";
+import { usePushNotifications } from "@/lib/pushNotifications";
 import { SubscriptionProvider } from "@/lib/revenuecat";
 
 SplashScreen.preventAutoHideAsync();
@@ -75,6 +76,7 @@ function RootLayoutNav() {
   useDeviceSync(isAuthenticated);
   useForegroundScreenTime(isAuthenticated);
   useScreenControlSync(isAuthenticated, user?.role);
+  usePushNotifications(isAuthenticated ? user?.role : undefined);
 
   return (
     <>

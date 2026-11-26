@@ -101,6 +101,8 @@ export const familiesTable = pgTable(
       .notNull()
       .references(() => profilesTable.id, { onDelete: 'cascade' }),
     family_code: text('family_code').notNull().unique(),
+    // Last weekly-summary push; used to claim the send exactly once per week.
+    last_weekly_push_at: timestamp('last_weekly_push_at'),
     created_at: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [
@@ -244,6 +246,10 @@ export const devicesTable = pgTable(
       .default({}),
     status: text('status').notNull().default('active'),
     last_synced_at: timestamp('last_synced_at'),
+    // Expo push token for this install (set only by the device owner; parents only).
+    push_token: text('push_token'),
+    // When the "device inactive" alert was sent; cleared on the next sync.
+    inactive_alert_sent_at: timestamp('inactive_alert_sent_at'),
     created_at: timestamp('created_at').notNull().defaultNow(),
     updated_at: timestamp('updated_at').notNull().defaultNow(),
   },
