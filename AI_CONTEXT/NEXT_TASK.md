@@ -136,6 +136,10 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 
 The product owner's full store-launch checklist is triaged in `docs/LAUNCH_CHECKLIST.md` (source of truth for launch status). Decided 2026-11-26: Play audience = parents + children 6–17 (Families Policy; app-side changes done), retention = tiered (job built). AI Coach = parents only (done). Push notifications built (needs `eas init`, APNs/FCM credentials, and an hourly scheduler on autoscale).
 
+## Live screen mirroring (requested 2026-11-26, not started)
+
+Product owner chose full in-app, consent-based live screen mirroring (parent requests, child accepts each time, live only, never recorded). Architecture review + plan: `docs/SCREEN_MIRRORING_PLAN.md` (~4-6 weeks; new `screen_share_requests` table, LiveKit-style SFU, iOS broadcast extension, Android MediaProjection). Pending decisions: provider, launch timing, session/rate limits. **Conflicts with current privacy policy, in-app privacy text, data inventory and the FaceTime/Meet tip, which all say we never see the child's screen; those must be rewritten before it ships.**
+
 ## Release Blockers (audit 2026-11-05) — must resolve before App Store / production
 
 _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, security headers, production CORS allowlist, no codes/keys in logs._
