@@ -116,7 +116,7 @@ export default function RegisterScreen() {
           <Button title={loading ? "Creating account…" : "Create Free Account"} onPress={handleRegister} loading={loading} disabled={loading || !agreed} style={styles.btn} />
 
           <Caption color={colors.mutedForeground} style={styles.disclaimer}>
-            We never read your family&apos;s messages, browsing history or location, and we never sell your data.
+            We never collect your family&apos;s messages, browsing history or location, never record screens, and never sell your data.
           </Caption>
         </View>
       </View>

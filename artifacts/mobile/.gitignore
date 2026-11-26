@@ -39,3 +39,8 @@ yarn-error.*
 .vercel
 
 .env
+
+# Copied in at prebuild by react-native-device-activity; not source.
+targets/ActivityMonitorExtension/
+targets/ShieldAction/
+targets/ShieldConfiguration/

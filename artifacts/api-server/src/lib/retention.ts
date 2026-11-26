@@ -6,6 +6,7 @@ import {
   deviceEventsTable,
   emailVerificationCodesTable,
   passwordResetCodesTable,
+  screenShareRequestsTable,
   sessionsTable,
   supportCodesTable,
 } from '@workspace/db';
@@ -68,6 +69,14 @@ export async function runRetentionCleanup(now: Date = new Date()): Promise<Recor
       .delete(auditLogTable)
       .where(lt(auditLogTable.created_at, monthsAgo(RETENTION.auditLogMonths, now)))
       .returning({ id: auditLogTable.id }),
+  );
+  // Screen-view request records (who asked, when, the answer); never video.
+  await count(
+    'screenShareRequests',
+    db
+      .delete(screenShareRequestsTable)
+      .where(lt(screenShareRequestsTable.created_at, activityCutoff))
+      .returning({ id: screenShareRequestsTable.id }),
   );
   await count('sessions', db.delete(sessionsTable).where(lt(sessionsTable.expires_at, now)).returning({ token: sessionsTable.token }));
   await count(

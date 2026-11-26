@@ -230,7 +230,7 @@ export default function ProfileScreen() {
 
   const privacyItems = [
     { icon: "shield" as const, title: "Our Approach", desc: "Education first. Optional controls use Apple's Screen Time, with a parent's approval, to apply bedtime and web filters on a child's iPhone.", color: colors.success },
-    { icon: "eye-off" as const, title: "What We Never Do", desc: "No reading messages, no browsing history, no location, no keystroke logging, no photo access, no background recording.", color: colors.info },
+    { icon: "eye-off" as const, title: "What We Never Do", desc: "No collecting messages, browsing history, location, keystrokes or photos, and no recording. Screen viewing happens live, only when your child accepts.", color: colors.info },
     { icon: "lock" as const, title: "Your Data", desc: "Stored securely so your family's devices stay in sync. We don't sell your data or show ads, and you can delete your account at any time.", color: colors.accent },
   ];
 

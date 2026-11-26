@@ -18,6 +18,7 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 | Audit log (sign-ins, failed sign-ins, account changes) incl. IP address | Parent / child / support staff | Security and abuse prevention | `audit_log` | Deleted with the account |
 | Subscription status, Stripe customer ID | Family | Billing | `subscriptions`, `profiles.subscription_tier` | |
 | Coach message count per month | Family | Free-tier quota | `coach_usage` | **Message text is not stored on our server** |
+| Screen-view request records (who asked, when, accepted/declined/ended) | Family | Consent record and audit | `screen_share_requests` | Deleted after 12 months. **The screen video itself is never stored** |
 | Push token (parents who turn alerts on) | Parent device | Sending family alerts | `devices.push_token` | Removed on logout, when a child signs in on that phone, when alerts are turned off, or when the OS reports the app uninstalled |
 
 ## Kept only on the device
@@ -35,11 +36,14 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 | RevenueCat | Family ID (as the app user ID), purchase receipts | In-app subscriptions |
 | Apple App Store / Google Play | Purchase transactions | Payments |
 | Stripe | Parent email, family ID (metadata) | Web subscriptions only |
+| LiveKit Cloud | Live video of a child's screen while the child is sharing; parent and child first names and account IDs as participant labels | Live screen viewing (only after the child accepts each request). Relayed in real time, never recorded (no LiveKit recording/egress is used) |
 | Expo push service → Apple (APNs) / Google (FCM) | Parent push token; alert text, which can include a child's first name, device name, and course/challenge title | Delivering parent alerts |
 | Email provider (SMTP) | Parent email address, reset/verification codes, weekly digest content | Transactional email |
 | Hosting/database provider | All server data above | Infrastructure |
 
 **Not used:** advertising SDKs, third-party analytics, tracking across apps or websites (answer "No tracking" in App Store Connect), location, contacts, photos, microphone, camera.
+
+**Live screen viewing:** a child's screen can contain anything (messages, photos, other people's information). It is shown live to the family's parents only after the child accepts, for at most 15 minutes, and is never stored. For App Privacy / Data Safety, declare it as user content (other user content, "screen content viewed live, not stored"), linked to the user, used for app functionality, not tracking.
 
 ## Retention and deletion
 

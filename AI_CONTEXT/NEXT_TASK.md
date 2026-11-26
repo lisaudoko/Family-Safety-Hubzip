@@ -138,7 +138,7 @@ The product owner's full store-launch checklist is triaged in `docs/LAUNCH_CHECK
 
 ## Live screen mirroring (requested 2026-11-26, not started)
 
-Product owner chose full in-app, consent-based live screen mirroring (parent requests, child accepts each time, live only, never recorded). Architecture review + plan: `docs/SCREEN_MIRRORING_PLAN.md` (~4-6 weeks; new `screen_share_requests` table, LiveKit-style SFU, iOS broadcast extension, Android MediaProjection). Decided: LiveKit Cloud, launch delayed until shipped, limits 2 min / 15 min / 5 per hour. Phase 1 (server) built 2026-11-26; next: mobile phases (needs LiveKit keys + dev builds on real devices). **Conflicts with current privacy policy, in-app privacy text, data inventory and the FaceTime/Meet tip, which all say we never see the child's screen; those must be rewritten before it ships.**
+Product owner chose full in-app, consent-based live screen mirroring (parent requests, child accepts each time, live only, never recorded). Architecture review + plan: `docs/SCREEN_MIRRORING_PLAN.md` (~4-6 weeks; new `screen_share_requests` table, LiveKit-style SFU, iOS broadcast extension, Android MediaProjection). Decided: LiveKit Cloud, launch delayed until shipped, limits 2 min / 15 min / 5 per hour. Phases 1–3 code written 2026-11-26 (server, app + Android, iOS extension; policies updated). Next: LiveKit keys, ScreenBroadcast App ID, dev builds on real devices; decide iOS background keep-alive after first iPhone test. **Conflicts with current privacy policy, in-app privacy text, data inventory and the FaceTime/Meet tip, which all say we never see the child's screen; those must be rewritten before it ships.**
 
 ## Release Blockers (audit 2026-11-05) — must resolve before App Store / production
 

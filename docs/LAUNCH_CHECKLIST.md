@@ -71,7 +71,8 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 **What monitoring actually does (use this wording in listings and review notes):**
 - Digital Village records *its own* time in the foreground, plus basic device info (name, platform, OS and app version) and the last sync time.
 - On iOS 16+, with the parent's approval through Apple's Screen Time (Family Controls) framework, it can enforce bedtime (blocking apps on a schedule) and web content filters on the child's device. Apple's framework does not give the app usage data it can upload.
-- It does **not** read messages, browsing history, location, photos or keystrokes, and it does not report system-wide app usage.
+- **Live screen viewing:** a parent can ask to see a child's screen; the child must accept every time (Apple/Google show a recording indicator), it lasts up to 15 minutes, either can stop it, and it is never recorded.
+- It does **not** collect messages, browsing history, location, photos or keystrokes in the background, and it does not report system-wide app usage.
 - There is no equivalent enforcement on Android.
 
 ## 4. Apple App Store
