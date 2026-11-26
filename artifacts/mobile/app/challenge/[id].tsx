@@ -40,6 +40,11 @@ export default function ChallengeDetailScreen() {
   const isActive = progress.activeChallenges.includes(challenge.id);
   const isComplete = progress.completedChallenges.includes(challenge.id);
   const isLocked = challenge.isPremium && !user?.isPremium;
+  // Children never see the purchase screen (Families Policy).
+  const openUpgrade = () => {
+    if (user?.role === "parent") router.push("/subscription");
+    else Alert.alert("Ask a parent", "Premium is unlocked by a parent from their own account.");
+  };
 
   const status = isComplete ? "completed" : isActive ? "active" : "available";
   const totalSteps = challenge.steps.length;
@@ -48,7 +53,7 @@ export default function ChallengeDetailScreen() {
   const doneCount = isComplete ? totalSteps : completedSteps.length;
 
   const handleStart = async () => {
-    if (isLocked) { router.push("/subscription"); return; }
+    if (isLocked) { openUpgrade(); return; }
     try {
       await startChallenge(challenge.id);
       await haptics.notify(Haptics.NotificationFeedbackType.Success);
@@ -173,7 +178,7 @@ export default function ChallengeDetailScreen() {
       </Card>
 
       {isLocked && (
-        <Button title="Unlock with Premium" icon="lock" style={{ backgroundColor: colors.accent }} onPress={() => router.push("/subscription")} />
+        <Button title="Unlock with Premium" icon="lock" style={{ backgroundColor: colors.accent }} onPress={openUpgrade} />
       )}
       {!isLocked && status === "available" && (
         <Button title="Start Challenge" icon="play" style={{ backgroundColor: challenge.color }} onPress={handleStart} />

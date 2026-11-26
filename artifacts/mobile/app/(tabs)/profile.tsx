@@ -13,6 +13,7 @@ import { apiCreateSupportCode, apiResendVerification, apiVerifyEmail } from "@/l
 import { Avatar, Badge, Body, BodyStrong, Button, Card, Caption, Display, H2, H3, Small, TextField } from "@/components/primitives";
 import { ScreenControlCard } from "@/components/ScreenControlCard";
 import { openPrivacyPolicy, openTerms } from "@/lib/legal";
+import { useParentGate } from "@/components/ParentGate";
 import { SUPPORT_EMAIL } from "@/constants/links";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
@@ -49,6 +50,9 @@ export default function ProfileScreen() {
     }, [])
   );
   const isParent = user?.role === "parent";
+  // Child sessions: anything that leaves the app goes behind a parent gate.
+  const { gate, guard } = useParentGate();
+  const leaveApp = (action: () => void) => (isParent ? action() : guard(action));
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -136,7 +140,7 @@ export default function ProfileScreen() {
   };
 
   const handlePrivacyPolicy = () => {
-    void openPrivacyPolicy();
+    leaveApp(() => void openPrivacyPolicy());
   };
 
   const handleHelp = () => {
@@ -144,7 +148,7 @@ export default function ProfileScreen() {
       "Help & Support",
       `Need help? Reach out at:\n\n${SUPPORT_EMAIL}\n\nWe respond within 1 business day.`,
       [
-        { text: "Send Email", onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`) },
+        { text: "Send Email", onPress: () => leaveApp(() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)) },
         { text: "Close", style: "cancel" },
       ]
     );
@@ -189,7 +193,7 @@ export default function ProfileScreen() {
     { icon: "eye", label: "Accessibility", onPress: () => router.push("/settings/accessibility") },
     { icon: "bell", label: "Notifications", onPress: handleNotifications },
     { icon: "shield", label: "Privacy Policy", onPress: handlePrivacyPolicy },
-    { icon: "file-text", label: "Terms of Use", onPress: () => void openTerms() },
+    { icon: "file-text", label: "Terms of Use", onPress: () => leaveApp(() => void openTerms()) },
     { icon: "help-circle", label: "Help & Support", onPress: handleHelp },
     ...(isParent ? [{ icon: "key" as const, label: "Get Support Access Code", onPress: handleGetSupport }] : []),
   ];
@@ -247,7 +251,7 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      {!user?.isPremium && (
+      {isParent && !user?.isPremium && (
         <Card variant="flat" pressable onPress={() => router.push("/subscription")} style={[styles.upgradeCard, { backgroundColor: colors.accent }]}>
           <View style={styles.upgradeContent}>
             <Feather name="star" size={20} color={colors.accentForeground} />
@@ -260,7 +264,7 @@ export default function ProfileScreen() {
         </Card>
       )}
 
-      {user?.isPremium && (
+      {isParent && user?.isPremium && (
         <Card
           variant="outline"
           pressable
@@ -510,6 +514,7 @@ export default function ProfileScreen() {
           />
         </View>
       </Modal>
+      {gate}
     </ScrollView>
   );
 }

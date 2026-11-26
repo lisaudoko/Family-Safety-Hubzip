@@ -11,6 +11,7 @@ import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
 import { useColors } from "@/hooks/useColors";
 import { openPrivacyPolicy, openTerms } from "@/lib/legal";
+import { useParentGate } from "@/components/ParentGate";
 
 const FEATURES: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { icon: "book-open", label: "Parent micro-courses" },
@@ -20,6 +21,7 @@ const FEATURES: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
 
 export default function WelcomeScreen() {
   const colors = useColors();
+  const { gate, guard } = useParentGate();
   const insets = useSafeAreaInsets();
 
   return (
@@ -55,10 +57,11 @@ export default function WelcomeScreen() {
 
         <Small style={styles.legal}>
           By continuing, you agree to our{" "}
-          <Small style={[styles.legal, styles.legalLink]} onPress={() => void openTerms()}>Terms of Use</Small> and{" "}
-          <Small style={[styles.legal, styles.legalLink]} onPress={() => void openPrivacyPolicy()}>Privacy Policy</Small>.
+          <Small style={[styles.legal, styles.legalLink]} onPress={() => guard(() => void openTerms())}>Terms of Use</Small> and{" "}
+          <Small style={[styles.legal, styles.legalLink]} onPress={() => guard(() => void openPrivacyPolicy())}>Privacy Policy</Small>.
         </Small>
       </View>
+      {gate}
     </View>
   );
 }

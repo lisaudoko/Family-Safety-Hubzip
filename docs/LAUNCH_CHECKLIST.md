@@ -60,7 +60,7 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 | Support page or email | Built (email) | `admin@nexgenoptimize.com` is in the app. A support URL is still required by both stores |
 | Children's privacy disclosures / parental consent | **You** | COPPA: the parent creates all child profiles. Needs a consent statement at child creation and in the policy (legal review) |
 | Data collected / purpose / sharing documented | Drafted | See `docs/DATA_INVENTORY.md` (verify before submitting) |
-| Data retention policy | **You** | Decide; the code deletes on request but has no automatic expiry |
+| Data retention policy | Built | Decided 2026-11-26 (tiered): device check-ins 30 days; other device activity and blocked-app events 12 months; security/audit log 12 months; accounts, progress and settings until the parent deletes the account. Daily server cleanup (`lib/retention.ts`) also purges expired sessions and one-time codes. Put the same periods in the privacy policy |
 | Account and child-data deletion | Built | |
 | Monitoring functionality accurately described | Built | Fixed 2026-11-26: false "does not monitor / data stays on your device" claims removed from Profile, Welcome and Register; replaced with accurate text (`lib/legal.ts`) |
 | Permissions requested only when necessary | Built | Screen Time is the only sensitive permission; it is requested from the child's profile card |
@@ -107,7 +107,7 @@ _Triage of the product owner's launch checklist against the codebase, 2026-11-26
 | Target SDK | Built | Expo SDK 54 targets the current Play requirement |
 | EAS Android production profile | Built | Same profiles; produces `.aab` by default |
 | Listing, feature graphic, Data Safety, content rating, ads declaration | **You** | Ads: none |
-| Target audience / Families Policy | **Decide** | Parents are the audience, but children sign in. If any target age is under 13, Families Policy applies, and RevenueCat and Anthropic must be compatible. Simplest: target adults (parents) and describe child sign-in as a parent-managed feature |
+| Target audience / Families Policy | Built (app side) / **You** | Decided 2026-11-26: declare parents **and** children 6–17 (mixed audience), so Families Policy applies. Done in code: children never see purchase screens (they see "ask a parent"); RevenueCat only starts for parent sessions; outside links (Terms, Privacy, support email) go behind a parent gate (math question) on Welcome and in child sessions; no ads or analytics. Open: AI Coach for children (decision pending); confirm in Play Console that no in-app SDK used by children needs Families self-certification |
 | Reviewer access instructions | **You** | Same demo accounts as Apple |
 | Testing tracks | **You** | New personal accounts need a closed test with 12+ testers for 14 days |
 

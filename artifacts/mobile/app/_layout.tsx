@@ -23,18 +23,12 @@ import { CoachProvider } from "@/context/CoachContext";
 import { configureApiBase } from "@/lib/apiClient";
 import { configureApi } from "@/lib/api";
 import { useDeviceSync, useForegroundScreenTime, useScreenControlSync } from "@/lib/deviceSync";
-import { initializeRevenueCat } from "@/lib/revenuecat";
 import { SubscriptionProvider } from "@/lib/revenuecat";
 
 SplashScreen.preventAutoHideAsync();
 
 configureApiBase();
 configureApi();
-try {
-  initializeRevenueCat();
-} catch (err: any) {
-  console.warn("RevenueCat init failed:", err?.message);
-}
 const queryClient = new QueryClient();
 
 function AuthRedirect() {

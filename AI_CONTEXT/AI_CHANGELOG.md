@@ -2,6 +2,13 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — Data retention job; Google Play Families Policy changes
+
+- **Decisions (product owner, 2026-11-26)**: Google Play audience = parents **and** children 6–17 (mixed audience, so Families Policy applies). Retention = tiered: heartbeats 30 days, other device activity and blocked-app events 12 months, audit log 12 months, accounts/progress/settings until deletion.
+- **What**: `api-server/src/lib/retention.ts` (`runRetentionCleanup`, scheduled at server start then every 24h, idempotent; also purges expired sessions, reset/verification codes, and expired **unused** support codes. Used codes are kept because deleting them cascades to `support_sessions`, the admin-access record). Mobile: `components/ParentGate.tsx` (`useParentGate`, a multiplication question) guards Terms/Privacy/support-email links on Welcome and in child sessions on Profile; children never see the subscription screen ("Ask a parent" on the screen, course/challenge locks, and hidden Profile upgrade/manage cards); RevenueCat SDK is now configured only once a parent session exists (removed from `_layout.tsx` startup).
+- **Open**: children can use the AI Coach (tab visible to all roles; `/coach/chat` is `requireAuth` only) — decision pending.
+- **Verification**: api-server + mobile typecheck clean; `test/retention.test.ts` UNRUN (Windows). No device testing.
+
 ## 2026-11-26 — Launch-checklist triage; accurate privacy text; legal links; privacy manifest
 
 - **What**: Product owner supplied a full App Store / Google Play launch checklist. Triaged every item against the code into `docs/LAUNCH_CHECKLIST.md` (Built / Code / You / Decide) and wrote a factual `docs/DATA_INVENTORY.md` for the App Privacy questionnaire, Data Safety form and privacy policy. Code fixes: (1) **in-app privacy claims were false** ("does not monitor, track, or surveil children's devices", "all family data stays on your device") while the app syncs data to the server, records device heartbeats/app time, enforces Screen Time on iOS and sends coach text to Anthropic — replaced in Profile (alert + cards), Welcome and Register with accurate text (`lib/legal.ts` `PRIVACY_SUMMARY`). (2) Configurable `EXPO_PUBLIC_PRIVACY_POLICY_URL` / `TERMS_URL` / `SUPPORT_URL` / `SUPPORT_EMAIL` (`constants/links.ts`); Terms of Use + Privacy Policy links added to the subscription screen (Apple 3.1.2), Welcome, and Profile settings; Terms falls back to Apple's standard EULA. (3) `ios.privacyManifests` + `usesNonExemptEncryption: false` in `app.json`. (4) Removed unused `expo-image-picker` (+ its `expo-image-loader`) by hand from package.json/lockfile; frozen install passes.

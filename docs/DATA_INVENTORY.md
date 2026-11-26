@@ -42,7 +42,7 @@ _Derived from the code on 2026-11-26 (`lib/db/src/schema/index.ts`, `artifacts/m
 
 - **Account deletion** (Profile → Delete Account, or on request) removes the parent, the family, every child profile, devices, events, policies, progress, agreement, subscription records, sessions and audit rows. It also cancels the Stripe subscription. App Store and Play subscriptions must be cancelled by the user in store settings.
 - A parent can remove an individual child (and that child's data) from the Family tab.
-- **No automatic retention limit exists yet.** Decide one (for example, purge `device_events` older than N months) and state it in the policy.
+- **Automatic retention** (decided 2026-11-26; daily job `api-server/src/lib/retention.ts`): device check-ins (heartbeats) 30 days; other device activity and blocked-app events 12 months; security/audit log including IP addresses 12 months; expired sessions and one-time codes removed. Accounts, progress, policies and agreements are kept until the parent deletes the account.
 
 ## Store questionnaire hints
 

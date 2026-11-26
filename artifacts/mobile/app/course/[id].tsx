@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
@@ -26,6 +26,11 @@ export default function CourseDetailScreen() {
   if (!course) { router.back(); return null; }
 
   const isLocked = course.isPremium && !user?.isPremium;
+  // Children never see the purchase screen (Families Policy).
+  const openUpgrade = () => {
+    if (user?.role === "parent") router.push("/subscription");
+    else Alert.alert("Ask a parent", "Premium is unlocked by a parent from their own account.");
+  };
   const completedLessons = course.lessons.filter(l => progress.completedLessons.includes(l.id));
   const courseProgress = progress.courseProgress[course.id] ?? 0;
   const isComplete = courseProgress === 100;
@@ -62,9 +67,9 @@ export default function CourseDetailScreen() {
             <Feather name="lock" size={18} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Body color={colors.foreground}>Premium Course</Body>
-              <Caption color={colors.mutedForeground}>Upgrade to Premium to access this course.</Caption>
+              <Caption color={colors.mutedForeground}>{user?.role === "parent" ? "Upgrade to Premium to access this course." : "Ask a parent to unlock Premium."}</Caption>
             </View>
-            <Button title="Upgrade" size="sm" fullWidth={false} style={{ backgroundColor: colors.accent }} onPress={() => router.push("/subscription")} />
+            <Button title="Upgrade" size="sm" fullWidth={false} style={{ backgroundColor: colors.accent }} onPress={openUpgrade} />
           </Card>
         )}
 

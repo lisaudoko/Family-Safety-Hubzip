@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,13 +26,17 @@ function getRevenueCatApiKey(): string | null {
 
 let revenueCatConfigured = false;
 
-export function initializeRevenueCat() {
+// Called only once a parent is signed in: child sessions never load the
+// purchases SDK (Google Play Families Policy). Safe to call repeatedly.
+export function initializeRevenueCat(): boolean {
+  if (revenueCatConfigured) return true;
   const apiKey = getRevenueCatApiKey();
-  if (!apiKey) return;
+  if (!apiKey) return false;
 
   if (__DEV__) Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
   Purchases.configure({ apiKey });
   revenueCatConfigured = true;
+  return true;
 }
 
 function useSubscriptionContext() {
@@ -44,8 +48,16 @@ function useSubscriptionContext() {
   const loginRef = useRef<Promise<unknown>>(Promise.resolve());
   const isParent = user?.role === "parent";
   const familyId = isParent ? user?.familyId : undefined;
+  const [configured, setConfigured] = useState(revenueCatConfigured);
 
   useEffect(() => {
+    if (familyId && !revenueCatConfigured) {
+      try {
+        setConfigured(initializeRevenueCat());
+      } catch {
+        setConfigured(false);
+      }
+    }
     if (!revenueCatConfigured) return;
     loginRef.current = (familyId
       ? Purchases.logIn(familyId)
@@ -69,7 +81,7 @@ function useSubscriptionContext() {
       return info;
     },
     staleTime: 60 * 1000,
-    enabled: revenueCatConfigured,
+    enabled: configured && isParent,
   });
 
   const offeringsQuery = useQuery({
@@ -79,7 +91,7 @@ function useSubscriptionContext() {
       return offerings;
     },
     staleTime: 300 * 1000,
-    enabled: revenueCatConfigured,
+    enabled: configured && isParent,
   });
 
   const purchaseMutation = useMutation({

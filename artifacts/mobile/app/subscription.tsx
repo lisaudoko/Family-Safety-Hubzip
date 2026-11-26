@@ -87,6 +87,20 @@ export default function SubscriptionScreen() {
     }
   };
 
+  // Children never see purchase options (Google Play Families Policy).
+  if (user?.role !== "parent") {
+    return (
+      <View style={[styles.loader, { backgroundColor: colors.background, paddingTop: topPad + spacing.lg, paddingHorizontal: spacing.xl }]}>
+        <Feather name="lock" size={32} color={colors.accent} />
+        <H2 style={{ textAlign: "center", marginTop: spacing.md }}>Ask a parent</H2>
+        <Body color={colors.mutedForeground} style={{ textAlign: "center", marginBottom: spacing.lg }}>
+          Premium is unlocked by a parent from their own account.
+        </Body>
+        <Button title="Go back" variant="secondary" onPress={() => router.back()} />
+      </View>
+    );
+  }
+
   if (isLoading) {
     return (
       <View style={[styles.loader, { backgroundColor: colors.background, paddingTop: topPad + spacing.lg }]}>

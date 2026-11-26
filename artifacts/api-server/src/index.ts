@@ -1,6 +1,7 @@
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { runStartupMigrations } from "./lib/startup-migrate.js";
+import { scheduleRetentionCleanup } from "./lib/retention.js";
 
 const rawPort = process.env["PORT"];
 
@@ -24,6 +25,7 @@ runStartupMigrations()
         process.exit(1);
       }
       logger.info({ port }, "Server listening");
+      scheduleRetentionCleanup();
     });
   })
   .catch((err) => {
