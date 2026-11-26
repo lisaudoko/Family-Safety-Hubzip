@@ -54,12 +54,16 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@livekit/react-native": "3.2.0",
+    "@livekit/react-native-expo-plugin": "1.2.0",
+    "@livekit/react-native-webrtc": "150.2.0",
     "expo-application": "~7.0.8",
     "expo-build-properties": "^1.0.10",
     "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
     "expo-notifications": "~0.32.17",
     "expo-secure-store": "^56.0.4",
+    "livekit-client": "^2.25.0",
     "react-native-device-activity": "^0.6.1",
     "react-native-purchases": "^10.4.1",
     "react-native-url-polyfill": "^3.0.0"

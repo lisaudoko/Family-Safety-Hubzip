@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — Live screen viewing, phase 2 (app: shared flow + Android)
+
+- **What**: LiveKit RN SDK (`@livekit/react-native` 3.2.0, `@livekit/react-native-webrtc` 150.2.0, `@livekit/react-native-expo-plugin` 1.2.0, `livekit-client`) added via `pnpm@10.20.0 --lockfile-only`. `app.json`: LiveKit plugin (`android.enableScreenShareService`, `audioType: media`), Android `FOREGROUND_SERVICE(_MEDIA_PROJECTION)`, `blockedPermissions` CAMERA/RECORD_AUDIO/BLUETOOTH(_ADMIN) (SDK declares them; feature is screen-only), iOS camera/mic purpose strings (required because WebRTC references those APIs; never requested), `RTCAppGroupIdentifier` + `RTCScreenSharingExtension`. Skipped `@config-plugins/react-native-webrtc` (its SDK-54 build only adds camera/mic permissions we block). New `app/screen-share/[id].tsx` (role-split parent viewer / child sharer), `lib/screenShare.ts` (lazy require + `registerGlobals` before `livekit-client`; returns null in Expo Go/web), `lib/screenShareInbox.ts`, apiClient wrappers, child-page request button (FaceTime/Meet kept as fallback; its "never sees your screen" caption removed), children auto-register push in `usePushNotifications`.
+- **Verification**: mobile typecheck clean. **Nothing run on a device**; Android needs a dev build; iOS needs the broadcast extension (phase 3) before sharing works.
+- **Still to do**: iOS extension + background keep-alive; privacy policy / in-app privacy text / data inventory / store answers; LiveKit keys.
+
 ## 2026-11-26 — Live screen viewing, phase 1 (server)
 
 - **Decisions**: full in-app, consent-based live screen viewing; LiveKit Cloud; launch delayed until it ships (`docs/SCREEN_MIRRORING_PLAN.md`, `DECISIONS.md`).

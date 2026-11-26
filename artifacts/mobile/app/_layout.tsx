@@ -24,6 +24,7 @@ import { configureApiBase } from "@/lib/apiClient";
 import { configureApi } from "@/lib/api";
 import { useDeviceSync, useForegroundScreenTime, useScreenControlSync } from "@/lib/deviceSync";
 import { usePushNotifications } from "@/lib/pushNotifications";
+import { useScreenShareInbox } from "@/lib/screenShareInbox";
 import { SubscriptionProvider } from "@/lib/revenuecat";
 
 SplashScreen.preventAutoHideAsync();
@@ -77,6 +78,7 @@ function RootLayoutNav() {
   useForegroundScreenTime(isAuthenticated);
   useScreenControlSync(isAuthenticated, user?.role);
   usePushNotifications(isAuthenticated ? user?.role : undefined);
+  useScreenShareInbox(isAuthenticated ? user?.role : undefined);
 
   return (
     <>
@@ -94,6 +96,7 @@ function RootLayoutNav() {
         <Stack.Screen name="lesson/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="quiz/[id]" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="child/[id]" options={{ headerShown: false, animation: slide }} />
+        <Stack.Screen name="screen-share/[id]" options={{ headerShown: false, animation: slide, gestureEnabled: false }} />
         <Stack.Screen name="agreement" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="family-policy" options={{ headerShown: false, animation: slide }} />
         <Stack.Screen name="subscription" options={{ headerShown: false, presentation: "modal" }} />

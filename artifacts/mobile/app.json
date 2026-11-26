@@ -25,25 +25,49 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
-            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
-            "NSPrivacyAccessedAPITypeReasons": ["35F9.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
-            "NSPrivacyAccessedAPITypeReasons": ["E174.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1"
+            ]
           }
         ]
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "Digital Village does not use your camera. The video library behind live screen viewing requires this description.",
+        "NSMicrophoneUsageDescription": "Digital Village does not record audio. The video library behind live screen viewing requires this description.",
+        "RTCAppGroupIdentifier": "group.com.iriemom.digitalvillage",
+        "RTCScreenSharingExtension": "com.iriemom.digitalvillage.ScreenBroadcast"
       }
     },
     "android": {
-      "package": "com.iriemom.digitalvillage"
+      "package": "com.iriemom.digitalvillage",
+      "permissions": [
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -58,8 +82,29 @@
       "expo-font",
       "expo-web-browser",
       "expo-dev-client",
-      ["expo-notifications", { "color": "#F97316" }],
-      ["expo-build-properties", { "ios": { "deploymentTarget": "16.0" } }],
+      [
+        "expo-notifications",
+        {
+          "color": "#F97316"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
+        }
+      ],
+      [
+        "@livekit/react-native-expo-plugin",
+        {
+          "android": {
+            "enableScreenShareService": true,
+            "audioType": "media"
+          }
+        }
+      ],
       [
         "react-native-device-activity",
         {

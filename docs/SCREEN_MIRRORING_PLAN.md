@@ -46,8 +46,8 @@ _Requested by the product owner on 2026-11-26: a parent asks to see a child's sc
 ## Phases and rough effort
 
 1. **Server** (requests table, endpoints, token minting, audit, tests): **built 2026-11-26** — `routes/screenShare.ts`, `lib/livekit.ts`, `test/screen-share.test.ts`. Limits: request expires after 2 minutes, session after 15, max 5 requests per child per hour.
-2. **Android** sharing + viewer: 1–1.5 weeks.
-3. **iOS** broadcast extension + viewer: 1.5–2 weeks.
+2. **App, shared + Android**: **code written 2026-11-26, not yet run on a device.** `@livekit/react-native` 3.2.0 + `@livekit/react-native-webrtc` 150.2.0 + `@livekit/react-native-expo-plugin` 1.2.0 (`android.enableScreenShareService`), `livekit-client` ^2.20. `app/screen-share/[id].tsx` (parent: waiting → live view → stop; child: accept/decline → share → "can see your screen" banner → stop; 15-minute countdown), `lib/screenShare.ts` (lazy loader, so Expo Go/web show "not available" instead of crashing), `lib/screenShareInbox.ts` (child app opens a pending request on foreground), "Request live screen view" button on the child page, children auto-register for push. Android manifest: `FOREGROUND_SERVICE_MEDIA_PROJECTION` added; CAMERA / RECORD_AUDIO / BLUETOOTH blocked (declared by the SDK, unused).
+3. **iOS broadcast extension**: not started. `Info.plist` already points at it (`RTCScreenSharingExtension` = `com.iriemom.digitalvillage.ScreenBroadcast`, `RTCAppGroupIdentifier` = the existing App Group). Still needed: a config plugin that adds the Broadcast Upload Extension target (Jitsi `SampleHandler` + socket uploader the SDK documents), a new App ID `com.iriemom.digitalvillage.ScreenBroadcast` in the App Group, and keeping the main app alive while the child is in other apps. LiveKit recommends CallKit (`voip` background mode); without it iOS can suspend the app and stop the stream after the child leaves Digital Village. 1.5–2 weeks.
 4. **Policy, store and legal updates; two-device testing on both platforms; fixes:** about 1 week.
 
 **Total: roughly 4–6 weeks.** Nothing in phases 2–3 can be tested without development builds on real devices.

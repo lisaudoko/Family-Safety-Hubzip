@@ -130,6 +130,9 @@ export async function reattachPushToken(): Promise<void> {
 export function usePushNotifications(role: "parent" | "child" | undefined): void {
   useEffect(() => {
     if (role === "parent") void reattachPushToken();
+    // Children are registered automatically so a parent's screen-view request
+    // reaches them (they still accept or decline every request).
+    if (role === "child") void enablePushNotifications();
   }, [role]);
 
   useEffect(() => {

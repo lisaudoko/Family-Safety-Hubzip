@@ -948,3 +948,54 @@ export async function apiDeleteDeviceAppRule(
 ): Promise<void> {
   await apiFetch(`/devices/${deviceId}/app-rules/${ruleId}`, { method: "DELETE" });
 }
+// ── Live screen viewing (consent-based; see docs/SCREEN_MIRRORING_PLAN.md) ────
+
+export type ScreenShareStatus = "requested" | "accepted" | "declined" | "expired" | "ended";
+
+export interface ApiScreenShareRequest {
+  id: string;
+  childId: string;
+  parentId: string;
+  status: ScreenShareStatus;
+  expiresAt: string;
+  sessionEndsAt: string | null;
+  createdAt: string;
+}
+
+export interface LiveKitConnection {
+  url: string;
+  room: string;
+  token: string;
+}
+
+/** Parent: ask a child to share their screen. */
+export async function apiRequestScreenShare(childId: string): Promise<{ request: ApiScreenShareRequest }> {
+  return apiFetch("/screen-share/requests", { method: "POST", body: JSON.stringify({ childId }) });
+}
+
+/** Child: own open request; parent: the family's open requests/sessions. */
+export async function apiGetActiveScreenShares(): Promise<{ requests: ApiScreenShareRequest[] }> {
+  return apiFetch("/screen-share/active");
+}
+
+export async function apiGetScreenShare(id: string): Promise<{ request: ApiScreenShareRequest }> {
+  return apiFetch(`/screen-share/requests/${encodeURIComponent(id)}`);
+}
+
+/** Child: accept; returns a publish-only (screen) LiveKit token. */
+export async function apiAcceptScreenShare(id: string): Promise<{ request: ApiScreenShareRequest; livekit: LiveKitConnection }> {
+  return apiFetch(`/screen-share/requests/${encodeURIComponent(id)}/accept`, { method: "POST" });
+}
+
+export async function apiDeclineScreenShare(id: string): Promise<{ request: ApiScreenShareRequest }> {
+  return apiFetch(`/screen-share/requests/${encodeURIComponent(id)}/decline`, { method: "POST" });
+}
+
+/** Parent: watch-only LiveKit token, once the child has accepted. */
+export async function apiGetScreenShareViewerToken(id: string): Promise<{ request: ApiScreenShareRequest; livekit: LiveKitConnection }> {
+  return apiFetch(`/screen-share/requests/${encodeURIComponent(id)}/viewer-token`, { method: "POST" });
+}
+
+export async function apiEndScreenShare(id: string): Promise<{ request: ApiScreenShareRequest }> {
+  return apiFetch(`/screen-share/requests/${encodeURIComponent(id)}/end`, { method: "POST" });
+}

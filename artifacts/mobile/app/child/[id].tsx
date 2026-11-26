@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
 import React, { useState } from "react";
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +16,7 @@ import { useEffectivePolicy } from "@/hooks/useEffectivePolicy";
 import { deviceStatusMeta } from "@/lib/deviceStatus";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import { AGE_BAND_COLORS, avatarColorForName } from "@/constants/identityColors";
-import type { ApiDevice } from "@/lib/apiClient";
+import { apiRequestScreenShare, type ApiDevice } from "@/lib/apiClient";
 import {
   Avatar,
   Badge,
@@ -420,6 +420,20 @@ export default function ChildProfileScreen() {
   const [ageBand, setAgeBand] = useState<AgeBand>(child?.ageBand ?? "10-13");
   const [settingPin, setSettingPin] = useState(false);
   const [newPin, setNewPin] = useState("");
+  const [requestingView, setRequestingView] = useState(false);
+
+  const requestScreenView = async () => {
+    if (!child) return;
+    setRequestingView(true);
+    try {
+      const { request } = await apiRequestScreenShare(child.id);
+      router.push(`/screen-share/${request.id}` as Href);
+    } catch (e: any) {
+      Alert.alert("Screen view", e?.message || "Couldn't send the request. Please try again.");
+    } finally {
+      setRequestingView(false);
+    }
+  };
   const { policy, updatePolicy } = useChildPolicy(child?.id);
   const { devices, renameDevice } = useChildDevices(child?.id);
 
@@ -560,14 +574,22 @@ export default function ChildProfileScreen() {
         )}
       </View>
 
-      {/* Consent-based screen sharing uses FaceTime / Google Meet; Digital Village
-          never captures or receives the child's screen. */}
+      {/* Live screen viewing: consent per session, never recorded
+          (docs/SCREEN_MIRRORING_PLAN.md). FaceTime / Meet stay as a fallback. */}
       <View style={styles.infoSection}>
-        <H2 style={{ marginBottom: 0 }}>See Their Screen Together</H2>
+        <H2 style={{ marginBottom: 0 }}>See Their Screen</H2>
         <Body color={colors.mutedForeground}>
-          Want to see what&apos;s on {child.name}&apos;s screen? Ask them to share it with you on a video call. They stay in
-          control and can stop at any time.
+          Ask {child.name} to share their screen with you live. They&apos;ll get a request on their phone and can accept or
+          decline. Sessions last up to 15 minutes, either of you can stop at any time, and nothing is recorded.
         </Body>
+        <Button
+          title={requestingView ? "Sending request…" : "Request live screen view"}
+          icon="monitor"
+          onPress={requestScreenView}
+          loading={requestingView}
+          disabled={requestingView}
+        />
+        <Caption color={colors.mutedForeground}>Or ask them to share on a video call:</Caption>
         {[
           {
             icon: "smartphone" as const,
@@ -599,7 +621,7 @@ export default function ChildProfileScreen() {
           </Card>
         ))}
         <Caption color={colors.mutedForeground}>
-          Sharing happens directly in FaceTime or Google Meet. Digital Village never sees or records your child&apos;s screen.
+          Video-call sharing happens in FaceTime or Google Meet, outside Digital Village.
         </Caption>
       </View>
 
