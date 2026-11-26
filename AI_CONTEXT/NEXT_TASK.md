@@ -132,6 +132,10 @@ _Note: auth is opaque UUID session tokens, not JWT. An `admin` role now exists, 
 
 ---
 
+## Launch checklist (2026-11-26)
+
+The product owner's full store-launch checklist is triaged in `docs/LAUNCH_CHECKLIST.md` (source of truth for launch status). Open decisions: push notifications (none exist), Google Play target audience/Families Policy, data retention period.
+
 ## Release Blockers (audit 2026-11-05) — must resolve before App Store / production
 
 _Done 2026-11-05 (see AI_CHANGELOG): auth brute-force limiters, trust proxy, security headers, production CORS allowlist, no codes/keys in logs._

@@ -10,6 +10,7 @@ import { Body, Button, Display, Small } from "@/components/primitives";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
 import { useColors } from "@/hooks/useColors";
+import { openPrivacyPolicy, openTerms } from "@/lib/legal";
 
 const FEATURES: { icon: keyof typeof Feather.glyphMap; label: string }[] = [
   { icon: "book-open", label: "Parent micro-courses" },
@@ -53,8 +54,9 @@ export default function WelcomeScreen() {
         </TouchableOpacity>
 
         <Small style={styles.legal}>
-          By continuing, you agree to our Terms of Service and Privacy Policy. Digital Village does not monitor or
-          track children&apos;s devices.
+          By continuing, you agree to our{" "}
+          <Small style={[styles.legal, styles.legalLink]} onPress={() => void openTerms()}>Terms of Use</Small> and{" "}
+          <Small style={[styles.legal, styles.legalLink]} onPress={() => void openPrivacyPolicy()}>Privacy Policy</Small>.
         </Small>
       </View>
     </View>
@@ -81,4 +83,5 @@ const styles = StyleSheet.create({
   featureIconWrap: { width: 32, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   loginBtn: { alignItems: "center" },
   legal: { textAlign: "center", marginTop: spacing.xs },
+  legalLink: { textDecorationLine: "underline", marginTop: 0 },
 });

@@ -12,6 +12,8 @@ import { useHaptics } from "@/lib/haptics";
 import { apiCreateSupportCode, apiResendVerification, apiVerifyEmail } from "@/lib/apiClient";
 import { Avatar, Badge, Body, BodyStrong, Button, Card, Caption, Display, H2, H3, Small, TextField } from "@/components/primitives";
 import { ScreenControlCard } from "@/components/ScreenControlCard";
+import { openPrivacyPolicy, openTerms } from "@/lib/legal";
+import { SUPPORT_EMAIL } from "@/constants/links";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
 import { fontFamily } from "@/constants/typography";
@@ -134,19 +136,15 @@ export default function ProfileScreen() {
   };
 
   const handlePrivacyPolicy = () => {
-    Alert.alert(
-      "Our Privacy Commitment",
-      "Digital Village does not monitor, track, or surveil children's devices. We do not sell or share your data. All family data stays with you.\n\nWe believe digital safety is built through education and trust — never surveillance.",
-      [{ text: "Close" }]
-    );
+    void openPrivacyPolicy();
   };
 
   const handleHelp = () => {
     Alert.alert(
       "Help & Support",
-      "Need help? Reach out at:\n\nadmin@nexgenoptimize.com\n\nWe respond within 1 business day.",
+      `Need help? Reach out at:\n\n${SUPPORT_EMAIL}\n\nWe respond within 1 business day.`,
       [
-        { text: "Send Email", onPress: () => Linking.openURL("mailto:admin@nexgenoptimize.com") },
+        { text: "Send Email", onPress: () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`) },
         { text: "Close", style: "cancel" },
       ]
     );
@@ -191,14 +189,15 @@ export default function ProfileScreen() {
     { icon: "eye", label: "Accessibility", onPress: () => router.push("/settings/accessibility") },
     { icon: "bell", label: "Notifications", onPress: handleNotifications },
     { icon: "shield", label: "Privacy Policy", onPress: handlePrivacyPolicy },
+    { icon: "file-text", label: "Terms of Use", onPress: () => void openTerms() },
     { icon: "help-circle", label: "Help & Support", onPress: handleHelp },
     ...(isParent ? [{ icon: "key" as const, label: "Get Support Access Code", onPress: handleGetSupport }] : []),
   ];
 
   const privacyItems = [
-    { icon: "shield" as const, title: "Our Approach", desc: "Digital Village does not monitor, track, or spy on children's devices. We build safety through education and conversation.", color: colors.success },
-    { icon: "eye-off" as const, title: "No Surveillance", desc: "No iMessage reading, no keystroke logging, no unauthorized photo access, no background recording.", color: colors.info },
-    { icon: "lock" as const, title: "Data Privacy", desc: "All family data stays on your device. We don't sell or share your information.", color: colors.accent },
+    { icon: "shield" as const, title: "Our Approach", desc: "Education first. Optional controls use Apple's Screen Time, with a parent's approval, to apply bedtime and web filters on a child's iPhone.", color: colors.success },
+    { icon: "eye-off" as const, title: "What We Never Do", desc: "No reading messages, no browsing history, no location, no keystroke logging, no photo access, no background recording.", color: colors.info },
+    { icon: "lock" as const, title: "Your Data", desc: "Stored securely so your family's devices stay in sync. We don't sell your data or show ads, and you can delete your account at any time.", color: colors.accent },
   ];
 
   return (

@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { useHaptics } from "@/lib/haptics";
 import { useSubscription } from "@/lib/revenuecat";
+import { openPrivacyPolicy, openTerms } from "@/lib/legal";
 import { Badge, Body, Button, Card, Caption, H1, H2, H3, LoadingSpinner, Small } from "@/components/primitives";
 import { spacing } from "@/constants/spacing";
 import { radius } from "@/constants/radius";
@@ -180,6 +181,15 @@ export default function SubscriptionScreen() {
       <Caption color={colors.mutedForeground} style={styles.legal}>
         Cancel anytime. No commitments. Subscriptions renew automatically unless cancelled at least 24 hours before renewal.
       </Caption>
+      <View style={styles.legalLinks}>
+        <TouchableOpacity onPress={() => void openTerms()} accessibilityRole="link">
+          <Caption color={colors.primary}>Terms of Use</Caption>
+        </TouchableOpacity>
+        <Caption color={colors.mutedForeground}>·</Caption>
+        <TouchableOpacity onPress={() => void openPrivacyPolicy()} accessibilityRole="link">
+          <Caption color={colors.primary}>Privacy Policy</Caption>
+        </TouchableOpacity>
+      </View>
 
       <Modal visible={confirmModal} transparent animationType="fade">
         <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.5)" }]}>
@@ -220,6 +230,7 @@ const styles = StyleSheet.create({
   featureChecks: { flexDirection: "row", gap: spacing.lg },
   alreadyPremium: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   legal: { textAlign: "center", lineHeight: 16 },
+  legalLinks: { flexDirection: "row", justifyContent: "center", gap: spacing.sm },
   loader: { flex: 1, alignItems: "center", justifyContent: "center" },
   modalOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
   modalCard: { width: "100%", maxWidth: 340, gap: spacing.lg },

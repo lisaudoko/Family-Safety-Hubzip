@@ -2,6 +2,12 @@
 
 _Append newest entries at the top. Format: date, what, why, files, future considerations._
 
+## 2026-11-26 — Launch-checklist triage; accurate privacy text; legal links; privacy manifest
+
+- **What**: Product owner supplied a full App Store / Google Play launch checklist. Triaged every item against the code into `docs/LAUNCH_CHECKLIST.md` (Built / Code / You / Decide) and wrote a factual `docs/DATA_INVENTORY.md` for the App Privacy questionnaire, Data Safety form and privacy policy. Code fixes: (1) **in-app privacy claims were false** ("does not monitor, track, or surveil children's devices", "all family data stays on your device") while the app syncs data to the server, records device heartbeats/app time, enforces Screen Time on iOS and sends coach text to Anthropic — replaced in Profile (alert + cards), Welcome and Register with accurate text (`lib/legal.ts` `PRIVACY_SUMMARY`). (2) Configurable `EXPO_PUBLIC_PRIVACY_POLICY_URL` / `TERMS_URL` / `SUPPORT_URL` / `SUPPORT_EMAIL` (`constants/links.ts`); Terms of Use + Privacy Policy links added to the subscription screen (Apple 3.1.2), Welcome, and Profile settings; Terms falls back to Apple's standard EULA. (3) `ios.privacyManifests` + `usesNonExemptEncryption: false` in `app.json`. (4) Removed unused `expo-image-picker` (+ its `expo-image-loader`) by hand from package.json/lockfile; frozen install passes.
+- **Open decisions**: push notifications don't exist (checklist expects "parent notifications and alerts"); Google Play target-audience / Families Policy; data retention period.
+- **Verification**: mobile typecheck clean; frozen install OK. Not run on a device; no EAS build.
+
 ## 2026-11-05 — Keyboard covering auth forms; remove unused expo-location
 
 - **What**: `login`, `register`, `forgot-password`, `child-login` used React Native's `KeyboardAvoidingView` + `ScrollView`, which does not work under the app-wide `KeyboardProvider` (react-native-keyboard-controller) — the likely cause of the Notes.md report that the keyboard hides the password field and Sign In button on iPhone. They now use the existing `KeyboardAwareScrollViewCompat` (`bottomOffset={24}`). Removed the unused `expo-location` dependency (no imports, no plugin, no permission strings) from `mobile/package.json` and by hand from `pnpm-lock.yaml` (a `pnpm remove` rewrites ~2000 lockfile lines under pnpm 12/Windows); a `--frozen-lockfile` install accepts the result.

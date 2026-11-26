@@ -87,7 +87,7 @@ export default function RegisterScreen() {
           <Button title={loading ? "Creating account…" : "Create Free Account"} onPress={handleRegister} loading={loading} disabled={loading} style={styles.btn} />
 
           <Caption color={colors.mutedForeground} style={styles.disclaimer}>
-            Digital Village does not monitor, track, or surveil children&apos;s devices. Privacy is a family value.
+            We never read your family&apos;s messages, browsing history or location, and we never sell your data.
           </Caption>
         </View>
       </View>
